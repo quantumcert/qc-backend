@@ -1,0 +1,640 @@
+{
+    "info": {
+        "_postman_id": "qc-universal-api-v2",
+        "name": "Quantum Cert — Universal API v2.0",
+        "description": "Coleção completa da API Universal Quantum Cert.\n\nArquitetura: Faceted Diamond Pattern\nTecnologias: Falcon-512 + Algorand Testnet + PostgreSQL\n\n⚠️ Pré-requisitos:\n1. Servidor local rodando (npm run dev → porta 3000)\n2. PostgreSQL conectado (DATABASE_URL no .env)\n3. JWT_SECRET configurado no .env\n\n📋 Ordem de execução:\n1. Register (criar usuário ISSUER + STANDARD)\n2. Login (obter JWT token)\n3. Mint Asset (criar ativo)\n4. Lookup (verificar ativo público)\n5. Transfer / State Change / Events\n6. Relay (Blind Contact)\n\n🔑 Após Login, copie o token e cole na variável {{jwt_token}}",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:3000"
+        },
+        {
+            "key": "jwt_token",
+            "value": "PASTE_JWT_TOKEN_HERE"
+        },
+        {
+            "key": "asset_id",
+            "value": "PASTE_ASSET_ID_HERE"
+        },
+        {
+            "key": "issuer_id",
+            "value": ""
+        },
+        {
+            "key": "owner_id",
+            "value": ""
+        }
+    ],
+    "item": [
+        {
+            "name": "🔐 Auth",
+            "item": [
+                {
+                    "name": "1. Register ISSUER",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"issuer@quantumcert.com\",\n  \"password\": \"QC#Falcon2026!\",\n  \"document\": \"12345678000199\",\n  \"userType\": \"ISSUER\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/auth/register",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "register"
+                            ]
+                        },
+                        "description": "Cria um usuário ISSUER (emissor de ativos).\nGuarde o `user.id` retornado como {{issuer_id}} e o `token` como {{jwt_token}}."
+                    }
+                },
+                {
+                    "name": "2. Register STANDARD (Owner)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"owner@quantumcert.com\",\n  \"password\": \"QC#Owner2026!\",\n  \"document\": \"98765432100\",\n  \"userType\": \"STANDARD\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/auth/register",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "register"
+                            ]
+                        },
+                        "description": "Cria um usuário STANDARD (proprietário de ativos).\nGuarde o `user.id` retornado como {{owner_id}}."
+                    }
+                },
+                {
+                    "name": "3. Login (Obter JWT)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"issuer@quantumcert.com\",\n  \"password\": \"QC#Falcon2026!\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/auth/login",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "login"
+                            ]
+                        },
+                        "description": "Autentica e retorna JWT token.\n\n⚡ Copie o `token` da resposta e atualize a variável {{jwt_token}}."
+                    }
+                },
+                {
+                    "name": "4. Verify Token",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/auth/verify",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "auth",
+                                "verify"
+                            ]
+                        },
+                        "description": "Valida se o JWT token é válido e retorna usuário decodificado."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🏭 ProvisioningFacet (Mint)",
+            "item": [
+                {
+                    "name": "5. Mint Asset — BICYCLE",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"ownerId\": \"{{owner_id}}\",\n  \"assetClass\": \"BICYCLE\",\n  \"customMetadata\": {\n    \"brand\": \"Canyon\",\n    \"model\": \"Neuron CF 9\",\n    \"serialNumber\": \"CN-2026-001\",\n    \"color\": \"Carbon Black\",\n    \"frameSize\": \"L\",\n    \"year\": 2026,\n    \"invoiceNumber\": \"NF-001234\"\n  }\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/assets",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "assets"
+                            ]
+                        },
+                        "description": "Mint (criar) um ativo BICYCLE com payload JSON genérico.\n\n⚡ O `issuerId` é extraído automaticamente do JWT.\n\n📋 Guarde o `asset.id` da resposta como {{asset_id}}.\n\nFluxo interno:\n1. Gera hash Falcon-512\n2. Cria ARC-89 Registry na Algorand Testnet\n3. Ancora Note Field imutável\n4. Persiste no PostgreSQL com SystemState.ACTIVE"
+                    }
+                },
+                {
+                    "name": "5b. Mint Asset — FINANCIAL_BOND",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"ownerId\": \"{{owner_id}}\",\n  \"assetClass\": \"FINANCIAL_BOND\",\n  \"customMetadata\": {\n    \"bondType\": \"GOVERNMENT_TREASURY\",\n    \"issuingCountry\": \"BR\",\n    \"isin\": \"BRSTNCLTN7V5\",\n    \"faceValue\": 10000.00,\n    \"currency\": \"BRL\",\n    \"maturityDate\": \"2030-01-01\",\n    \"couponRate\": 0.065,\n    \"issuerName\": \"Tesouro Nacional\"\n  }\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/assets",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "assets"
+                            ]
+                        },
+                        "description": "Demonstra que o Core aceita QUALQUER payload JSON — sem validação de domínio.\nAqui estamos criando um título financeiro do Tesouro Nacional."
+                    }
+                },
+                {
+                    "name": "5c. Mint Asset — QTAG_LIFE (Soulbound)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"ownerId\": \"{{owner_id}}\",\n  \"assetClass\": \"QTAG_LIFE\",\n  \"customMetadata\": {\n    \"fullName\": \"João Carlos da Silva\",\n    \"documentHash\": \"0xE2EE_ENCRYPTED_CPF_HASH\",\n    \"bloodType\": \"O+\",\n    \"emergencyContact\": \"0xE2EE_ENCRYPTED_PHONE\",\n    \"allergies\": [\"Penicilina\"],\n    \"isOrganDonor\": true\n  }\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/assets",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "assets"
+                            ]
+                        },
+                        "description": "Cria um ativo Soulbound (identidade pessoal intransferível).\n\n🚫 Este ativo NÃO poderá ser transferido posteriormente.\n⚠️ Dados sensíveis devem ser E2EE-criptografados pelo BFF antes do envio."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🔄 OwnershipFacet (Transfer)",
+            "item": [
+                {
+                    "name": "6. Transfer Asset — BICYCLE ✅",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"newOwnerId\": \"{{owner_id}}\",\n  \"falconSignature\": null\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/assets/{{asset_id}}/transfer",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "assets",
+                                "{{asset_id}}",
+                                "transfer"
+                            ]
+                        },
+                        "description": "Transferir proprietário de um ativo BICYCLE.\n\n📋 O `currentOwnerId` é extraído do JWT.\n\nA assinatura Falcon-512 é opcional — sem HSM, a autenticação JWT é suficiente.\n\nFluxo:\n1. Validar ownership\n2. Verificar NÃO é Soulbound\n3. Verificar NÃO está FROZEN\n4. Ancorar transferência on-chain\n5. Atualizar ownerId no banco\n6. Registrar AssetEvent TRANSFER"
+                    }
+                },
+                {
+                    "name": "6b. Transfer QTAG_LIFE — 🚫 BLOCKED (Soulbound)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"newOwnerId\": \"{{issuer_id}}\",\n  \"falconSignature\": null\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/assets/PASTE_SOULBOUND_ASSET_ID/transfer",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "assets",
+                                "PASTE_SOULBOUND_ASSET_ID",
+                                "transfer"
+                            ]
+                        },
+                        "description": "⚠️ ESTE REQUEST DEVE FALHAR COM HTTP 403!\n\nDemonstra que ativos Soulbound (QTAG_LIFE, HUMAN_IDENTITY, etc.) são INTRANSFERÍVEIS.\n\nResposta esperada:\n{\n  \"error\": \"Asset intransferível: a classe QTAG_LIFE é uma identidade pessoal vinculada (Soulbound). Transferência proibida.\"\n}"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🔁 LifecycleFacet (State)",
+            "item": [
+                {
+                    "name": "7. State Change — ACTIVE → FROZEN",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"newState\": \"FROZEN\",\n  \"reason\": \"Decisão judicial - Processo nº 0001234-56.2026.8.26.0100\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/assets/{{asset_id}}/state",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "assets",
+                                "{{asset_id}}",
+                                "state"
+                            ]
+                        },
+                        "description": "Muda o SystemState de ACTIVE para FROZEN (bloqueio judicial).\n\nTransições permitidas:\n- ACTIVE → [ALERT, RETIRED, FROZEN]\n- ALERT → [ACTIVE, RETIRED, FROZEN]\n- FROZEN → [ACTIVE, ALERT, RETIRED]\n- RETIRED → [] (terminal — nenhuma transição)"
+                    }
+                },
+                {
+                    "name": "7b. State Change — FROZEN → ACTIVE (desbloquear)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"newState\": \"ACTIVE\",\n  \"reason\": \"Desbloqueio autorizado - Alvará nº 987/2026\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/assets/{{asset_id}}/state",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "assets",
+                                "{{asset_id}}",
+                                "state"
+                            ]
+                        },
+                        "description": "Desbloqueia o ativo FROZEN de volta para ACTIVE."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "⚡ EventFacet (Inject)",
+            "item": [
+                {
+                    "name": "8. Inject Event — THEFT_REPORT (trigger ALERT)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"actionType\": \"THEFT_REPORT\",\n  \"eventPayload\": {\n    \"description\": \"Bicicleta roubada próximo à Av. Paulista, altura do nº 1578\",\n    \"city\": \"São Paulo\",\n    \"state\": \"SP\",\n    \"reportedAt\": \"2026-02-16T23:30:00Z\",\n    \"policeReportNumber\": \"BO-2026-0001234\",\n    \"triggerSystemState\": \"ALERT\"\n  }\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/assets/{{asset_id}}/events",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "assets",
+                                "{{asset_id}}",
+                                "events"
+                            ]
+                        },
+                        "description": "Injeta evento de furto com trigger automático para ALERT.\n\nO campo `triggerSystemState: 'ALERT'` causa a mutação do systemState automaticamente.\nO Core é agnóstico — não sabe o que 'THEFT_REPORT' significa, apenas aplica o alerta."
+                    }
+                },
+                {
+                    "name": "8b. Inject Event — MAINTENANCE",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"actionType\": \"MAINTENANCE\",\n  \"eventPayload\": {\n    \"description\": \"Revisão completa: troca de corrente, ajuste de câmbio, lubrificação\",\n    \"serviceProvider\": \"BikeShop Premium\",\n    \"cost\": 350.00,\n    \"currency\": \"BRL\",\n    \"warrantyUntil\": \"2026-08-16\"\n  }\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/assets/{{asset_id}}/events",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "assets",
+                                "{{asset_id}}",
+                                "events"
+                            ]
+                        },
+                        "description": "Evento de manutenção — sem trigger de estado.\nHistórico registrado on-chain via Algorand Testnet."
+                    }
+                },
+                {
+                    "name": "8c. Inject Event — MISSING_PERSON (Soulbound)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{jwt_token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"actionType\": \"MISSING_PERSON\",\n  \"eventPayload\": {\n    \"lastSeenLocation\": \"São Paulo - Praça da Sé\",\n    \"lastSeenDate\": \"2026-02-15T18:00:00Z\",\n    \"description\": \"Homem, 45 anos, 1.75m, moreno, cabelos curtos\",\n    \"contactAuthority\": \"181 (Disque-Denúncia)\",\n    \"triggerSystemState\": \"ALERT\"\n  }\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/assets/PASTE_SOULBOUND_ASSET_ID/events",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "assets",
+                                "PASTE_SOULBOUND_ASSET_ID",
+                                "events"
+                            ]
+                        },
+                        "description": "Injeta alerta de pessoa desaparecida em ativo QTAG_LIFE.\nO systemState será automaticamente alterado para ALERT."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🔍 QueryFacet (Public/LGPD)",
+            "item": [
+                {
+                    "name": "9. Lookup Público — por QTAG Hash",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/public/lookup?identifier=0xQTAG_HASH_HERE",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "public",
+                                "lookup"
+                            ],
+                            "query": [
+                                {
+                                    "key": "identifier",
+                                    "value": "0xQTAG_HASH_HERE"
+                                }
+                            ]
+                        },
+                        "description": "Consulta pública LGPD-Safe.\n\n🚫 SEM autenticação — rota aberta.\n\n✅ Retorna SOMENTE:\n- exists: true/false\n- systemState (ACTIVE, ALERT, FROZEN, RETIRED)\n- assetClass\n- lastEvent.actionType\n- lastEvent.dltProof (Algorand TX ID)\n- totalEvents\n\n⛔ NUNCA retorna:\n- customMetadata\n- ownerId / issuerId\n- owner / issuer (dados pessoais)\n- eventPayload (pode conter dados sensíveis)"
+                    }
+                },
+                {
+                    "name": "9b. Lookup Público — por Asset ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/public/lookup?identifier={{asset_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "public",
+                                "lookup"
+                            ],
+                            "query": [
+                                {
+                                    "key": "identifier",
+                                    "value": "{{asset_id}}"
+                                }
+                            ]
+                        },
+                        "description": "Lookup usando o ID interno do Asset.\nMesmas regras LGPD-Safe da rota anterior."
+                    }
+                },
+                {
+                    "name": "10. Exists (Checagem Binária)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/public/exists?identifier={{asset_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "public",
+                                "exists"
+                            ],
+                            "query": [
+                                {
+                                    "key": "identifier",
+                                    "value": "{{asset_id}}"
+                                }
+                            ]
+                        },
+                        "description": "Verificação binária ultra-rápida.\nRetorna SOMENTE `{ exists: true }` ou `{ exists: false }`.\nÚtil para validação de QR Code / NFC tag scan."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "📡 RelayFacet (Blind Contact)",
+            "item": [
+                {
+                    "name": "11. Blind Relay — Contato Anônimo",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"contactData\": {\n    \"senderEmail\": \"bom.samaritano@email.com\",\n    \"senderName\": \"Maria\",\n    \"message\": \"Encontrei sua bicicleta Canyon preta na estação Faria Lima do metrô. Está presa no bicicletário.\",\n    \"location\": \"Estação Faria Lima, São Paulo - SP\",\n    \"latitude\": -23.5674,\n    \"longitude\": -46.6942\n  }\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/public/lookup/{{asset_id}}/contact",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "public",
+                                "lookup",
+                                "{{asset_id}}",
+                                "contact"
+                            ]
+                        },
+                        "description": "Ponte Cega (Blind Relay) — LGPD Compliant.\n\n🚫 SEM autenticação — rota aberta.\n\nO remetente envia seus dados de contato.\nO backend resolve o proprietário INTERNAMENTE.\nO proprietário recebe notificação (email/push).\nA resposta é SEMPRE genérica: { success: true, message: 'Relay processed' }\n\n⛔ NUNCA expõe identidade do proprietário ao remetente.\n✅ Retorna 200 OK mesmo se o ativo não existir (anti-enumeração)."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🏥 Health Check",
+            "item": [
+                {
+                    "name": "0. Health Check",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/health",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "health"
+                            ]
+                        },
+                        "description": "Verificação de saúde do servidor.\nRetorna status, versão, uptime e timestamp."
+                    }
+                }
+            ]
+        }
+    ]
+}

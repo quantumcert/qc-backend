@@ -1,0 +1,464 @@
+// ═══════════════════════════════════════════════════════════
+// QUANTUM CERT — DIAMOND PATTERN UNIVERSAL CORE SCHEMA
+// Architecture: EIP-2535 Faceted Diamond Pattern
+// Version: 3.1.0 — Phase 2: Agnostic Asset Engine & Zero Knowledge
+// 
+// GOLDEN RULE: 100% AGNOSTIC. No domain-specific terminology.
+// Only universal terms: Tenant, Asset, Device, Event, Owner, Metadata.
+// ═══════════════════════════════════════════════════════════
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════════════════════
+// PHASE 1: MULTI-TENANT ENGINE & ACCESS CONTROL
+// ═══════════════════════════════════════════════════════════
+
+// ─── TENANT — SaaS Client Isolation Unit ─────────────────
+model Tenant {
+  id           String  @id @default(cuid())
+  name         String
+  slug         String  @unique
+  contactEmail String
+  isActive     Boolean @default(true)
+
+  planTier PlanTier @default(FREE)
+
+  maxRequestsPerMinute Int?
+  maxRequestsPerDay    Int?
+
+  // ─── Phase X: Dynamic Pricing ─────────────────────────
+  customTransferFee Float?
+  customTagFee      Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ─── Relations ────────────────────────────────────────
+  apiKeys           ApiKey[]
+  rateLimitCounters RateLimitCounter[]
+  assets            Asset[] // Phase 2
+  eventLogs         EventLog[] // Phase 4
+  blindContactLogs  BlindContactLog[] // Phase 5
+  webhooks          TenantWebhook[] // Phase 6: B2B Notifications
+
+  @@index([slug])
+  @@index([planTier])
+  @@index([isActive])
+}
+
+enum PlanTier {
+  FREE
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+// ─── API KEY — Authenticated Access Credentials ─────────
+model ApiKey {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  keyHash   String     @unique
+  keyPrefix String
+  label     String?
+  role      ApiKeyRole @default(READER)
+
+  isActive   Boolean   @default(true)
+  revokedAt  DateTime?
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([keyHash])
+  @@index([keyPrefix])
+  @@index([isActive])
+}
+
+enum ApiKeyRole {
+  ADMIN
+  OPERATOR
+  READER
+}
+
+// ─── RATE LIMIT COUNTER ─────────────────────────────────
+model RateLimitCounter {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  windowType   RateLimitWindow
+  windowKey    String
+  requestCount Int             @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, windowType, windowKey])
+  @@index([tenantId, windowType])
+  @@index([windowKey])
+}
+
+enum RateLimitWindow {
+  MINUTE
+  DAILY
+}
+
+// ─── AUDIT LOG ──────────────────────────────────────────
+model AuditLog {
+  id           String  @id @default(cuid())
+  tenantId     String?
+  apiKeyPrefix String?
+
+  action       String
+  resourceType String
+  resourceId   String?
+
+  metadata  Json?
+  ipAddress String?
+  userAgent String?
+
+  timestamp DateTime @default(now())
+
+  @@index([tenantId, timestamp])
+  @@index([action])
+  @@index([resourceType, resourceId])
+  @@index([timestamp])
+}
+
+// ═══════════════════════════════════════════════════════════
+// PHASE 2: AGNOSTIC ASSET ENGINE & ZERO KNOWLEDGE SECURITY
+// ═══════════════════════════════════════════════════════════
+
+// ─── ASSET — The Universal Agnostic Container ───────────
+// The Asset is a 100% agnostic container. It stores only
+// structural identifiers and a FREE-FORM JSON payload.
+// The Tenant injects whatever data structure they need
+// into the metadata field.
+//
+// Design: Prepared for future FractionalOwnershipFacet
+// and FungibleFacet via dedicated fields.
+model Asset {
+  id String @id @default(cuid())
+
+  // ─── Phase 5: Asset Status Machine ────────────────────
+  status AssetStatus @default(ACTIVE)
+
+  // ─── Tenant Isolation ─────────────────────────────────
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  // ─── Immutable Core Identifiers ───────────────────────
+  // externalId: Tenant-provided external reference (e.g., SKU, serial)
+  // Must be unique within the Tenant scope.
+  externalId String?
+
+  // ─── Hardware Binding (optional — for physical assets) ─
+  // Links this asset to a physical NFC/QTag Device.
+  // null = purely digital asset (no hardware).
+  deviceId String? @unique
+  device   Device? @relation(fields: [deviceId], references: [id])
+
+  // ─── Free-Form Metadata (HEART OF THE ASSET) ─────────
+  // This JSON field is 100% owned by the Tenant.
+  // The platform NEVER interprets its contents.
+  // The Tenant can store ANY structure they need.
+  metadata Json @default("{}")
+
+  // ─── Phase 3: Public Profile & Privacy Control ────────
+  // Public, unique, and persistent URL for QR Payload / Open Read
+  publicUrl      String   @unique
+  // Which keys in the `metadata` JSON are exposed publicly
+  publicDataKeys String[] @default([])
+
+  // ─── Ownership ────────────────────────────────────────
+  // Multi-owner support via Owner junction table.
+  owners Owner[]
+
+  // ─── Phase 4: Event Engine & Quarantine ───────────────
+  events EventLog[]
+
+  // ─── Phase 5: Double-Blind Quarantine ─────────────────
+  blindContactLogs BlindContactLog[]
+
+  // ─── Phase 6: ESG Provenance (Ancestry Tracking) ──────
+  parentAssetId String?
+  parentAsset   Asset?  @relation("AssetToAsset", fields: [parentAssetId], references: [id])
+  childAssets   Asset[] @relation("AssetToAsset")
+
+  // ─── Phase 6: Audit & Telemetry ───────────────────────
+  tagScanLogs TagScanLog[]
+
+  // ─── FractionalOwnershipFacet Preparation ─────────────
+  // Enables future fractional ownership (e.g., 40% Owner A, 60% Owner B).
+  // false = standard single/multi-owner mode
+  // true  = ownership percentages tracked in Owner.sharePercent
+  isFractionable Boolean @default(false)
+
+  // ─── FungibleFacet Preparation ────────────────────────
+  // Enables future fungible token emission.
+  // false = unique/non-fungible asset (1:1)
+  // true  = fungible (1:N, tracked by totalSupply)
+  isFungible        Boolean @default(false)
+  totalSupply       Int? // Only set when isFungible=true
+  circulatingSupply Int? // Minted so far (fungible mode)
+
+  // ─── Lifecycle ────────────────────────────────────────
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, externalId]) // externalId unique per Tenant
+  @@index([tenantId])
+  @@index([deviceId])
+  @@index([isFractionable])
+  @@index([isFungible])
+  @@index([createdAt])
+}
+
+// ─── OWNER — Multi-Owner Relationship ───────────────────
+// Junction table linking Assets to their Owners.
+// Supports co-ownership and fractional ownership.
+//
+// ownerRef: A universal reference string identifying the owner.
+//   It can be a wallet address, an email hash, an external user ID,
+//   or any unique identifier the Tenant uses.
+//   The platform does NOT enforce the format — it is Tenant-controlled.
+model Owner {
+  id String @id @default(cuid())
+
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  // ─── Owner Identification ─────────────────────────────
+  // Universal owner reference — format defined by the Tenant.
+  ownerRef String
+
+  // ─── Optional Display / Contact ───────────────────────
+  label String? // Human-readable label (e.g., "Primary Owner")
+
+  // ─── FractionalOwnershipFacet Fields ──────────────────
+  // Only used when Asset.isFractionable = true.
+  // Represents the percentage share (0.00 to 100.00).
+  sharePercent Decimal? @db.Decimal(6, 2)
+
+  // ─── Ownership Lifecycle ──────────────────────────────
+  acquiredAt DateTime  @default(now())
+  revokedAt  DateTime? // null = active owner
+
+  @@unique([assetId, ownerRef]) // One owner entry per ownerRef per Asset
+  @@index([assetId])
+  @@index([ownerRef])
+}
+
+// ─── DEVICE — Hardware State & Anti-Replay Guardian ─────
+// Tracks the physical lifecycle of an NFC/QTag chip.
+// Stores the monotonic counter for Replay Attack protection.
+//
+// CRITICAL SECURITY RULE:
+//   The lastCounter field is the SINGLE SOURCE OF TRUTH.
+//   Any NFC reading with counter <= lastCounter is REJECTED
+//   as a cloning/replay attempt. The counter can ONLY advance.
+model Device {
+  id String @id @default(cuid())
+
+  // ─── Hardware Identifier ──────────────────────────────
+  // The UID is the unique hardware identifier burned into
+  // the NFC chip during manufacturing. It is immutable.
+  uid String @unique // e.g., "04A1B2C3D4E5F6" (NTAG 424 DNA UID)
+
+  // ─── Tenant Scope ─────────────────────────────────────
+  tenantId String
+
+  // ─── Anti-Replay Monotonic Counter ────────────────────
+  // This is the LAST VALID counter value read from this chip.
+  // Atomically updated on each valid NFC tap.
+  // RULE: incoming CTR must be STRICTLY GREATER than this value.
+  lastCounter Int @default(0)
+
+  // ─── Tap Audit Trail ──────────────────────────────────
+  lastTapAt DateTime? // Timestamp of last valid NFC tap
+  totalTaps Int       @default(0) // Lifetime tap count
+  lastTapIp String? // IP of last reader (audit)
+
+  // ─── Device State ─────────────────────────────────────
+  isActive     Boolean  @default(true)
+  registeredAt DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // ─── Zero-Knowledge Master Key ────────────────────────
+  masterKey Json? // Stored encrypted via CryptoService
+
+  // ─── Reverse Relation ─────────────────────────────────
+  asset Asset? // The asset linked to this device (if any)
+
+  // ─── Tap History ──────────────────────────────────────
+  tapLog DeviceTapLog[]
+
+  @@index([uid])
+  @@index([tenantId])
+  @@index([isActive])
+}
+
+// ─── DEVICE TAP LOG — Immutable NFC Tap History ─────────
+// Every NFC tap (valid or rejected) is logged here for
+// audit, forensics, and fraud detection.
+model DeviceTapLog {
+  id String @id @default(cuid())
+
+  deviceId String
+  device   Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  // ─── Tap Data ─────────────────────────────────────────
+  counterValue Int // The CTR value received
+  cmacReceived String // The CMAC transmitted by the chip
+  cmacValid    Boolean // Did the CMAC pass cryptographic validation?
+
+  // ─── Verdict ──────────────────────────────────────────
+  verdict TapVerdict // VALID, REPLAY_BLOCKED, CMAC_INVALID, DEVICE_INACTIVE
+
+  // ─── Request Context ──────────────────────────────────
+  ipAddress String?
+  userAgent String?
+  rawUrl    String? // The full NFC URL for forensic analysis
+
+  timestamp DateTime @default(now())
+
+  @@index([deviceId, timestamp])
+  @@index([verdict])
+  @@index([timestamp])
+}
+
+enum TapVerdict {
+  VALID // CTR > lastCounter AND CMAC valid
+  REPLAY_BLOCKED // CTR <= lastCounter (cloning attempt)
+  CMAC_INVALID // CMAC signature mismatch
+  DEVICE_INACTIVE // Device exists but is deactivated
+  DEVICE_NOT_FOUND // UID not registered in the system
+}
+
+// ═══════════════════════════════════════════════════════════
+// PHASE 4: ATTESTATION ENGINE, EVENTS & QUARANTINE
+// ═══════════════════════════════════════════════════════════
+
+// ─── EVENT LOG — Chronological Asset Attachments ────────
+// Events append data/milestones to an Asset's history.
+// Supports direct (APPROVED) or quarantined (PENDING) writes.
+model EventLog {
+  id String @id @default(cuid())
+
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Origin can be the ApiKey ID (for authenticated) or "PUBLIC" (for unauthenticated)
+  origin String
+
+  // Track the exact API Key or ID that created this event (crucial for EXPERT/AUDITOR tracing)
+  issuerId String?
+
+  status EventStatus @default(PENDING)
+
+  // Opaque payload containing the event's facts
+  payload Json @default("{}")
+
+  // For future Phase 6 integration
+  signatureHash String?
+  dltTxId       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([assetId])
+  @@index([tenantId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([status, dltTxId]) // RED TEAM HOTFIX 5: Anti-OOM Full Table Scan Lock
+}
+
+enum EventStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PENDING_FUNDS // For Queue
+}
+
+// ═══════════════════════════════════════════════════════════
+// PHASE 5: STATUS MANAGEMENT & DOUBLE-BLIND QUARANTINE
+// ═══════════════════════════════════════════════════════════
+
+enum AssetStatus {
+  ACTIVE
+  ALERT
+  INACTIVE
+  BURNED
+  AWAITING_PAYMENT
+}
+
+// ─── BLIND CONTACT LOG — Finder's Quarantine ────────────
+// Double-blind privacy zone for assets in ALERT status.
+model BlindContactLog {
+  id String @id @default(cuid())
+
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // JSON payload preserving the "Finder's" contact details
+  contactData Json
+
+  // Audit properties (Never exposed publicly, nor committed to DLT)
+  originIp  String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+
+  @@index([assetId])
+  @@index([tenantId])
+  @@index([createdAt])
+}
+
+// ═══════════════════════════════════════════════════════════
+// PHASE 6: ESG PROVENANCE, TELEMETRY & B2B NOTIFICATIONS
+// ═══════════════════════════════════════════════════════════
+
+// ─── TAG SCAN LOG — Telemetria de Scans (Fraude/Auditoria) 
+model TagScanLog {
+  id          String   @id @default(cuid())
+  assetId     String
+  asset       Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  ipAddress   String?
+  userAgent   String?
+  geoLocation Json?
+  timestamp   DateTime @default(now())
+  isValid     Boolean  @default(true)
+
+  @@index([assetId])
+  @@index([timestamp])
+  @@index([isValid])
+}
+
+// ─── TENANT WEBHOOK — Motor B2B (Notificações Ativas) ───
+model TenantWebhook {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  endpointUrl String
+  secretKey   String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([isActive])
+}
