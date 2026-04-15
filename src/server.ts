@@ -112,6 +112,37 @@ setInterval(() => {
 // ─────────────────────────────────────────────────────────
 // HEALTH CHECK
 // ─────────────────────────────────────────────────────────
+/**
+ * @openapi
+ * /health:
+ *   get:
+ *     summary: Health check do servidor
+ *     description: Verifica se o servidor e o banco de dados estão operacionais. Não requer autenticação.
+ *     tags: [System]
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: Servidor saudável
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         status:
+ *                           type: string
+ *                           example: ok
+ *                         timestamp:
+ *                           type: string
+ *                           format: date-time
+ *                         database:
+ *                           type: string
+ *                           enum: [connected, disconnected, unknown]
+ */
 app.get('/health', async (req, res) => {
   let dbStatus = 'unknown';
   try {

@@ -60,6 +60,44 @@ router.use('/v1/assets', lifecycleRoutes);
 // MercadoPago Webhook — POST /api/v1/webhooks/mercadopago
 router.use('/v1/webhooks', webhookRoutes);
 
+/**
+ * @openapi
+ * /api/v1/diamond:
+ *   post:
+ *     summary: Diamond Proxy — roteador universal de Facets
+ *     description: |
+ *       Ponto de entrada para operações via Diamond Pattern. O selector mapeia para
+ *       uma função de Facet registrada no FacetRegistry. O secureContext é injetado
+ *       pelo middleware — nunca confie em tenantId vindo do payload.
+ *     tags: [Diamond]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/DiamondCallPayload'
+ *     responses:
+ *       200:
+ *         description: Facet executado com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
+ *       400:
+ *         description: Selector inválido ou não registrado no FacetRegistry
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: API key ausente ou inválida
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
 // The Universal EIP-2535 Router
 router.post('/v1/diamond', requireApiKey, DiamondProxy.delegateCall);
 
