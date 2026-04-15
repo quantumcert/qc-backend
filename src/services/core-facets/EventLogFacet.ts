@@ -2,7 +2,6 @@ import prisma from '../../config/prisma';
 import { AuditActions, ResourceTypes } from '../../types';
 import crypto from 'crypto';
 import { WebhookDispatcher } from '../../utils/WebhookDispatcher';
-import { AlgorandAnchorFacet } from './AlgorandAnchorFacet';
 import { AnchorQueueService } from '../AnchorQueueService';
 
 export class EventLogFacet {
@@ -71,9 +70,7 @@ export class EventLogFacet {
         });
 
         // Trigger the DLT Anchor Queue asynchronously (Fire and Forget)
-        const dltAdapter = new AlgorandAnchorFacet();
-        const queueService = new AnchorQueueService(dltAdapter);
-        queueService.processQueue().catch(console.error);
+        AnchorQueueService.processQueue().catch(console.error);
 
         return result;
     }
@@ -173,9 +170,7 @@ export class EventLogFacet {
         });
 
         if (status === 'APPROVED') {
-            const dltAdapter = new AlgorandAnchorFacet();
-            const queueService = new AnchorQueueService(dltAdapter);
-            queueService.processQueue().catch(console.error);
+            AnchorQueueService.processQueue().catch(console.error);
         }
 
         return result;
