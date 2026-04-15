@@ -1,74 +1,104 @@
+// src/services/core-facets/TransferRegistryFacet.ts
 import prisma from '../../config/prisma';
 import { BillingFacet } from './BillingFacet';
 
-export class TransferRegistryFacet {
-    /**
-     * Initiates the ownership transfer of an Asset.
-     */
-    static async initiateTransfer(secureContext: any, payload: { assetId: string, buyerEmail: string }) {
-        const { tenantId, role } = secureContext;
-        const { assetId, buyerEmail } = payload;
+interface SecureContext {
+    tenantId: string;
+    apiKeyId?: string;
+    role: string;
+}
 
-        // Ensure proper privileges
+interface TransferPayload {
+    assetId: string;
+    buyerDocument: string;    // CPF or CNPJ, may have mask
+    documentType: 'CPF' | 'CNPJ';
+}
+
+export class TransferRegistryFacet {
+    static async initiateTransfer(secureContext: SecureContext, payload: TransferPayload) {
+        const { tenantId, apiKeyId, role } = secureContext;
+        const { assetId, documentType } = payload;
+
+        // Normalize: strip mask characters (dots, dashes, slashes)
+        const buyerDocument = payload.buyerDocument.replace(/\D/g, '');
+
         if (role !== 'ADMIN' && role !== 'OPERATOR') {
-            throw new Error('Forbidden: Insufficient privileges to initiate transfer');
+            const err: any = new Error('Forbidden: Insufficient privileges to initiate transfer');
+            err.code = 'INSUFFICIENT_PERMISSIONS';
+            throw err;
         }
 
-        // Validate Asset ownership and status securely
         const asset = await prisma.asset.findUnique({
             where: { id: assetId, tenantId },
-            include: { tenant: true } // Need Tenant config for custom pricing
+            include: { tenant: true },
         });
 
-        if (!asset) throw new Error('Asset not found or access denied limit.');
-        if (asset.status !== 'ACTIVE') throw new Error(`Asset cannot be transferred from current state: ${asset.status}`);
+        if (!asset) {
+            const err: any = new Error('Asset not found or access denied');
+            err.code = 'ASSET_NOT_FOUND';
+            throw err;
+        }
 
-        // Phase X: Dynamic Pricing 
-        // Checks if Tenant negotiated custom fees. If not, fallback to default R$49.99
-        const fee = asset.tenant.customTransferFee || 49.99;
+        if (asset.status !== 'ACTIVE') {
+            const err: any = new Error(`Asset cannot be transferred from state: ${asset.status}`);
+            err.code = 'INVALID_ASSET_STATE';
+            throw err;
+        }
 
-        // Set status strictly to await payment completion
+        const fee = (asset.tenant as any).customTransferFee || 49.99;
+
+        // Shadow Account: lookup or create by document within this asset
+        let owner = await prisma.owner.findFirst({
+            where: { assetId, document: buyerDocument },
+        });
+
+        if (!owner) {
+            owner = await prisma.owner.create({
+                data: {
+                    assetId,
+                    ownerRef: buyerDocument,
+                    document: buyerDocument,
+                    documentType,
+                    label: 'Shadow Account (Pending Payment)',
+                },
+            });
+        }
+
         await prisma.asset.update({
             where: { id: asset.id },
-            data: { status: 'AWAITING_PAYMENT' }
+            data: { status: 'AWAITING_PAYMENT' },
         });
 
-        // Generate Intent event 
         await prisma.eventLog.create({
             data: {
                 assetId: asset.id,
                 tenantId: asset.tenantId,
-                origin: secureContext.apiKeyId || 'MANUAL',
+                origin: apiKeyId || 'MANUAL',
                 status: 'APPROVED',
-                payload: { action: 'TRANSFER_INITIATED', target: buyerEmail, fee }
-            }
+                payload: {
+                    action: 'TRANSFER_INITIATED',
+                    buyerDocument,
+                    documentType,
+                    fee,
+                    buyerOwnerId: owner.id,
+                },
+            },
         });
 
-        // Engine: Billing via Mercado Pago
         const billing = await BillingFacet.createPaymentPreference(secureContext, {
             assetId: asset.id,
             title: `Ownership Transfer: ${asset.externalId}`,
             amount: fee,
-            ownerEmail: buyerEmail
-        });
-
-        // Concept: "Shadow Account"
-        // Registers the buyer pending full verification. The transfer resolves entirely
-        // once Mercado Pago confirms the invoice.
-        await prisma.owner.create({
-            data: {
-                assetId: asset.id,
-                ownerRef: buyerEmail, // Can be CPF/Email
-                label: 'Shadow Account (Pending Payment)'
-            }
+            ownerEmail: buyerDocument, // BillingFacet uses this as payer reference
         });
 
         return {
-            success: true,
             assetId: asset.id,
             status: 'AWAITING_PAYMENT',
             paymentLink: billing.initPoint,
-            buyerAddress: buyerEmail
+            buyerDocument,
+            documentType,
+            buyerOwnerId: owner.id,
         };
     }
 }
