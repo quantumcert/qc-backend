@@ -30,16 +30,25 @@ const PORT = process.env.PORT || 3000;
 
 // ─────────────────────────────────────────────────────────
 // MIDDLEWARE GLOBAL
+// /api-docs precisa carregar scripts da CDN (Scalar UI) — CSP desabilitado
+// apenas para esse prefixo. Todas as outras rotas mantêm o helmet padrão.
 // ─────────────────────────────────────────────────────────
-app.use(helmet());
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api-docs')) {
+    return helmet({ contentSecurityPolicy: false })(req, res, next);
+  }
+  return helmet()(req, res, next);
+});
 
 // RED TEAM HOTFIX 1 (DDoS Auto-infligido): Trust the reverse proxy correctly
 app.set('trust proxy', 1);
 
 // CORS — Whitelist frontend origins
+// localhost:3000 incluído para permitir chamadas da Scalar UI (/api-docs) em dev
 const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:5173',
   'http://localhost:3001',
+  `http://localhost:${process.env.PORT || 3000}`,
 ].filter(Boolean);
 
 app.use(cors({
