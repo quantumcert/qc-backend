@@ -153,24 +153,21 @@ app.use(errorHandler);
 // ─────────────────────────────────────────────────────────
 // FAIL-FAST: ENVIRONMENT VALIDATION
 // ─────────────────────────────────────────────────────────
-const REQUIRED_ENV_VARS = ['DATABASE_URL', 'ALGOD_SERVER', 'ALGORAND_MASTER_MNEMONIC'];
-const missingVars = REQUIRED_ENV_VARS.filter(v => !process.env[v]);
-
-if (missingVars.length > 0) {
-  console.error('\n❌ [FATAL ERROR] Failed to start Quantum Cert Core Engine.');
-  console.error(`Missing required environment variables: ${missingVars.join(', ')}`);
-  console.error('Production deployment requires strict definition of all endpoints and secrets.');
-  process.exit(1);
-}
-
+// SERVER STARTUP (skipped when imported by test suite)
 // ─────────────────────────────────────────────────────────
-// SERVER STARTUP
-// ─────────────────────────────────────────────────────────
-app.listen(PORT, () => {
-  // Start anchor queue cron (only in non-test environments)
-  if (process.env.NODE_ENV !== 'test') {
-    SchedulerService.start();
+if (process.env.NODE_ENV !== 'test') {
+  const REQUIRED_ENV_VARS = ['DATABASE_URL', 'ALGOD_SERVER', 'ALGORAND_MASTER_MNEMONIC'];
+  const missingVars = REQUIRED_ENV_VARS.filter(v => !process.env[v]);
+
+  if (missingVars.length > 0) {
+    console.error('\n❌ [FATAL ERROR] Failed to start Quantum Cert Core Engine.');
+    console.error(`Missing required environment variables: ${missingVars.join(', ')}`);
+    console.error('Production deployment requires strict definition of all endpoints and secrets.');
+    process.exit(1);
   }
+
+  app.listen(PORT, () => {
+    SchedulerService.start();
 
   console.log('');
   console.log('═══════════════════════════════════════════════════════════');
@@ -205,7 +202,8 @@ app.listen(PORT, () => {
   console.log('');
   console.log('═══════════════════════════════════════════════════════════');
   console.log('');
-});
+  }); // end app.listen
+} // end NODE_ENV !== 'test'
 
 // ─────────────────────────────────────────────────────────
 // GRACEFUL SHUTDOWN

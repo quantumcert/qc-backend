@@ -36,6 +36,7 @@ vi.mock('../src/config/prisma', () => ({
         owner: mockOwner,
         eventLog: mockEventLog,
         blindContactLog: mockBlindContact,
+        tenantWebhook: { findMany: vi.fn().mockResolvedValue([]) },
         $transaction: vi.fn(async (cb) => {
             return await cb({
                 asset: mockAsset,
@@ -51,6 +52,12 @@ vi.mock('../src/config/prisma', () => ({
 vi.mock('../src/services/core-facets/BillingFacet', () => ({
     BillingFacet: {
         createPaymentPreference: vi.fn().mockResolvedValue({ initPoint: 'https://pagamento.link' })
+    }
+}));
+
+vi.mock('../src/services/AnchorQueueService', () => ({
+    AnchorQueueService: {
+        processQueue: vi.fn().mockResolvedValue({ processed: 0, items: [] }),
     }
 }));
 
