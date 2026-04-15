@@ -37,6 +37,9 @@ model Tenant {
   customTransferFee Float?
   customTagFee      Float?
 
+  // DLT chain for anchor routing (used by DLTAdapterFactory)
+  targetChain String @default("ALGORAND")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -241,6 +244,10 @@ model Owner {
   // Universal owner reference — format defined by the Tenant.
   ownerRef String
 
+  // Document-based identification (CPF/CNPJ for legal chain of custody)
+  document     String?  // digits only, no mask (e.g. "12345678909")
+  documentType String?  // 'CPF' | 'CNPJ'
+
   // ─── Optional Display / Contact ───────────────────────
   label String? // Human-readable label (e.g., "Primary Owner")
 
@@ -256,6 +263,7 @@ model Owner {
   @@unique([assetId, ownerRef]) // One owner entry per ownerRef per Asset
   @@index([assetId])
   @@index([ownerRef])
+  @@index([assetId, document])
 }
 
 // ─── DEVICE — Hardware State & Anti-Replay Guardian ─────
@@ -397,11 +405,16 @@ enum EventStatus {
 // ═══════════════════════════════════════════════════════════
 
 enum AssetStatus {
+  DRAFT
   ACTIVE
-  ALERT
-  INACTIVE
+  SUSPENDED
+  ARCHIVED
   BURNED
   AWAITING_PAYMENT
+  LOCKED_IN_ESCROW
+  // Legacy states — kept for backward compat with existing records
+  ALERT
+  INACTIVE
 }
 
 // ─── BLIND CONTACT LOG — Finder's Quarantine ────────────
@@ -461,4 +474,21 @@ model TenantWebhook {
 
   @@index([tenantId])
   @@index([isActive])
+}
+
+// ═══════════════════════════════════════════════════════════
+// WEBHOOK INBOX — Inbox Pattern for external payment events
+// Persisted before 200 OK to guarantee no lost payments on crash.
+// ═══════════════════════════════════════════════════════════
+model WebhookInbox {
+  id           String    @id @default(cuid())
+  provider     String    // 'MERCADOPAGO'
+  rawPayload   Json      // raw payload received, never modified
+  status       String    @default("PENDING") // PENDING | PROCESSING | DONE | FAILED
+  retryCount   Int       @default(0)
+  lastError    String?
+  receivedAt   DateTime  @default(now())
+  processedAt  DateTime?
+
+  @@index([status, receivedAt])
 }
