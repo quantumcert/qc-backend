@@ -25,7 +25,7 @@ const router = Router();
  *       - ApiKeyAuth: []
  *     parameters:
  *       - in: header
- *         name: X-Idempotency-Key
+ *         name: Idempotency-Key
  *         required: true
  *         schema:
  *           type: string
@@ -169,7 +169,7 @@ router.get('/:id', requireApiKey, tenantRateLimiter, requireReader, AssetControl
  *           type: string
  *           format: uuid
  *       - in: header
- *         name: X-Idempotency-Key
+ *         name: Idempotency-Key
  *         required: true
  *         schema:
  *           type: string

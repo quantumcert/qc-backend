@@ -25,7 +25,7 @@ router.use(requireApiKey, tenantRateLimiter, requireAdmin);
  *       - ApiKeyAuth: []
  *     parameters:
  *       - in: header
- *         name: X-Idempotency-Key
+ *         name: Idempotency-Key
  *         required: true
  *         schema:
  *           type: string
@@ -149,7 +149,7 @@ router.delete('/:id', ApiKeyController.revoke);
  *           type: string
  *           format: uuid
  *       - in: header
- *         name: X-Idempotency-Key
+ *         name: Idempotency-Key
  *         required: true
  *         schema:
  *           type: string

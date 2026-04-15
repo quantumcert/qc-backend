@@ -41,7 +41,14 @@ router.get('/api-docs', (_req: Request, res: Response) => {
     theme: 'default',
     authentication: {
       preferredSecurityScheme: 'ApiKeyAuth',
-      apiKey: { token: apiKey },
+      securitySchemes: {
+        ApiKeyAuth: {
+          type: 'apiKey',
+          name: 'X-API-Key',
+          in: 'header',
+          value: apiKey,
+        },
+      },
     },
   });
 

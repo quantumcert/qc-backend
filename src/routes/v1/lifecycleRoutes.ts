@@ -37,7 +37,7 @@ const router = Router();
  *           type: string
  *           format: uuid
  *       - in: header
- *         name: X-Idempotency-Key
+ *         name: Idempotency-Key
  *         required: true
  *         schema:
  *           type: string

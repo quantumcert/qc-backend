@@ -27,7 +27,7 @@ router.use(requireApiKey, tenantRateLimiter, requireAdmin);
  *       - ApiKeyAuth: []
  *     parameters:
  *       - in: header
- *         name: X-Idempotency-Key
+ *         name: Idempotency-Key
  *         required: true
  *         schema:
  *           type: string

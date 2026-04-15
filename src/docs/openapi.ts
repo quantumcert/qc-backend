@@ -16,7 +16,7 @@ const options: swaggerJsdoc.Options = {
       description:
         'Universal multi-tenant API built on the EIP-2535 Diamond Pattern. ' +
         'All authenticated endpoints require an `X-API-Key` header with a `qc_` prefixed key. ' +
-        'Mutating endpoints (POST, PATCH) require an `X-Idempotency-Key` (UUIDv4) header.',
+        'Mutating endpoints (POST, PATCH) require an `Idempotency-Key` (UUIDv4) header.',
       contact: {
         name: 'Quantum Cert',
         url: 'https://quantumcert.io',
@@ -183,8 +183,10 @@ const options: swaggerJsdoc.Options = {
 let _cachedSpec: object | null = null;
 
 export function getSpec(): object {
-  if (!_cachedSpec) {
-    _cachedSpec = swaggerJsdoc(options);
+  // Em dev, nunca cacheia para refletir mudanças nos JSDocs imediatamente
+  if (process.env.NODE_ENV === 'production' && _cachedSpec) {
+    return _cachedSpec;
   }
+  _cachedSpec = swaggerJsdoc(options);
   return _cachedSpec;
 }
