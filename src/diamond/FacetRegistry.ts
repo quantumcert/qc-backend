@@ -11,6 +11,8 @@ import { BlindContactLogFacet } from '../services/core-facets/BlindContactLogFac
 import { PublicProfileFacet } from '../services/core-facets/PublicProfileFacet';
 import { DeviceRegistryFacet } from '../services/core-facets/DeviceRegistryFacet';
 import { DeviceGuardFacet } from '../services/core-facets/DeviceGuardFacet';
+import { LifecycleFacet } from '../services/core-facets/LifecycleFacet';
+import { TransferRegistryFacet } from '../services/core-facets/TransferRegistryFacet';
 
 export type FacetFunction = (...args: any[]) => Promise<any> | any;
 
@@ -37,5 +39,11 @@ export const FacetRegistry: Record<string, FacetFunction> = {
     'blindContact.submit': BlindContactLogFacet.submitContact,
 
     // PUBLIC PROFILE
-    'publicProfile.filter': PublicProfileFacet.filterAsset
+    'publicProfile.filter': PublicProfileFacet.filterAsset,
+
+    // LIFECYCLE STATE MACHINE
+    'lifecycle.transition': LifecycleFacet.transition,
+
+    // TRANSFER REGISTRY
+    'transfer.initiate': TransferRegistryFacet.initiateTransfer,
 };

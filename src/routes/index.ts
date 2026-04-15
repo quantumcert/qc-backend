@@ -18,6 +18,8 @@ import tenantRoutes from './v1/tenantRoutes';
 import apiKeyRoutes from './v1/apiKeyRoutes';
 import assetRoutes from './v1/assetRoutes';
 import deviceRoutes from './v1/deviceRoutes';
+import lifecycleRoutes from './v1/lifecycleRoutes';
+import webhookRoutes from './v1/webhookRoutes';
 import { DiamondProxy } from '../diamond/DiamondProxy';
 import { requireApiKey } from '../middleware/apiKeyAuth';
 
@@ -47,6 +49,16 @@ router.use('/v1/devices', deviceRoutes);
 // PHASE 3: Context Router & RBAC (PLACEHOLDER)
 // router.use('/v1/public', publicRoutes);
 // ═══════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════
+// SUB-SISTEMA 1: Core Gap Closure
+// ═══════════════════════════════════════════════════════════
+
+// Lifecycle State Machine — PATCH /api/v1/assets/:assetId/lifecycle
+router.use('/v1/assets', lifecycleRoutes);
+
+// MercadoPago Webhook — POST /api/v1/webhooks/mercadopago
+router.use('/v1/webhooks', webhookRoutes);
 
 // The Universal EIP-2535 Router
 router.post('/v1/diamond', requireApiKey, DiamondProxy.delegateCall);

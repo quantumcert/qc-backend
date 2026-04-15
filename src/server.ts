@@ -20,6 +20,7 @@ import dotenv from 'dotenv';
 import routes from './routes/index';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import prisma from './config/prisma';
+import { SchedulerService } from './services/SchedulerService';
 
 dotenv.config();
 
@@ -166,6 +167,11 @@ if (missingVars.length > 0) {
 // SERVER STARTUP
 // ─────────────────────────────────────────────────────────
 app.listen(PORT, () => {
+  // Start anchor queue cron (only in non-test environments)
+  if (process.env.NODE_ENV !== 'test') {
+    SchedulerService.start();
+  }
+
   console.log('');
   console.log('═══════════════════════════════════════════════════════════');
   console.log('  QUANTUM CERT — DIAMOND PATTERN UNIVERSAL API');
