@@ -15,9 +15,6 @@ export class AnchorQueueService {
                 dltTxId: null,
                 signatureHash: { not: null },
             },
-            include: {
-                tenant: { select: { targetChain: true } },
-            },
             orderBy: { id: 'asc' }, // FIFO
             take: 10,
         });
@@ -44,10 +41,18 @@ export class AnchorQueueService {
 
         console.log(`[AnchorQueue] Locked ${lockedEvents.length} events for anchoring.`);
 
+        // Resolve tenant chains for locked events (separate query avoids include type inference issues)
+        const uniqueTenantIds = [...new Set(lockedEvents.map(e => e.tenantId))];
+        const tenants = await prisma.tenant.findMany({
+            where: { id: { in: uniqueTenantIds } },
+            select: { id: true, targetChain: true },
+        });
+        const tenantChainMap = new Map(tenants.map(t => [t.id, t.targetChain]));
+
         // Group by chain to minimize adapter instantiations
         const byChain = new Map<string, typeof lockedEvents>();
         for (const event of lockedEvents) {
-            const chain = (event.tenant?.targetChain as string) ?? 'ALGORAND';
+            const chain = tenantChainMap.get(event.tenantId) ?? 'ALGORAND';
             if (!byChain.has(chain)) byChain.set(chain, []);
             byChain.get(chain)!.push(event);
         }
@@ -83,7 +88,7 @@ export class AnchorQueueService {
                     if (error.message.includes('Insufficient funds') || error.message.includes('PENDING_FUNDS')) {
                         await prisma.eventLog.updateMany({
                             where: { id: event.id, dltTxId: 'PROCESSING' },
-                            data: { dltTxId: null, status: 'PENDING_FUNDS' as any },
+                            data: { dltTxId: null, status: 'PENDING_FUNDS' },
                         });
                     } else {
                         await prisma.eventLog.updateMany({
