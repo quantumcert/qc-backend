@@ -18,6 +18,7 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 
 import routes from './routes/index';
+import docsRoutes from './routes/v1/docsRoutes';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import prisma from './config/prisma';
 import { SchedulerService } from './services/SchedulerService';
@@ -143,6 +144,11 @@ app.get('/health', async (req, res) => {
 // API ROUTES (via centralized Diamond router)
 // ─────────────────────────────────────────────────────────
 app.use('/api', routes);
+
+// ─────────────────────────────────────────────────────────
+// API DOCUMENTATION (Scalar UI)
+// ─────────────────────────────────────────────────────────
+app.use('/', docsRoutes);
 
 // ─────────────────────────────────────────────────────────
 // ERROR HANDLING

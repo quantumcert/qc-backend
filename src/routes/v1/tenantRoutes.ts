@@ -27,6 +27,60 @@ const router = Router();
 // All tenant management routes require ADMIN API key + rate limiting
 router.use(requireApiKey, tenantRateLimiter, requireAdmin);
 
+/**
+ * @openapi
+ * /api/v1/tenants:
+ *   post:
+ *     summary: Create a new Tenant
+ *     tags:
+ *       - Tenants
+ *     security:
+ *       - ApiKeyAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateTenantPayload'
+ *     responses:
+ *       '201':
+ *         description: Tenant created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
+ *       '400':
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       '401':
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *   get:
+ *     summary: List all Tenants
+ *     tags:
+ *       - Tenants
+ *     security:
+ *       - ApiKeyAuth: []
+ *     responses:
+ *       '200':
+ *         description: List of tenants
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SuccessResponse'
+ *       '401':
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
 router.post('/', TenantController.create);
 router.get('/', TenantController.list);
 router.get('/:id', TenantController.getById);
