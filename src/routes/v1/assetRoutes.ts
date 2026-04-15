@@ -12,6 +12,7 @@ import { requireApiKey, optionalApiKey } from '../../middleware/apiKeyAuth';
 import { requireOperator, requireReader } from '../../middleware/rbacGuard';
 import { tenantRateLimiter } from '../../middleware/rateLimiter';
 import { requireIdempotency } from '../../middleware/idempotencyGuard';
+import transferRoutes from './transferRoutes';
 
 const router = Router();
 
@@ -22,5 +23,8 @@ router.get('/:id', requireApiKey, tenantRateLimiter, requireReader, AssetControl
 
 // Owner management
 router.patch('/:id/owners', requireApiKey, requireIdempotency, tenantRateLimiter, requireOperator, AssetController.addOwner);
+
+// Transfer management
+router.use('/', transferRoutes);
 
 export default router;
