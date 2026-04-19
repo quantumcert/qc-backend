@@ -17,6 +17,7 @@ const { mockAsset, mockAuditLog, mockOwner, mockEventLog, mockBlindContact } = v
     },
     mockOwner: {
         create: vi.fn(),
+        findFirst: vi.fn(),
     },
     mockEventLog: {
         create: vi.fn(),
@@ -35,6 +36,7 @@ vi.mock('../src/config/prisma', () => ({
         owner: mockOwner,
         eventLog: mockEventLog,
         blindContactLog: mockBlindContact,
+        tenantWebhook: { findMany: vi.fn().mockResolvedValue([]) },
         $transaction: vi.fn(async (cb) => {
             return await cb({
                 asset: mockAsset,
@@ -50,6 +52,12 @@ vi.mock('../src/config/prisma', () => ({
 vi.mock('../src/services/core-facets/BillingFacet', () => ({
     BillingFacet: {
         createPaymentPreference: vi.fn().mockResolvedValue({ initPoint: 'https://pagamento.link' })
+    }
+}));
+
+vi.mock('../src/services/AnchorQueueService', () => ({
+    AnchorQueueService: {
+        processQueue: vi.fn().mockResolvedValue({ processed: 0, items: [] }),
     }
 }));
 
@@ -123,22 +131,52 @@ describe('FACETA 1/3: AssetRegistryFacet — Criação e Ciclo de Vida', () => {
 describe('FACETA 2: TransferRegistryFacet — Transferência e Billing', () => {
     beforeEach(() => { vi.clearAllMocks(); });
 
-    it('✅ Inicia transferência e gera link de pagamento', async () => {
+    it('✅ Inicia transferência com documento CPF (novo comprador — cria Shadow Account)', async () => {
         mockAsset.findUnique.mockResolvedValue(BICYCLE);
+        mockOwner.findFirst.mockResolvedValue(null); // no existing owner with this doc
+        mockOwner.create.mockResolvedValue({ id: 'owner_shadow_001' });
         mockAsset.update.mockResolvedValue({ ...BICYCLE, status: 'AWAITING_PAYMENT' });
-        mockEventLog.create.mockResolvedValue({ id: 'evt_1' });
-        mockOwner.create.mockResolvedValue({ id: 'owner_2' });
+        mockEventLog.create.mockResolvedValue({ id: 'evt_transfer_001' });
 
         const result = await TransferRegistryFacet.initiateTransfer(
             SECURE_CONTEXT,
-            { assetId: BICYCLE.id, buyerEmail: 'new_owner@qc.com' }
+            { assetId: BICYCLE.id, buyerDocument: '123.456.789-09', documentType: 'CPF' }
         );
 
-        expect(result.success).toBe(true);
+        expect(result.assetId).toBe(BICYCLE.id);
         expect(result.status).toBe('AWAITING_PAYMENT');
         expect(result.paymentLink).toBe('https://pagamento.link');
+        expect(result.buyerDocument).toBe('12345678909'); // normalized — mask removed
+        expect(result.documentType).toBe('CPF');
+        expect(result.buyerOwnerId).toBe('owner_shadow_001');
+        expect(mockOwner.findFirst).toHaveBeenCalledOnce();
+        expect(mockOwner.create).toHaveBeenCalledOnce();
         expect(mockAsset.update).toHaveBeenCalledOnce();
         expect(mockEventLog.create).toHaveBeenCalledOnce();
+    });
+
+    it('✅ Reutiliza Shadow Account existente (mesmo CPF)', async () => {
+        mockAsset.findUnique.mockResolvedValue(BICYCLE);
+        mockOwner.findFirst.mockResolvedValue({ id: 'owner_existing_001' }); // already exists
+        mockAsset.update.mockResolvedValue({ ...BICYCLE, status: 'AWAITING_PAYMENT' });
+        mockEventLog.create.mockResolvedValue({ id: 'evt_transfer_002' });
+
+        const result = await TransferRegistryFacet.initiateTransfer(
+            SECURE_CONTEXT,
+            { assetId: BICYCLE.id, buyerDocument: '12345678909', documentType: 'CPF' }
+        );
+
+        expect(result.buyerOwnerId).toBe('owner_existing_001');
+        expect(mockOwner.create).not.toHaveBeenCalled(); // no duplicate creation
+    });
+
+    it('🚫 Rejeita quando ativo não está ACTIVE', async () => {
+        mockAsset.findUnique.mockResolvedValue({ ...BICYCLE, status: 'AWAITING_PAYMENT' });
+
+        await expect(TransferRegistryFacet.initiateTransfer(
+            SECURE_CONTEXT,
+            { assetId: BICYCLE.id, buyerDocument: '12345678909', documentType: 'CPF' }
+        )).rejects.toMatchObject({ code: 'INVALID_ASSET_STATE' });
     });
 });
 

@@ -18,8 +18,10 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 
 import routes from './routes/index';
+import docsRoutes from './routes/v1/docsRoutes';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import prisma from './config/prisma';
+import { SchedulerService } from './services/SchedulerService';
 
 dotenv.config();
 
@@ -28,16 +30,25 @@ const PORT = process.env.PORT || 3000;
 
 // ─────────────────────────────────────────────────────────
 // MIDDLEWARE GLOBAL
+// /api-docs precisa carregar scripts da CDN (Scalar UI) — CSP desabilitado
+// apenas para esse prefixo. Todas as outras rotas mantêm o helmet padrão.
 // ─────────────────────────────────────────────────────────
-app.use(helmet());
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api-docs')) {
+    return helmet({ contentSecurityPolicy: false })(req, res, next);
+  }
+  return helmet()(req, res, next);
+});
 
 // RED TEAM HOTFIX 1 (DDoS Auto-infligido): Trust the reverse proxy correctly
 app.set('trust proxy', 1);
 
 // CORS — Whitelist frontend origins
+// localhost:3000 incluído para permitir chamadas da Scalar UI (/api-docs) em dev
 const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:5173',
   'http://localhost:3001',
+  `http://localhost:${process.env.PORT || 3000}`,
 ].filter(Boolean);
 
 app.use(cors({
@@ -110,6 +121,37 @@ setInterval(() => {
 // ─────────────────────────────────────────────────────────
 // HEALTH CHECK
 // ─────────────────────────────────────────────────────────
+/**
+ * @openapi
+ * /health:
+ *   get:
+ *     summary: Health check do servidor
+ *     description: Verifica se o servidor e o banco de dados estão operacionais. Não requer autenticação.
+ *     tags: [System]
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: Servidor saudável
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         status:
+ *                           type: string
+ *                           example: ok
+ *                         timestamp:
+ *                           type: string
+ *                           format: date-time
+ *                         database:
+ *                           type: string
+ *                           enum: [connected, disconnected, unknown]
+ */
 app.get('/health', async (req, res) => {
   let dbStatus = 'unknown';
   try {
@@ -144,6 +186,11 @@ app.get('/health', async (req, res) => {
 app.use('/api', routes);
 
 // ─────────────────────────────────────────────────────────
+// API DOCUMENTATION (Scalar UI)
+// ─────────────────────────────────────────────────────────
+app.use('/', docsRoutes);
+
+// ─────────────────────────────────────────────────────────
 // ERROR HANDLING
 // ─────────────────────────────────────────────────────────
 app.use(notFoundHandler);
@@ -152,20 +199,22 @@ app.use(errorHandler);
 // ─────────────────────────────────────────────────────────
 // FAIL-FAST: ENVIRONMENT VALIDATION
 // ─────────────────────────────────────────────────────────
-const REQUIRED_ENV_VARS = ['DATABASE_URL', 'ALGOD_SERVER', 'ALGORAND_MASTER_MNEMONIC'];
-const missingVars = REQUIRED_ENV_VARS.filter(v => !process.env[v]);
-
-if (missingVars.length > 0) {
-  console.error('\n❌ [FATAL ERROR] Failed to start Quantum Cert Core Engine.');
-  console.error(`Missing required environment variables: ${missingVars.join(', ')}`);
-  console.error('Production deployment requires strict definition of all endpoints and secrets.');
-  process.exit(1);
-}
-
+// SERVER STARTUP (skipped when imported by test suite)
 // ─────────────────────────────────────────────────────────
-// SERVER STARTUP
-// ─────────────────────────────────────────────────────────
-app.listen(PORT, () => {
+if (process.env.NODE_ENV !== 'test') {
+  const REQUIRED_ENV_VARS = ['DATABASE_URL', 'ALGOD_SERVER', 'ALGORAND_MASTER_MNEMONIC'];
+  const missingVars = REQUIRED_ENV_VARS.filter(v => !process.env[v]);
+
+  if (missingVars.length > 0) {
+    console.error('\n❌ [FATAL ERROR] Failed to start Quantum Cert Core Engine.');
+    console.error(`Missing required environment variables: ${missingVars.join(', ')}`);
+    console.error('Production deployment requires strict definition of all endpoints and secrets.');
+    process.exit(1);
+  }
+
+  app.listen(PORT, () => {
+    SchedulerService.start();
+
   console.log('');
   console.log('═══════════════════════════════════════════════════════════');
   console.log('  QUANTUM CERT — DIAMOND PATTERN UNIVERSAL API');
@@ -199,7 +248,8 @@ app.listen(PORT, () => {
   console.log('');
   console.log('═══════════════════════════════════════════════════════════');
   console.log('');
-});
+  }); // end app.listen
+} // end NODE_ENV !== 'test'
 
 // ─────────────────────────────────────────────────────────
 // GRACEFUL SHUTDOWN
