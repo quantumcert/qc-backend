@@ -1,7 +1,7 @@
 import algosdk from 'algosdk';
 import crypto from 'crypto';
 import prisma from '../../config/prisma';
-import { IDLTAdapter } from '../../interfaces/IDLTAdapter';
+import { IDLTAdapter, AnchorOptions, EscrowParams, TransferParams, ReceiveParams } from '../../interfaces/IDLTAdapter';
 import { PostQuantumCrypto } from '../../utils/PostQuantumCrypto';
 
 export class AlgorandAnchorFacet implements IDLTAdapter {
@@ -31,8 +31,9 @@ export class AlgorandAnchorFacet implements IDLTAdapter {
      * ZERO-VALUE Txn with Note Field LGPD Obfuscation.
      * @param eventId The local event ID
      * @param eventHash The SHA-256 or SHA3-512 hash of the payload
+     * @param _options Optional chain-specific anchoring parameters (ignored for Algorand)
      */
-    async anchorEvent(eventId: string, eventHash: string): Promise<string> {
+    async anchorEvent(eventId: string, eventHash: string, _options?: AnchorOptions): Promise<string> {
         // Fetch event to get Tenant ID for LGPD Obfuscation
         const event = await prisma.eventLog.findUnique({
             where: { id: eventId }
@@ -103,8 +104,10 @@ export class AlgorandAnchorFacet implements IDLTAdapter {
 
     /**
      * Verifies if an anchor associated with a TxID is mathematically valid and exists on the ledger.
+     * @param txId The transaction ID on the DLT
+     * @param _expectedHash Optional expected hash (ignored for Algorand — verified via confirmedRound only)
      */
-    async verifyAnchor(txId: string): Promise<boolean> {
+    async verifyAnchor(txId: string, _expectedHash?: string): Promise<boolean> {
         try {
             const txInfo = await this.algodClient.pendingTransactionInformation(txId).do();
             if (txInfo && txInfo.confirmedRound && txInfo.confirmedRound > 0) {
@@ -114,5 +117,33 @@ export class AlgorandAnchorFacet implements IDLTAdapter {
         } catch (error) {
             return false;
         }
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // ESCROW — NOT IMPLEMENTED FOR ALGORAND (Phase 2)
+    // ─────────────────────────────────────────────────────────
+
+    async createEscrow(_params: EscrowParams): Promise<string> {
+        throw new Error('Escrow operations are not yet implemented for Algorand. Use Ethereum, Solana, or Stellar.');
+    }
+
+    async releaseEscrow(_escrowId: string, _txRef: string): Promise<string> {
+        throw new Error('Escrow operations are not yet implemented for Algorand. Use Ethereum, Solana, or Stellar.');
+    }
+
+    async cancelEscrow(_escrowId: string, _txRef: string): Promise<string> {
+        throw new Error('Escrow operations are not yet implemented for Algorand. Use Ethereum, Solana, or Stellar.');
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // SEND / RECEIVE — NOT IMPLEMENTED FOR ALGORAND (Phase 2)
+    // ─────────────────────────────────────────────────────────
+
+    async sendAsset(_params: TransferParams): Promise<string> {
+        throw new Error('Asset transfer operations are not yet implemented for Algorand. Use Ethereum, Solana, or Stellar.');
+    }
+
+    async receiveAsset(_params: ReceiveParams): Promise<string> {
+        throw new Error('Asset transfer operations are not yet implemented for Algorand. Use Ethereum, Solana, or Stellar.');
     }
 }

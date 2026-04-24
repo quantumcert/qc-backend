@@ -13,3 +13,5 @@ coverage/
 .turbo
 .worktrees/
 docs/doc-inpi-atualizado.pdf
+TODO.md
+.gitignore

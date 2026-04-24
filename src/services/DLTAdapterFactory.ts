@@ -1,11 +1,9 @@
 // src/services/DLTAdapterFactory.ts
 import { IDLTAdapter } from '../interfaces/IDLTAdapter';
 import { AlgorandAnchorFacet } from './core-facets/AlgorandAnchorFacet';
-
-// Add new chains here as Sub-sistema 2 adapters are implemented.
-// import { SolanaAdapter } from './adapters/SolanaAdapter';
-// import { PolygonAdapter } from './adapters/PolygonAdapter';
-// import { StellarAdapter } from './adapters/StellarAdapter';
+import { EthAdapter } from './multi-chain/EthAdapter';
+import { SolanaAdapter } from './multi-chain/SolanaAdapter';
+import { SorobanAdapter } from './multi-chain/SorobanAdapter';
 
 export type SupportedChain = 'ALGORAND' | 'SOLANA' | 'POLYGON' | 'ETHEREUM' | 'STELLAR';
 
@@ -19,9 +17,12 @@ export class DLTAdapterFactory {
         switch (targetChain) {
             case 'ALGORAND':
                 return new AlgorandAnchorFacet();
-            // case 'SOLANA':   return new SolanaAdapter();   // Sub-sistema 2
-            // case 'POLYGON':  return new PolygonAdapter();  // Sub-sistema 2
-            // case 'STELLAR':  return new StellarAdapter();  // Sub-sistema 2
+            case 'ETHEREUM':
+                return new EthAdapter();
+            case 'SOLANA':
+                return new SolanaAdapter();
+            case 'STELLAR':
+                return new SorobanAdapter();
             default:
                 throw new Error(`DLT adapter not implemented for chain: ${targetChain}`);
         }

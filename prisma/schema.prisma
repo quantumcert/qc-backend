@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════
 // QUANTUM CERT — DIAMOND PATTERN UNIVERSAL CORE SCHEMA
 // Architecture: EIP-2535 Faceted Diamond Pattern
-// Version: 3.1.0 — Phase 2: Agnostic Asset Engine & Zero Knowledge
+// Version: 3.2.0 — Multi-Chain DLT Adapters & Escrow
 // 
 // GOLDEN RULE: 100% AGNOSTIC. No domain-specific terminology.
 // Only universal terms: Tenant, Asset, Device, Event, Owner, Metadata.
@@ -50,6 +50,8 @@ model Tenant {
   eventLogs         EventLog[] // Phase 4
   blindContactLogs  BlindContactLog[] // Phase 5
   webhooks          TenantWebhook[] // Phase 6: B2B Notifications
+  escrows           Escrow[] // Multi-Chain Escrow
+  chainTransactions ChainTransaction[] // Multi-Chain Tx Logging
 
   @@index([slug])
   @@index([planTier])
@@ -443,6 +445,100 @@ model BlindContactLog {
 }
 
 // ═══════════════════════════════════════════════════════════
+// MULTI-CHAIN: ESCROW & CROSS-CHAIN TRANSACTION LOGGING
+// ═══════════════════════════════════════════════════════════
+
+// ─── ESCROW — Cross-Chain Escrow Record ─────────────────
+model Escrow {
+  id String @id @default(cuid())
+
+  // ─── Tenant Isolation ─────────────────────────────────
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // ─── Correlation ──────────────────────────────────────
+  escrowId String @unique // Off-chain unique identifier
+  assetId  String? // Optional link to Asset
+
+  // ─── Chain Identification ─────────────────────────────
+  chain      String // 'ETHEREUM' | 'SOLANA' | 'STELLAR' | 'ALGORAND'
+  chainTxId  String? // On-chain transaction ID
+
+  // ─── Parties ──────────────────────────────────────────
+  sender   String // Wallet address (chain-native format)
+  receiver String // Wallet address (chain-native format)
+
+  // ─── Financials ───────────────────────────────────────
+  amount       String // Stored as string to avoid precision loss
+  assetAddress String? // Token contract address (null for native)
+
+  // ─── Time-Lock ────────────────────────────────────────
+  unlockTimestamp DateTime? // When escrow becomes releasable
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // ─── Status ───────────────────────────────────────────
+  status EscrowStatus @default(PENDING)
+
+  // ─── Audit ────────────────────────────────────────────
+  metadata Json? // Chain-specific metadata
+
+  @@index([tenantId])
+  @@index([chain])
+  @@index([status])
+  @@index([escrowId])
+  @@index([createdAt])
+}
+
+enum EscrowStatus {
+  PENDING
+  ACTIVE
+  RELEASED
+  CANCELLED
+  EXPIRED
+}
+
+// ─── CHAIN TRANSACTION — Universal Cross-Chain Tx Log ───
+model ChainTransaction {
+  id String @id @default(cuid())
+
+  // ─── Tenant Isolation ─────────────────────────────────
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // ─── Correlation ──────────────────────────────────────
+  txRef String // Off-chain correlation ID
+
+  // ─── Chain Identification ─────────────────────────────
+  chain     String // 'ETHEREUM' | 'SOLANA' | 'STELLAR' | 'ALGORAND'
+  direction String // 'SEND' | 'RECEIVE' | 'ESCROW_CREATE' | 'ESCROW_RELEASE' | 'ESCROW_CANCEL' | 'ANCHOR'
+
+  // ─── On-Chain Data ────────────────────────────────────
+  fromAddress String?
+  toAddress   String?
+  amount      String?
+  assetAddress String? // Token contract address
+  chainTxId   String?
+  blockNumber String?
+  confirmedAt DateTime?
+
+  // ─── Status ───────────────────────────────────────────
+  status String @default("PENDING") // PENDING | CONFIRMED | FAILED
+
+  // ─── Audit ────────────────────────────────────────────
+  metadata  Json?
+  error     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([chain])
+  @@index([txRef])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ═══════════════════════════════════════════════════════════
 // PHASE 6: ESG PROVENANCE, TELEMETRY & B2B NOTIFICATIONS
 // ═══════════════════════════════════════════════════════════
 
@@ -492,3 +588,4 @@ model WebhookInbox {
 
   @@index([status, receivedAt])
 }
+

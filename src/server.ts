@@ -256,13 +256,17 @@ if (process.env.NODE_ENV !== 'test') {
 // ─────────────────────────────────────────────────────────
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received, closing server...');
-  await prisma.$disconnect();
+  if (typeof prisma.$disconnect === 'function') {
+    await prisma.$disconnect();
+  }
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('SIGINT received, closing server...');
-  await prisma.$disconnect();
+  if (typeof prisma.$disconnect === 'function') {
+    await prisma.$disconnect();
+  }
   process.exit(0);
 });
 
