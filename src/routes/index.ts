@@ -20,6 +20,7 @@ import assetRoutes from './v1/assetRoutes';
 import deviceRoutes from './v1/deviceRoutes';
 import lifecycleRoutes from './v1/lifecycleRoutes';
 import webhookRoutes from './v1/webhookRoutes';
+import walletRoutes from './v1/walletRoutes';
 import { DiamondProxy } from '../diamond/DiamondProxy';
 import { requireApiKey } from '../middleware/apiKeyAuth';
 
@@ -59,6 +60,9 @@ router.use('/v1/assets', lifecycleRoutes);
 
 // MercadoPago Webhook — POST /api/v1/webhooks/mercadopago
 router.use('/v1/webhooks', webhookRoutes);
+
+// Custodial Wallet — GET /api/v1/wallet/deposit-address, GET /api/v1/wallet/balance
+router.use('/v1/wallet', walletRoutes);
 
 /**
  * @openapi

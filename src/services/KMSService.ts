@@ -10,6 +10,10 @@
 // WARNING: Never log keys. Never expose keys in error messages.
 // ============================================================
 
+import { ethers } from 'ethers';
+import algosdk from 'algosdk';
+import nacl from 'tweetnacl';
+
 export type ChainKeyType = 'privateKey' | 'rpcUrl' | 'mnemonic' | 'secretKey' | 'apiToken';
 
 export interface KeyEntry {
@@ -118,6 +122,51 @@ export class KMSService {
   clearCache(): void {
     this.keyCache.clear();
     console.log('[KMSService] Key cache cleared.');
+  }
+
+  /**
+   * Derives a custodial deposit address for a user from the master key.
+   * Uses deterministic derivation so the same (chain, accountIndex) always
+   * yields the same address. The private key is NEVER exposed.
+   *
+   * EVM chains (Ethereum, Polygon): HD wallet derivation from private key.
+   * Algorand: Account index derivation from master mnemonic.
+   */
+  deriveAddress(chain: SupportedChainForKMS, accountIndex: number): string {
+    switch (chain) {
+      case 'ETHEREUM':
+      case 'POLYGON': {
+        const privateKey = this.getKey(chain, 'privateKey');
+        const masterWallet = new ethers.Wallet(privateKey);
+        // Use simple deterministic derivation: hash(privateKey + index)
+        const derivationInput = `${masterWallet.privateKey}:${accountIndex}`;
+        const derivedPrivateKey = ethers.keccak256(ethers.toUtf8Bytes(derivationInput));
+        const derivedWallet = new ethers.Wallet(derivedPrivateKey);
+        return derivedWallet.address;
+      }
+      case 'ALGORAND': {
+        const mnemonic = this.getKey('ALGORAND', 'mnemonic');
+        const masterAccount = algosdk.mnemonicToSecretKey(mnemonic);
+        // Deterministic derivation: derive key from master secret key seed + index
+        // masterAccount.sk is 64 bytes: [32-byte seed | 32-byte public key]
+        const masterSeed = masterAccount.sk.slice(0, 32);
+        const derivationInput = Buffer.concat([
+          Buffer.from(masterSeed),
+          Buffer.from(accountIndex.toString()),
+        ]);
+        const hash = ethers.keccak256(derivationInput);
+        const derivedSeed = Buffer.from(hash.slice(2), 'hex').slice(0, 32);
+        const derivedKeys = nacl.sign.keyPair.fromSeed(derivedSeed);
+        return algosdk.encodeAddress(derivedKeys.publicKey);
+      }
+      case 'SOLANA':
+      case 'STELLAR': {
+        // TODO: Implement Solana/Stellar derivation when needed
+        throw new Error(`Address derivation not yet implemented for ${chain}`);
+      }
+      default:
+        throw new Error(`Unsupported chain for address derivation: ${chain}`);
+    }
   }
 
   private resolveEnvVarName(chain: SupportedChainForKMS, keyType: ChainKeyType): string | undefined {

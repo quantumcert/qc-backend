@@ -27,6 +27,17 @@ const envSchema = z.object({
 
   // Quantum Cert
   QUANTUM_CERT_SECRET: z.string().optional(),
+
+  // Blockchain Observer (Custodial Deposit Flow)
+  BLOCKCHAIN_OBSERVER_INTERVAL_SECONDS: z.string().default('30'),
+  POLYGON_USDC_CONTRACT: z.string().optional(),
+  POLYGON_USDT_CONTRACT: z.string().optional(),
+  ETHEREUM_USDC_CONTRACT: z.string().optional(),
+  ETHEREUM_USDT_CONTRACT: z.string().optional(),
+  ALGORAND_USDC_ASA_ID: z.string().optional(),
+  DEPOSIT_CONFIRMATIONS_POLYGON: z.string().default('12'),
+  DEPOSIT_CONFIRMATIONS_ETHEREUM: z.string().default('12'),
+  DEPOSIT_CONFIRMATIONS_ALGORAND: z.string().default('0'),
 });
 
 function loadEnv() {

@@ -2,6 +2,7 @@
 import cron from 'node-cron';
 import { AnchorQueueService } from './AnchorQueueService';
 import { RetryWorker } from './RetryWorker';
+import { BlockchainObserverService } from './BlockchainObserverService';
 
 export class SchedulerService {
     /**
@@ -57,5 +58,41 @@ export class SchedulerService {
         });
 
         console.log(`[Scheduler] RetryWorker cron started — interval: ${retryInterval}s (pattern: ${retryPattern})`);
+
+        // ─── Blockchain Observer Cron ───────────────────────
+        // Scans chains for incoming stablecoin deposits
+        let observerRunning = false;
+        const observerInterval = parseInt(
+            process.env.BLOCKCHAIN_OBSERVER_INTERVAL_SECONDS ?? '30',
+            10
+        );
+        const observerPattern = `*/${observerInterval} * * * * *`;
+
+        cron.schedule(observerPattern, async () => {
+            if (observerRunning) {
+                console.log('[Scheduler] BlockchainObserver already running, skipping this cycle.');
+                return;
+            }
+            observerRunning = true;
+            try {
+                const observer = BlockchainObserverService.getInstance();
+                const result = await observer.scanAllChains();
+                if (result.totalNewDeposits > 0 || result.totalConfirmed > 0) {
+                    console.log(
+                        `[Scheduler] BlockchainObserver: ${result.totalNewDeposits} new deposits, ` +
+                        `${result.totalConfirmed} newly confirmed.`
+                    );
+                }
+                if (result.errors.length > 0) {
+                    console.error('[Scheduler] BlockchainObserver errors:', result.errors);
+                }
+            } catch (err) {
+                console.error('[Scheduler] BlockchainObserver error:', err);
+            } finally {
+                observerRunning = false;
+            }
+        });
+
+        console.log(`[Scheduler] BlockchainObserver cron started — interval: ${observerInterval}s (pattern: ${observerPattern})`);
     }
 }

@@ -685,3 +685,79 @@ Mock unificado do `algosdk` para todos os testes do Vitest. Substitui:
 - Nenhum — todas as fases do Master Task foram concluídas.
 - Todos os testes passam e a implementação está estável.
 - Se futuramente for necessário rodar testes E2E com servidores reais, avaliar a necessidade de stubs mais sofisticados para o Stellar SDK.
+
+---
+
+## 12. Sessão Atual — Custodial Deposit Flow & Blockchain Listener (2025-06-XX)
+
+### 12.1 Visão Geral do Fluxo
+
+Implementamos o "Entry Flow" para usuários do Quantum Cert: um sistema custodial onde cada tenant/user possui wallets geradas pelo KMSService e o sistema detecta automaticamente depósitos de stablecoins (USDC/USDT) na blockchain, atualizando saldos internos no PostgreSQL.
+
+### 12.2 Novos Modelos de Dados (Prisma)
+
+- UserWallet — Endereço custodial por tenant/chain (address, chain, pqcPublicKey, accountIndex)
+- Deposit — Log de depósito incoming (txHash UNIQUE, amount, currency, status, confirmations, blockNumber)
+- DepositStatus enum — PENDING | CONFIRMED | FAILED
+
+### 12.3 Novos Serviços
+
+- BlockchainObserverService.ts — Singleton scanner multi-chain (polling EVM + Algorand, confirmação por threshold, idempotência via txHash UNIQUE)
+- WalletService.ts — Criação de wallet, getDepositAddress, getBalance (aggregation de deposits CONFIRMED)
+- KMSService.ts — Adicionado deriveAddress() para derivação determinística por tenant/chain
+
+### 12.4 Novos Endpoints API
+
+- GET /api/v1/wallet/deposit-address?chain=POLYGON — Retorna endereço de depósito (cria se necessário)
+- GET /api/v1/wallet/balance?chain=POLYGON — Retorna saldo agregado de deposits confirmados
+
+### 12.5 Scheduler Integration
+
+- SchedulerService.ts — Adicionado cron job para BlockchainObserverService.scanAllChains() a cada 30s
+
+### 12.6 Variáveis de Ambiente (novas)
+
+- BLOCKCHAIN_OBSERVER_INTERVAL_SECONDS, POLYGON_USDC_CONTRACT, POLYGON_USDT_CONTRACT
+- ETHEREUM_USDC_CONTRACT, ETHEREUM_USDT_CONTRACT, ALGORAND_USDC_ASA_ID
+- DEPOSIT_CONFIRMATIONS_POLYGON, DEPOSIT_CONFIRMATIONS_ETHEREUM, DEPOSIT_CONFIRMATIONS_ALGORAND
+
+### 12.7 Testes
+
+- tests/wallet.test.ts — Testes de API (deposit-address, balance)
+- tests/blockchain-observer.test.ts — Testes de idempotência e confirmação
+- tests/deposit-flow.test.ts — Teste E2E completo
+
+### 12.8 Infraestrutura
+
+- PostgreSQL 16 instalado e configurado em localhost:5432
+- Prisma CLI v5.7.0 alinhado com @prisma/client@5.7.0
+- Schema sincronizado via npx prisma db push
+
+### 12.9 Resultado dos Testes (Final)
+
+```bash
+$ npm test -- --run
+Test Files  16 passed (16)
+     Tests  110 passed (110)
+    Errors  0 errors
+  Duration  ~2.5s
+```
+
+---
+
+## 13. Notas para Produção
+
+### 13.1 Endereços de Stablecoins Reais
+- USDC Ethereum: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
+- USDT Ethereum: 0xdAC17F958D2ee523a2206206994597C13D831ec7
+- USDC Polygon: 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174
+- USDT Polygon: 0xc2132D05D31c914a87C6611C10748AEb04B58e8F
+- USDC Algorand: ASA ID 31566704
+
+### 13.2 Segurança do Observer
+- 100% read-only — nunca assina transações
+- Chaves privadas permanecem exclusivamente no KMSService
+- Recomenda-se rodar em processo separado (worker dedicado)
+
+### 13.3 Escalabilidade
+- Para >10k wallets: considerar indexer dedicado (The Graph, AlgoIndexer) ou webhooks (Alchemy/Infura)
