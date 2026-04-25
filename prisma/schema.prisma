@@ -470,6 +470,21 @@ model UserWallet {
   // Account index used in HD derivation (if applicable)
   accountIndex Int @default(0)
 
+  // --- PQC Key Wrapping (Phase 2) ---
+  // Encrypted private key (AES-256-GCM wrapped by Master Falcon Key)
+  // Null for watch-only or externally-managed wallets
+  encryptedPrivateKey String?
+
+  // Version of the key wrapping protocol (for migration/compatibility)
+  keyWrapVersion Int @default(1)
+
+  // When the key was last wrapped/rotated
+  wrappedAt DateTime?
+
+  // --- Circuit Breaker (Phase 2) ---
+  // Individual wallet pause flag (overrides global circuit breaker)
+  isPaused Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -541,6 +556,77 @@ enum DepositStatus {
   PENDING
   CONFIRMED
   FAILED
+}
+
+// ===========================================================
+// MASTER KEY — Post-Quantum Master Key Registry
+// ===========================================================
+// CRITICAL SECURITY: This model NEVER stores private keys.
+// It only tracks metadata about the master Falcon-512 key
+// which is stored in the HSM/Vault (or .env in dev).
+// The actual key material is managed exclusively by KMSService.
+// ===========================================================
+model MasterKey {
+  id String @id @default(cuid())
+
+  // Key type discriminator (e.g., 'FALCON-512-MASTER', 'AES-256-MASTER')
+  keyType String
+
+  // SHA3-512 hash of the public key (for verification, never the private key)
+  publicKeyHash String @unique
+
+  // Version of the key wrapping protocol
+  keyWrapVersion Int @default(1)
+
+  // Whether this master key is currently active
+  isActive Boolean @default(true)
+
+  // When the key was created
+  createdAt DateTime @default(now())
+
+  // When the key was last rotated (null = never rotated)
+  rotatedAt DateTime?
+
+  // Audit metadata (rotation reason, etc.)
+  metadata Json?
+
+  @@index([keyType])
+  @@index([isActive])
+}
+
+// ===========================================================
+// PANIC LOG — Security Watchdog & Circuit Breaker Audit
+// ===========================================================
+model PanicLog {
+  id String @id @default(cuid())
+
+  // Reason for the panic trigger
+  reason String
+
+  // Who or what triggered the panic (service name, admin ID, etc.)
+  triggeredBy String?
+
+  // Which chain was affected ('ALL', 'POLYGON', 'ETHEREUM', etc.)
+  chainScope String @default("ALL")
+
+  // Whether the panic has been resolved
+  isResolved Boolean @default(false)
+
+  // When the panic was triggered
+  triggeredAt DateTime @default(now())
+
+  // When the panic was resolved (null = still active)
+  resolvedAt DateTime?
+
+  // Resolution notes
+  resolutionNotes String?
+
+  // Raw metadata (anomaly scores, tx volumes, etc.)
+  metadata Json?
+
+  @@index([triggeredAt])
+  @@index([isResolved])
+  @@index([chainScope])
 }
 
 // --- ESCROW --- Cross-Chain Escrow Record -----------------

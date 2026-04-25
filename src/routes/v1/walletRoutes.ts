@@ -4,6 +4,7 @@
 //
 // GET /wallet/deposit-address?chain=POLYGON
 // GET /wallet/balance?chain=POLYGON (optional chain filter)
+// GET /wallet/account (Quantum Account aggregation)
 // ============================================================
 
 import { Router } from 'express';
@@ -61,10 +62,6 @@ const router = Router();
  *                           format: date-time
  *       400:
  *         description: Invalid chain parameter
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
  *         description: API key missing or invalid
  */
@@ -132,6 +129,54 @@ router.get(
   tenantRateLimiter,
   requireReader,
   WalletController.getBalance
+);
+
+/**
+ * @openapi
+ * /api/v1/wallet/account:
+ *   get:
+ *     summary: Get unified Quantum Account
+ *     description: |
+ *       Returns a consolidated "Quantum Account" view for the tenant,
+ *       aggregating all wallets, balances, and health status across
+ *       all supported blockchains.
+ *     tags: [Wallet]
+ *     security:
+ *       - ApiKeyAuth: []
+ *     responses:
+ *       200:
+ *         description: Quantum Account retrieved
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         tenantId:
+ *                           type: string
+ *                         primaryAddress:
+ *                           type: string
+ *                         totalBalance:
+ *                           type: object
+ *                         walletCount:
+ *                           type: integer
+ *                         isHealthy:
+ *                           type: boolean
+ *                         wallets:
+ *                           type: array
+ *       401:
+ *         description: API key missing or invalid
+ */
+router.get(
+  '/account',
+  requireApiKey,
+  tenantRateLimiter,
+  requireReader,
+  WalletController.getQuantumAccount
 );
 
 export default router;

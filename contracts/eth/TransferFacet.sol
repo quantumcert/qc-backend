@@ -14,6 +14,9 @@ pragma solidity ^0.8.20;
  *        - entityType (string) — Type discriminator
  *      NO personal data, NO sensitive payloads, NO PII ever stored on-chain.
  *
+ *      CIRCUIT BREAKER: Emergency pause mechanism for institutional security.
+ *      All state-mutating functions check `whenNotPaused` modifier.
+ *
  *      Operations supported:
  *        - Payment (Escrow creation with time-lock)
  *        - Receiving (escrow release verification)
@@ -65,6 +68,8 @@ event AnchorEvent(
     uint256 anchoredAt
 );
 
+event CircuitBreakerToggled(bool paused, uint256 timestamp);
+
 // ===========================================================
 // ERRORS
 // ===========================================================
@@ -80,6 +85,7 @@ error InvalidTimeLock();
 error TransferFailed();
 error NotAuthorized();
 error InvalidTripleProof();
+error CircuitBreakerActive();
 
 //
 // INTERFACES
@@ -131,6 +137,7 @@ struct TransferStorage {
     mapping(bytes32 => AnchorRecord) anchors;
     mapping(bytes32 => bool) anchoredEvents;
     address admin;
+    bool paused; // Circuit breaker state
 }
 
 function transferStorage() pure returns (TransferStorage storage ds) {
@@ -147,6 +154,13 @@ function transferStorage() pure returns (TransferStorage storage ds) {
 modifier onlyAdmin() {
     if (msg.sender != transferStorage().admin) {
         revert NotAuthorized();
+    }
+    _;
+}
+
+modifier whenNotPaused() {
+    if (transferStorage().paused) {
+        revert CircuitBreakerActive();
     }
     _;
 }
@@ -170,6 +184,26 @@ contract TransferFacet {
         TransferStorage storage ds = transferStorage();
         if (ds.admin != address(0)) revert NotAuthorized();
         ds.admin = _admin;
+        ds.paused = false;
+    }
+
+    // --- Circuit Breaker ----------------------------------
+
+    /**
+     * @notice Toggles the circuit breaker pause state.
+     * @dev Only callable by admin. Emits CircuitBreakerToggled event.
+     */
+    function togglePause() external onlyAdmin {
+        TransferStorage storage ds = transferStorage();
+        ds.paused = !ds.paused;
+        emit CircuitBreakerToggled(ds.paused, block.timestamp);
+    }
+
+    /**
+     * @notice Returns the current pause state.
+     */
+    function paused() external view returns (bool) {
+        return transferStorage().paused;
     }
 
     // --- Triple-Proof Validation --------------------------
@@ -201,7 +235,7 @@ contract TransferFacet {
         address assetAddress,
         uint256 amount,
         TripleProof calldata tripleProof
-    ) external payable returns (bool) {
+    ) external payable whenNotPaused returns (bool) {
         if (receiver == address(0)) revert InvalidAddress();
         if (amount == 0) revert InvalidAmount();
         if (unlockTimestamp <= block.timestamp) revert InvalidTimeLock();
@@ -260,7 +294,7 @@ contract TransferFacet {
      * @dev Only callable after unlockTimestamp. Can be called by receiver or admin.
      *      High-security time-lock enforced (Tikin project).
      */
-    function releaseEscrow(bytes32 escrowId) external validEscrow(escrowId) returns (bool) {
+    function releaseEscrow(bytes32 escrowId) external validEscrow(escrowId) whenNotPaused returns (bool) {
         TransferStorage storage ds = transferStorage();
         Escrow storage escrow = ds.escrows[escrowId];
 
@@ -290,7 +324,7 @@ contract TransferFacet {
      * @notice Cancels an escrow and returns funds to the sender.
      * @dev Only callable by sender or admin. Requires escrow not yet released.
      */
-    function cancelEscrow(bytes32 escrowId) external validEscrow(escrowId) returns (bool) {
+    function cancelEscrow(bytes32 escrowId) external validEscrow(escrowId) whenNotPaused returns (bool) {
         TransferStorage storage ds = transferStorage();
         Escrow storage escrow = ds.escrows[escrowId];
 
@@ -325,7 +359,7 @@ contract TransferFacet {
         uint256 amount,
         address assetAddress,
         bytes32 txRef
-    ) external payable returns (bool) {
+    ) external payable whenNotPaused returns (bool) {
         if (to == address(0)) revert InvalidAddress();
         if (amount == 0) revert InvalidAmount();
 
@@ -361,7 +395,7 @@ contract TransferFacet {
         bytes32 payloadHash,
         bytes32 qtagId,
         bytes32 entityType
-    ) external onlyAdmin returns (bool) {
+    ) external onlyAdmin whenNotPaused returns (bool) {
         TransferStorage storage ds = transferStorage();
 
         ds.anchors[eventId] = AnchorRecord({
@@ -395,4 +429,3 @@ contract TransferFacet {
     receive() external payable {}
     fallback() external payable {}
 }
-

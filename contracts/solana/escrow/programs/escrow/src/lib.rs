@@ -58,6 +58,8 @@ pub enum EscrowError {
     InvalidPayloadHashLength,
     #[msg("Invalid triple proof: missing or duplicate signers")]
     InvalidTripleProof,
+    #[msg("Circuit breaker is active: operations paused")]
+    CircuitBreakerActive,
 }
 
 // ===========================================================
@@ -67,6 +69,18 @@ pub enum EscrowError {
 #[program]
 pub mod escrow {
     use super::*;
+
+    // --- 0. CIRCUIT BREAKER (Admin Only) ----------------
+
+    /// Toggles the circuit breaker pause state.
+    /// Only callable by the program authority (admin).
+    pub fn toggle_pause(ctx: Context<TogglePause>) -> Result<()> {
+        let state = &mut ctx.accounts.program_state;
+        state.paused = !state.paused;
+        
+        msg!("Circuit breaker toggled: paused={}", state.paused);
+        Ok(())
+    }
 
     // --- 1. INITIALIZE ESCROW (Payment) -----------------
 
@@ -85,6 +99,9 @@ pub mod escrow {
         amount: u64,
         triple_proof: Option<TripleProof>,
     ) -> Result<()> {
+        // Check circuit breaker
+        require!(!ctx.accounts.program_state.paused, EscrowError::CircuitBreakerActive);
+
         require!(
             escrow_id.len() <= 32,
             EscrowError::InvalidAmount
@@ -138,6 +155,9 @@ pub mod escrow {
     /// Releases escrowed SOL to the receiver.
     /// Only callable after unlock_timestamp.
     pub fn release_escrow(ctx: Context<ReleaseEscrow>) -> Result<()> {
+        // Check circuit breaker
+        require!(!ctx.accounts.program_state.paused, EscrowError::CircuitBreakerActive);
+
         let escrow = &mut ctx.accounts.escrow_account;
         let clock = Clock::get()?;
 
@@ -174,6 +194,9 @@ pub mod escrow {
     /// Cancels an escrow and returns SOL to the sender.
     /// Callable by sender at any time before release.
     pub fn cancel_escrow(ctx: Context<CancelEscrow>) -> Result<()> {
+        // Check circuit breaker
+        require!(!ctx.accounts.program_state.paused, EscrowError::CircuitBreakerActive);
+
         let escrow = &mut ctx.accounts.escrow_account;
 
         require!(!escrow.released, EscrowError::AlreadyReleased);
@@ -192,7 +215,7 @@ pub mod escrow {
 
         msg!("Escrow cancelled: id={}, sender={}, amount={}",
             escrow.escrow_id,
-            ctx.accounts.sender.key(),
+            escrow.sender,
             amount
         );
 
@@ -208,6 +231,9 @@ pub mod escrow {
         event_id_slice: [u8; 16],
         payload_hash: [u8; 64],
     ) -> Result<()> {
+        // Check circuit breaker
+        require!(!ctx.accounts.program_state.paused, EscrowError::CircuitBreakerActive);
+
         // Validate payload hash length
         require!(payload_hash.len() == 64, EscrowError::InvalidPayloadHashLength);
 
@@ -238,6 +264,9 @@ pub mod escrow {
         payload_hash: [u8; 64],
         unlock_timestamp: i64,
     ) -> Result<()> {
+        // Check circuit breaker
+        require!(!ctx.accounts.program_state.paused, EscrowError::CircuitBreakerActive);
+
         require!(payload_hash.len() == 64, EscrowError::InvalidPayloadHashLength);
 
         let anchor_account = &mut ctx.accounts.anchor_pda;
@@ -267,6 +296,19 @@ pub mod escrow {
 // ===========================================================
 
 #[derive(Accounts)]
+pub struct TogglePause<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"qc_program_state"],
+        bump = program_state.bump,
+    )]
+    pub program_state: Account<'info, ProgramState>,
+}
+
+#[derive(Accounts)]
 #[instruction(escrow_id: String, receiver: Pubkey, unlock_timestamp: i64, amount: u64)]
 pub struct InitializeEscrow<'info> {
     #[account(mut)]
@@ -280,6 +322,12 @@ pub struct InitializeEscrow<'info> {
         bump
     )]
     pub escrow_account: Account<'info, EscrowAccount>,
+
+    #[account(
+        seeds = [b"qc_program_state"],
+        bump = program_state.bump,
+    )]
+    pub program_state: Account<'info, ProgramState>,
 
     pub system_program: Program<'info, System>,
 }
@@ -302,6 +350,12 @@ pub struct ReleaseEscrow<'info> {
     #[account(mut)]
     pub receiver: AccountInfo<'info>,
 
+    #[account(
+        seeds = [b"qc_program_state"],
+        bump = program_state.bump,
+    )]
+    pub program_state: Account<'info, ProgramState>,
+
     pub system_program: Program<'info, System>,
 }
 
@@ -323,6 +377,12 @@ pub struct CancelEscrow<'info> {
     #[account(mut)]
     pub sender: AccountInfo<'info>,
 
+    #[account(
+        seeds = [b"qc_program_state"],
+        bump = program_state.bump,
+    )]
+    pub program_state: Account<'info, ProgramState>,
+
     pub system_program: Program<'info, System>,
 }
 
@@ -334,6 +394,12 @@ pub struct AnchorEventLog<'info> {
     /// CHECK: Instruction sysvar for nonce ban check
     #[account(address = solana_program::sysvar::instructions::ID)]
     pub instruction_sysvar_account: AccountInfo<'info>,
+
+    #[account(
+        seeds = [b"qc_program_state"],
+        bump = program_state.bump,
+    )]
+    pub program_state: Account<'info, ProgramState>,
 }
 
 #[derive(Accounts)]
@@ -350,6 +416,12 @@ pub struct AnchorEventState<'info> {
         bump
     )]
     pub anchor_pda: Account<'info, AnchorPda>,
+
+    #[account(
+        seeds = [b"qc_program_state"],
+        bump = program_state.bump,
+    )]
+    pub program_state: Account<'info, ProgramState>,
 
     pub system_program: Program<'info, System>,
 }
@@ -392,6 +464,20 @@ fn validate_triple_proof(proof: &TripleProof) -> Result<()> {
         EscrowError::InvalidTripleProof
     );
     Ok(())
+}
+
+#[account]
+pub struct ProgramState {
+    pub authority: Pubkey,    // Admin authority
+    pub paused: bool,         // Circuit breaker state
+    pub bump: u8,             // PDA bump
+}
+
+impl ProgramState {
+    pub const SIZE: usize =
+        32 +       // authority
+        1 +        // paused
+        1;         // bump
 }
 
 #[account]
@@ -443,4 +529,3 @@ impl AnchorPda {
         8 +        // created_at
         1;         // bump
 }
-

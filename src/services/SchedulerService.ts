@@ -3,6 +3,7 @@ import cron from 'node-cron';
 import { AnchorQueueService } from './AnchorQueueService';
 import { RetryWorker } from './RetryWorker';
 import { BlockchainObserverService } from './BlockchainObserverService';
+import { SecurityWatchdogService } from './SecurityWatchdogService';
 
 export class SchedulerService {
     /**
@@ -94,5 +95,35 @@ export class SchedulerService {
         });
 
         console.log(`[Scheduler] BlockchainObserver cron started — interval: ${observerInterval}s (pattern: ${observerPattern})`);
+
+        // ─── Security Watchdog Cron ─────────────────────────
+        // Runs every 60 seconds to check for anomalies
+        let watchdogRunning = false;
+        const watchdogInterval = 60;
+        const watchdogPattern = `*/${watchdogInterval} * * * * *`;
+
+        cron.schedule(watchdogPattern, async () => {
+            if (watchdogRunning) {
+                console.log('[Scheduler] SecurityWatchdog already running, skipping this cycle.');
+                return;
+            }
+            watchdogRunning = true;
+            try {
+                const watchdog = SecurityWatchdogService.getInstance();
+                const anomalies = await watchdog.checkAnomalies();
+                if (anomalies.length > 0) {
+                    console.warn(
+                        `[Scheduler] SecurityWatchdog: ${anomalies.length} anomalies detected. ` +
+                        `Severities: ${anomalies.map(a => a.severity).join(', ')}`
+                    );
+                }
+            } catch (err) {
+                console.error('[Scheduler] SecurityWatchdog error:', err);
+            } finally {
+                watchdogRunning = false;
+            }
+        });
+
+        console.log(`[Scheduler] SecurityWatchdog cron started — interval: ${watchdogInterval}s (pattern: ${watchdogPattern})`);
     }
 }

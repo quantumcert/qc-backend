@@ -20,6 +20,7 @@ import {
   Contract,
   nativeToScVal,
   rpc as SorobanRpc,
+  Transaction,
 } from '@stellar/stellar-sdk';
 import prisma from '../../config/prisma';
 import { KMSService } from '../KMSService';
@@ -93,18 +94,18 @@ export class SorobanAdapter implements IDLTAdapter {
       args.push(nativeToScVal(options.pqcProof, { type: 'string' }));
     }
 
-    const tx = new TransactionBuilder(account, {
+    const builder = new TransactionBuilder(account, {
       fee: '100000',
       networkPassphrase: this.networkPassphrase,
     })
       .setTimeout(30)
-      .addOperation(contract.call('anchor_event', ...args))
-      .build();
+      .addOperation(contract.call('anchor_event', ...args));
 
+    const tx = builder.build();
     tx.sign(this.keypair);
 
     const simulateResult = await this.sorobanServer.simulateTransaction(tx);
-    const preparedTx = SorobanRpc.assembleTransaction(tx, simulateResult);
+    const preparedTx = SorobanRpc.assembleTransaction(tx, simulateResult) as any;
     preparedTx.sign(this.keypair);
 
     const submitResult = await this.sorobanServer.sendTransaction(preparedTx);
@@ -159,18 +160,18 @@ export class SorobanAdapter implements IDLTAdapter {
       args.push(nativeToScVal(pqcProof, { type: 'string' }));
     }
 
-    const tx = new TransactionBuilder(account, {
+    const builder = new TransactionBuilder(account, {
       fee: '100000',
       networkPassphrase: this.networkPassphrase,
     })
       .setTimeout(30)
-      .addOperation(contract.call('create_escrow', ...args))
-      .build();
+      .addOperation(contract.call('create_escrow', ...args));
 
+    const tx = builder.build();
     tx.sign(this.keypair);
 
     const simulateResult = await this.sorobanServer.simulateTransaction(tx);
-    const preparedTx = SorobanRpc.assembleTransaction(tx, simulateResult);
+    const preparedTx = SorobanRpc.assembleTransaction(tx, simulateResult) as any;
     preparedTx.sign(this.keypair);
 
     const submitResult = await this.sorobanServer.sendTransaction(preparedTx);
@@ -199,18 +200,18 @@ export class SorobanAdapter implements IDLTAdapter {
     const account = await this.horizonServer.loadAccount(this.keypair.publicKey());
     const contract = new Contract(this.contractId);
 
-    const tx = new TransactionBuilder(account, {
+    const builder = new TransactionBuilder(account, {
       fee: '100000',
       networkPassphrase: this.networkPassphrase,
     })
       .setTimeout(30)
-      .addOperation(contract.call('release_escrow', ...this._toScValEscrowId(escrowId)))
-      .build();
+      .addOperation(contract.call('release_escrow', ...this._toScValEscrowId(escrowId)));
 
+    const tx = builder.build();
     tx.sign(this.keypair);
 
     const simulateResult = await this.sorobanServer.simulateTransaction(tx);
-    const preparedTx = SorobanRpc.assembleTransaction(tx, simulateResult);
+    const preparedTx = SorobanRpc.assembleTransaction(tx, simulateResult) as any;
     preparedTx.sign(this.keypair);
 
     const submitResult = await this.sorobanServer.sendTransaction(preparedTx);
@@ -236,18 +237,18 @@ export class SorobanAdapter implements IDLTAdapter {
     const account = await this.horizonServer.loadAccount(this.keypair.publicKey());
     const contract = new Contract(this.contractId);
 
-    const tx = new TransactionBuilder(account, {
+    const builder = new TransactionBuilder(account, {
       fee: '100000',
       networkPassphrase: this.networkPassphrase,
     })
       .setTimeout(30)
-      .addOperation(contract.call('cancel_escrow', ...this._toScValEscrowId(escrowId)))
-      .build();
+      .addOperation(contract.call('cancel_escrow', ...this._toScValEscrowId(escrowId)));
 
+    const tx = builder.build();
     tx.sign(this.keypair);
 
     const simulateResult = await this.sorobanServer.simulateTransaction(tx);
-    const preparedTx = SorobanRpc.assembleTransaction(tx, simulateResult);
+    const preparedTx = SorobanRpc.assembleTransaction(tx, simulateResult) as any;
     preparedTx.sign(this.keypair);
 
     const submitResult = await this.sorobanServer.sendTransaction(preparedTx);
@@ -285,7 +286,7 @@ export class SorobanAdapter implements IDLTAdapter {
 
     const account = await this.horizonServer.loadAccount(this.keypair.publicKey());
 
-    const tx = new TransactionBuilder(account, {
+    const builder = new TransactionBuilder(account, {
       fee: '100000',
       networkPassphrase: this.networkPassphrase,
     })
@@ -296,9 +297,9 @@ export class SorobanAdapter implements IDLTAdapter {
           asset: Asset.native(),
           amount,
         })
-      )
-      .build();
+      );
 
+    const tx = builder.build();
     tx.sign(this.keypair);
 
     const result = await this.horizonServer.submitTransaction(tx);
@@ -398,4 +399,3 @@ export class SorobanAdapter implements IDLTAdapter {
     }
   }
 }
-

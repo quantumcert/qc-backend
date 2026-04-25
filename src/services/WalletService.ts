@@ -32,8 +32,9 @@ export class WalletService {
 
   /**
    * Creates a custodial UserWallet for a tenant on a given chain.
-   * Derives the address from the master key and generates a Falcon-512
-   * public key for future Triple-Signature validation.
+   * Derives the address from the master key, generates a Falcon-512
+   * public key for Triple-Signature validation, and wraps the private
+   * key using the Quantum Master Key before storing in the database.
    */
   async createWallet(tenantId: string, chain: SupportedWalletChain) {
     // Check if wallet already exists
@@ -55,10 +56,19 @@ export class WalletService {
     // Derive address deterministically from master key
     const address = this.kms.deriveAddress(chain, accountIndex);
 
-    // TODO: Generate Falcon-512 keypair for Triple-Sig identity
-    // For now, pqcPublicKey is left null until PostQuantumCrypto
-    // exposes key generation in the installed version.
-    const pqcPublicKey = null;
+    // Derive and wrap the private key (PQC Key Wrapping)
+    // The plaintext is zeroized inside deriveAndWrapPrivateKey
+    const encryptedPrivateKey = this.kms.deriveAndWrapPrivateKey(chain, accountIndex);
+
+    // Generate Falcon-512 keypair for Triple-Sig identity
+    let pqcPublicKey: string | null = null;
+    try {
+      const falcon = require('falcon-crypto');
+      const keys = await falcon.keyPair();
+      pqcPublicKey = Buffer.from(keys.publicKey).toString('base64');
+    } catch (err) {
+      console.warn('[WalletService] Falcon-512 key generation failed, skipping PQC public key:', err);
+    }
 
     const wallet = await (prisma as any).userWallet.create({
       data: {
@@ -67,6 +77,9 @@ export class WalletService {
         address,
         accountIndex,
         pqcPublicKey,
+        encryptedPrivateKey,
+        keyWrapVersion: 1,
+        wrappedAt: new Date(),
       },
     });
 
@@ -162,6 +175,69 @@ export class WalletService {
       balance: balance.toString(),
       currency: 'USDC', // Primary stablecoin
       depositCount: deposits.length,
+    };
+  }
+
+  /**
+   * Returns a unified "Quantum Account" abstraction for a tenant.
+   * Aggregates all wallets across chains with their balances and
+   * metadata, providing a single view for the frontend.
+   *
+   * This is the WaaS (Wallet-as-a-Service) consolidation layer.
+   */
+  async getQuantumAccount(tenantId: string) {
+    const wallets = await (prisma as any).userWallet.findMany({
+      where: { tenantId },
+      include: {
+        deposits: {
+          where: { status: 'CONFIRMED' },
+          select: { amount: true, currency: true, chain: true },
+        },
+      },
+    });
+
+    const walletSummaries = wallets.map((w: any) => {
+      const totalDeposited = w.deposits.reduce((sum: bigint, d: any) => {
+        try { return sum + BigInt(d.amount); } catch { return sum; }
+      }, BigInt(0));
+
+      return {
+        id: w.id,
+        address: w.address,
+        chain: w.chain,
+        pqcPublicKey: w.pqcPublicKey,
+        accountIndex: w.accountIndex,
+        isPaused: w.isPaused,
+        totalDeposited: totalDeposited.toString(),
+        createdAt: w.createdAt,
+      };
+    });
+
+    // Aggregate balances by currency across all chains
+    const balanceByCurrency: Record<string, bigint> = {};
+    for (const w of wallets) {
+      for (const d of w.deposits) {
+        const currency = d.currency || 'USDC';
+        if (!balanceByCurrency[currency]) balanceByCurrency[currency] = BigInt(0);
+        try {
+          balanceByCurrency[currency] += BigInt(d.amount);
+        } catch { /* ignore parse errors */ }
+      }
+    }
+
+    const primaryWallet = walletSummaries.find((w: any) => w.chain === 'POLYGON') ||
+                          walletSummaries.find((w: any) => w.chain === 'ETHEREUM') ||
+                          walletSummaries[0];
+
+    return {
+      tenantId,
+      wallets: walletSummaries,
+      primaryAddress: primaryWallet?.address || null,
+      totalBalance: Object.fromEntries(
+        Object.entries(balanceByCurrency).map(([k, v]) => [k, v.toString()])
+      ),
+      walletCount: wallets.length,
+      isHealthy: wallets.every((w: any) => !w.isPaused),
     };
   }
 }

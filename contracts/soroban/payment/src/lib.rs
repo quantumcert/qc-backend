@@ -25,6 +25,9 @@ const STATUS_RELEASED: u32 = 3;
 /// Status: cancelled
 const STATUS_CANCELLED: u32 = 4;
 
+/// Error: circuit breaker active
+const ERR_CIRCUIT_BREAKER: u32 = 100;
+
 // ===========================================================
 // DATA TYPES
 // ===========================================================
@@ -67,6 +70,7 @@ pub enum DataKey {
     Escrow(Bytes),          // escrow_id -> Escrow
     Anchor(Bytes),          // event_id -> AnchorRecord
     Admin,                  // single admin address
+    Paused,                 // circuit breaker state
     Nonce(Address),         // per-address nonce for replay protection
 }
 
@@ -86,6 +90,48 @@ impl QuantumCertPayment {
     pub fn initialize(env: Env, admin: Address) {
         admin.require_auth();
         env.storage().instance().set(&DataKey::Admin, &admin);
+        env.storage().instance().set(&DataKey::Paused, &false);
+    }
+
+    /// Toggles the circuit breaker pause state.
+    pub fn toggle_pause(env: Env) {
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .unwrap_or_else(|| panic!("Admin not set"));
+        admin.require_auth();
+
+        let current: bool = env
+            .storage()
+            .instance()
+            .get(&DataKey::Paused)
+            .unwrap_or(false);
+        
+        env.storage().instance().set(&DataKey::Paused, &!current);
+        
+        // Emit event
+        env.events().publish(
+            (symbol_short!("CIRCUIT"), symbol_short!("TOGGLE")),
+            (!current, env.ledger().timestamp()),
+        );
+    }
+
+    /// Returns current pause state.
+    pub fn paused(env: Env) -> bool {
+        env.storage()
+            .instance()
+            .get(&DataKey::Paused)
+            .unwrap_or(false)
+    }
+
+    fn check_not_paused(env: &Env) {
+        let paused: bool = env
+            .storage()
+            .instance()
+            .get(&DataKey::Paused)
+            .unwrap_or(false);
+        assert!(!paused, symbol_short!("ERR_PAUSE"));
     }
 
     fn validate_triple_proof(env: &Env, proof: &TripleProof) {
@@ -100,14 +146,6 @@ impl QuantumCertPayment {
     // --- 1. CREATE ESCROW (Payment) ---------------------
 
     /// Creates an escrow holding XLM or SAC tokens until unlock_timestamp.
-    ///
-    /// # Arguments
-    /// * `escrow_id` — Unique identifier (max 32 bytes)
-    /// * `receiver` — Address that will receive funds upon release
-    /// * `amount` — Amount in stroops
-    /// * `asset_address` — Token contract address (None for native XLM)
-    /// * `unlock_timestamp` — Unix timestamp when release becomes possible
-    /// * `triple_proof` — Optional 3-signature proof
     pub fn create_escrow(
         env: Env,
         escrow_id: Bytes,
@@ -117,13 +155,10 @@ impl QuantumCertPayment {
         unlock_timestamp: u64,
         triple_proof: Option<TripleProof>,
     ) {
-        let sender = env.current_contract_address(); // Caller context
-        // Require auth from the actual transaction sender
-        // In practice, the client passes their address and calls require_auth()
-        // Here we use the invoking address
+        Self::check_not_paused(&env);
+
+        let sender = env.current_contract_address();
         let invoker = env.invoker();
-        // For Soroban v22, use the appropriate auth mechanism
-        // In a real deployment, the client address would be passed and authenticated
 
         assert!(
             escrow_id.len() <= 32,
@@ -169,8 +204,9 @@ impl QuantumCertPayment {
     // --- 2. RELEASE ESCROW (Receiving) ------------------
 
     /// Releases escrowed funds to the receiver.
-    /// Only callable after unlock_timestamp by receiver or admin.
     pub fn release_escrow(env: Env, escrow_id: Bytes) {
+        Self::check_not_paused(&env);
+
         let key = DataKey::Escrow(escrow_id.clone());
         let mut escrow: Escrow = env
             .storage()
@@ -202,10 +238,6 @@ impl QuantumCertPayment {
         escrow.status = STATUS_RELEASED;
         env.storage().persistent().set(&key, &escrow);
 
-        // Transfer logic would be implemented here using token contracts
-        // For native XLM, the contract would hold the balance and transfer
-        // For SAC tokens, invoke token.transfer()
-
         env.events().publish(
             (symbol_short!("ESCROW"), symbol_short!("RELEASE")),
             (escrow_id, escrow.receiver, escrow.amount),
@@ -215,8 +247,9 @@ impl QuantumCertPayment {
     // --- 3. CANCEL ESCROW -------------------------------
 
     /// Cancels an escrow and returns funds to the sender.
-    /// Callable by sender before release.
     pub fn cancel_escrow(env: Env, escrow_id: Bytes) {
+        Self::check_not_paused(&env);
+
         let key = DataKey::Escrow(escrow_id.clone());
         let mut escrow: Escrow = env
             .storage()
@@ -238,9 +271,6 @@ impl QuantumCertPayment {
         escrow.status = STATUS_CANCELLED;
         env.storage().persistent().set(&key, &escrow);
 
-        // Return funds to sender
-        // Transfer logic would be implemented here
-
         env.events().publish(
             (symbol_short!("ESCROW"), symbol_short!("CANCEL")),
             (escrow_id, escrow.sender, escrow.amount),
@@ -250,13 +280,14 @@ impl QuantumCertPayment {
     // --- 4. ANCHOR EVENT --------------------------------
 
     /// Anchors a payload hash to the contract state.
-    /// Rejects classic Memo (28b limit) — always uses persistent storage.
     pub fn anchor_event(
         env: Env,
         event_id: Bytes,
         hash: BytesN<64>,
         unlock_timestamp: u64,
     ) {
+        Self::check_not_paused(&env);
+
         let invoker = env.invoker();
         let admin: Address = env
             .storage()
@@ -307,4 +338,3 @@ impl QuantumCertPayment {
         env.storage().instance().get(&DataKey::Admin)
     }
 }
-

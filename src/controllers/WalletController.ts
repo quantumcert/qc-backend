@@ -81,5 +81,28 @@ export class WalletController {
       });
     }
   }
+
+  /**
+   * GET /wallet/account
+   * Returns a unified Quantum Account aggregation for the tenant.
+   */
+  static async getQuantumAccount(req: AuthenticatedRequest, res: Response) {
+    try {
+      const tenantId = req.tenantId!;
+
+      const walletService = WalletService.getInstance();
+      const result = await walletService.getQuantumAccount(tenantId);
+
+      return res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error: any) {
+      return res.status(500).json({
+        success: false,
+        error: error.message,
+      });
+    }
+  }
 }
 
