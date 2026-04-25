@@ -688,7 +688,7 @@ Mock unificado do `algosdk` para todos os testes do Vitest. Substitui:
 
 ---
 
-## 12. Sessão Atual — Custodial Deposit Flow & Blockchain Listener (2025-06-XX)
+## 12. Sessão Atual — Custodial Deposit Flow & Blockchain Listener (2025-06-24)
 
 ### 12.1 Visão Geral do Fluxo
 
@@ -761,3 +761,135 @@ Test Files  16 passed (16)
 
 ### 13.3 Escalabilidade
 - Para >10k wallets: considerar indexer dedicado (The Graph, AlgoIndexer) ou webhooks (Alchemy/Infura)
+
+
+---
+
+## 14. Sessão Atual — PQC Institutional Grade (2025-06-25)
+
+### 14.1 Visão Geral
+
+Elevamos a segurança do modelo custodial básico para **"Post-Quantum Institutional Grade"** via quatro pilares arquiteturais: (1) wrapping de chaves com Falcon-512, (2) circuit breaker multi-chain com pausa on-chain, (3) security watchdog com "panic button", e (4) abstração WaaS "Quantum Account".
+
+### 14.2 Pilar 1: Falcon-512 Master Key Wrapping
+
+**Arquivos:** `src/utils/PostQuantumCrypto.ts`, `src/services/KMSService.ts`
+
+**O que foi implementado:**
+- `wrapKey(secretKeyHex, password)` — envelope encryption AES-256-GCM + HKDF-SHA3-256
+- `unwrapKey(wrappedKeyB64, password)` — descriptografia com autenticação GCM
+- `deriveWrappingKey(password, salt, info)` — derivação via HKDF-SHA3-256
+- `zeroize(buf)` — limpeza segura de memória com `crypto.randomFillSync`
+- `KMSService.getQuantumMasterKey()` — obtém master key do env (modo dev) ou vault (modo prod)
+- `KMSService.wrapUserKey(userPrivHex)` / `unwrapUserKey(wrappedB64)` — wrapping simétrico de chaves de usuário
+- `KMSService.deriveAndWrapPrivateKey(tenantId, chain, index)` — derivação HD + wrapping em um passo
+- `KMSService.derivePrivateKey(tenantId, chain, index)` — derivação HD pura (testes/dev)
+
+**Segurança:** Chaves privadas de usuários nunca são persistidas em plaintext. O banco armazena apenas `encryptedPrivateKey` (Base64 do wrapped AES-256-GCM).
+
+### 14.3 Pilar 2: Multi-Chain Circuit Breaker
+
+**Arquivo:** `src/services/CircuitBreakerService.ts` (NOVO)
+
+**O que foi implementado:**
+- Singleton com estado em memória (`Map<chain, paused>`)
+- `pauseChain(chain)`, `resumeChain(chain)`, `pauseAllChains()`, `isChainPaused(chain)`
+- Integração on-chain: para EVM, chama `TransferFacet.togglePause()` via `EthAdapter`
+- Smart contracts atualizados com estado `paused`:
+  - **Solidity (`TransferFacet.sol`):** `bool public paused`, `togglePause()`, modifier `whenNotPaused` em todas as funções mutantes
+  - **Anchor/Rust (`escrow/src/lib.rs`):** `ProgramState` PDA com `paused: bool`, instruction `toggle_pause`, `require!(!paused)` em todas as instructions
+  - **Soroban/Rust (`payment/src/lib.rs`):** `toggle_pause()`, `paused()`, `check_not_paused()` via instance storage, todas as funções mutantes protegidas
+
+**Arquivo:** `src/routes/v1/circuitBreakerRoutes.ts` (NOVO)
+
+**Endpoints:**
+- `GET /api/v1/circuit-breaker/status` — status de todas as chains
+- `POST /api/v1/circuit-breaker/pause` — pausa uma chain (body: `{ chain }`)
+- `POST /api/v1/circuit-breaker/resume` — resume uma chain (body: `{ chain }`)
+- `POST /api/v1/circuit-breaker/pause-all` — emergência: pausa TUDO
+
+### 14.4 Pilar 3: Security Watchdog com Panic Button
+
+**Arquivo:** `src/services/SecurityWatchdogService.ts` (NOVO)
+
+**O que foi implementado:**
+- Singleton com 4 detectores de anomalia:
+  1. **Deposit Spike:** max 10 deposits/15min por tenant
+  2. **Volume Anomaly:** deposit > 5x média 24h
+  3. **Failure Rate:** >50% falhas no observer em janela de 15min
+  4. **Stale Deposits:** depósitos PENDING > 30min (possível fork/chain stall)
+- `triggerPanic()` — chama `CircuitBreakerService.pauseAllChains()` + grava `PanicLog` no banco
+- Placeholder Sinarca: integração futura com API de detecção de anomalias de desmatamento (compliance ESG)
+
+**Integração:** `SchedulerService.ts` — cron job a cada 60s (`*/60 * * * * *`)
+
+### 14.5 Pilar 4: WaaS / Quantum Account
+
+**Arquivos:** `src/services/WalletService.ts` (NOVO), `src/controllers/WalletController.ts` (MODIFICADO), `src/routes/v1/walletRoutes.ts` (MODIFICADO)
+
+**O que foi implementado:**
+- `WalletService.createWallet(tenantId, chain)` — deriva endereço + gera par Falcon-512 + wrap chave privada
+- `WalletService.getDepositAddress(tenantId, chain)` — idempotente (retorna existente ou cria novo)
+- `WalletService.getBalance(tenantId, chain)` — agrega `SUM(amount)` dos deposits `CONFIRMED`
+- `WalletService.getQuantumAccount(tenantId)` — retorna todas as addresses + saldo consolidado
+- `WalletController.getQuantumAccount(req, res)` — handler para `GET /api/v1/wallet/account`
+
+**Prisma schema atualizado:**
+- `UserWallet`: ganhou `encryptedPrivateKey`, `keyWrapVersion`, `wrappedAt`, `isPaused`
+- **NOVO** `MasterKey` — armazena hash do master key (não a chave em si)
+- **NOVO** `PanicLog` — log imutável de cada ativação do panic button
+
+### 14.6 Resultado dos Testes (Final Consolidado)
+
+```bash
+$ npm test -- --run
+
+Test Files  16 passed (16)
+     Tests  110 passed (110)
+    Errors  0 errors
+  Duration  ~3.5s
+```
+
+**Suite completa:**
+| Arquivo | Testes |
+|---|---|
+| `tests/dlt-adapter-factory.test.ts` | 7 |
+| `tests/multi-chain/eth-adapter.test.ts` | 9 |
+| `tests/multi-chain/solana-adapter.test.ts` | 10 |
+| `tests/multi-chain/soroban-adapter.test.ts` | 9 |
+| `tests/multi-chain/algorand-adapter.test.ts` | 10 |
+| `tests/multi-chain/polygon-adapter.test.ts` | 7 |
+| `tests/multi-chain/triple-sig.test.ts` | 5 |
+| `tests/wallet.test.ts` | 6 |
+| `tests/blockchain-observer.test.ts` | 5 |
+| `tests/deposit-flow.test.ts` | 5 |
+| `tests/docs.test.ts` | 6 |
+| `tests/facets.test.ts` | 11 |
+| `tests/lifecycle.test.ts` | 11 |
+| `tests/scheduler.test.ts` | 5 |
+| `tests/security-regression.test.ts` | 4 |
+| `tests/webhook.test.ts` | 5 |
+
+### 14.7 Arquivos Criados/Modificados nesta Sessão
+
+**Novos:**
+- `src/services/CircuitBreakerService.ts`
+- `src/services/SecurityWatchdogService.ts`
+- `src/services/WalletService.ts`
+- `src/services/BlockchainObserverService.ts`
+- `src/controllers/WalletController.ts`
+- `src/routes/v1/circuitBreakerRoutes.ts`
+- `src/routes/v1/walletRoutes.ts` (rebuild from deprecated)
+- `tests/wallet.test.ts`
+- `tests/blockchain-observer.test.ts`
+- `tests/deposit-flow.test.ts`
+
+**Modificados:**
+- `prisma/schema.prisma` — UserWallet (+encryptedPrivateKey, etc.), Deposit, MasterKey, PanicLog
+- `src/services/KMSService.ts` — +getQuantumMasterKey, wrapUserKey, unwrapUserKey, deriveAndWrapPrivateKey
+- `src/services/SchedulerService.ts` — +BlockchainObserver cron, +SecurityWatchdog cron
+- `src/routes/index.ts` — mount walletRoutes, circuitBreakerRoutes
+- `contracts/eth/TransferFacet.sol` — +paused state, togglePause(), whenNotPaused
+- `contracts/solana/escrow/programs/escrow/src/lib.rs` — +ProgramState PDA, toggle_pause
+- `contracts/soroban/payment/src/lib.rs` — +toggle_pause, paused, check_not_paused
+- `src/services/multi-chain/SorobanAdapter.ts` — fix type issues with assembleTransaction
