@@ -2,39 +2,33 @@ import algosdk from 'algosdk';
 import crypto from 'crypto';
 import prisma from '../../config/prisma';
 import { IDLTAdapter, AnchorOptions, EscrowParams, TransferParams, ReceiveParams } from '../../interfaces/IDLTAdapter';
-import { PostQuantumCrypto } from '../../utils/PostQuantumCrypto';
+import { KMSService } from '../KMSService';
+import { QuantumSignerService } from '../QuantumSignerService';
 
 export class AlgorandAnchorFacet implements IDLTAdapter {
     private algodClient: algosdk.Algodv2;
     private masterAccount: algosdk.Account;
 
     constructor() {
-        const Mnemonic = process.env.ALGORAND_MASTER_MNEMONIC;
-        const Server = process.env.ALGOD_SERVER;
-        const Token = process.env.ALGOD_TOKEN || '';
-        const Port = process.env.ALGOD_PORT || '';
+        const kms = KMSService.getInstance();
+        const mnemonic = kms.getKey('ALGORAND', 'mnemonic');
+        const server = kms.getKey('ALGORAND', 'rpcUrl');
+        const token = kms.getKey('ALGORAND', 'apiToken') || '';
+        const port = process.env.ALGOD_PORT || '';
 
-        if (!Mnemonic) {
-            throw new Error("ALGORAND_MASTER_MNEMONIC is not defined in the environment.");
-        }
-
-        if (!Server) {
-            throw new Error("ALGOD_SERVER is not defined in the environment. Production requires explicit Mainnet configuration.");
-        }
-
-        this.algodClient = new algosdk.Algodv2(Token, Server, Port);
-        this.masterAccount = algosdk.mnemonicToSecretKey(Mnemonic);
+        this.algodClient = new algosdk.Algodv2(token, server, port);
+        this.masterAccount = algosdk.mnemonicToSecretKey(mnemonic);
     }
 
     /**
      * Anchors an event payload hash to the Algorand Blockchain.
      * ZERO-VALUE Txn with Note Field LGPD Obfuscation.
+     * Includes Falcon-512 PQC proof via QuantumSignerService.
      * @param eventId The local event ID
      * @param eventHash The SHA-256 or SHA3-512 hash of the payload
-     * @param _options Optional chain-specific anchoring parameters (ignored for Algorand)
+     * @param options Optional chain-specific anchoring parameters (pqcProof, unlockTimestamp)
      */
-    async anchorEvent(eventId: string, eventHash: string, _options?: AnchorOptions): Promise<string> {
-        // Fetch event to get Tenant ID for LGPD Obfuscation
+    async anchorEvent(eventId: string, eventHash: string, options?: AnchorOptions): Promise<string> {
         const event = await prisma.eventLog.findUnique({
             where: { id: eventId }
         });
@@ -43,29 +37,37 @@ export class AlgorandAnchorFacet implements IDLTAdapter {
             throw new Error(`Event not found: ${eventId}`);
         }
 
-        // Post-Quantum Signature Simulation (Falcon-512)
-        // Extract the private seed/key from the environment (or Vault)
-        const tenantPrivateKey = process.env.QUANTUM_CERT_SECRET || event.tenantId;
-        const pqcSignature = await PostQuantumCrypto.signPayloadFalcon512(event.payload as object, tenantPrivateKey);
+        // Resolve PQC proof: use provided options or generate via QuantumSignerService
+        let pqcProofBase64: string;
+        if (options?.pqcProof) {
+            pqcProofBase64 = options.pqcProof;
+        } else {
+            const qss = QuantumSignerService.getInstance();
+            const tenantSecret = process.env.QUANTUM_CERT_SECRET || event.tenantId;
+            pqcProofBase64 = await qss.signPayloadRaw(
+                { eventId, hash: eventHash, tenantId: event.tenantId },
+                eventId,
+                'EVENT',
+                tenantSecret
+            );
+        }
 
         // LGPD OBFUSCATION & BINARY PACKAGING
-        // The business rule defined: Header (QC|) | TenantHash (32b) | EventSHA3 (64b) | PQCSign (~666b)
         const headerBuffer = Buffer.from('QC|');
         const tenantHashBuffer = crypto.createHash('sha256').update(event.tenantId).digest();
         const eventHashBuffer = Buffer.from(eventHash, 'hex');
+        const pqcBuffer = Buffer.from(pqcProofBase64);
 
         const noteBuffer = Buffer.concat([
             headerBuffer,
             tenantHashBuffer,
             eventHashBuffer,
-            pqcSignature
+            pqcBuffer
         ]);
         const noteArray = new Uint8Array(noteBuffer);
 
-        // Get suggested params from the network (Gas, Fee, Rounds)
         const params = await this.algodClient.getTransactionParams().do();
 
-        // Omnibus Wallet: From Master to Master, Amount 0
         const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
             sender: this.masterAccount.addr.toString(),
             receiver: this.masterAccount.addr.toString(),
@@ -74,15 +76,12 @@ export class AlgorandAnchorFacet implements IDLTAdapter {
             suggestedParams: params
         });
 
-        // HOTFIX: Resilience check - Ensure Master Wallet has enough ALGOs to pay the fee
         const accountInfo = await this.algodClient.accountInformation(this.masterAccount.addr).do();
         const balanceMicroAlgos = Number(accountInfo.amount || 0);
         const requiredFee = params.fee || 1000;
-
-        // RED TEAM HOTFIX: 5 ALGOs soft alert (1 ALGO = 1,000,000 microAlgos)
         const balanceAlgos = balanceMicroAlgos / 1000000;
+
         if (balanceAlgos <= 5) {
-            // Emits Critical Alert without stopping the queue
             console.warn(`[CRITICAL ALERT] Master Wallet balance is VERY LOW: ${balanceAlgos.toFixed(2)} ALGOs remaining! Replenish immediately to avoid queue stalling.`);
         }
 
@@ -90,23 +89,13 @@ export class AlgorandAnchorFacet implements IDLTAdapter {
             throw new Error('Insufficient funds in Master Wallet to cover anchoring fees. Marking as PENDING_FUNDS.');
         }
 
-        // Sign the transaction with Master Account's Private Key (Falcon/Ed25519 internally managed by Algorand)
-        // Note: Algorand natively uses Ed25519. In Phase 6 logic the "Falcon-512" signature would be the payload's signature, 
-        // but Algorand signs the transaction using Ed25519. We will rely on standard algosdk signing.
         const signedTxn = txn.signTxn(this.masterAccount.sk);
-
-        // Submit the transaction
         const sendResponse = await this.algodClient.sendRawTransaction(signedTxn).do();
         const txId = (sendResponse as any).txId || sendResponse.txid;
 
         return txId;
     }
 
-    /**
-     * Verifies if an anchor associated with a TxID is mathematically valid and exists on the ledger.
-     * @param txId The transaction ID on the DLT
-     * @param _expectedHash Optional expected hash (ignored for Algorand — verified via confirmedRound only)
-     */
     async verifyAnchor(txId: string, _expectedHash?: string): Promise<boolean> {
         try {
             const txInfo = await this.algodClient.pendingTransactionInformation(txId).do();
@@ -114,36 +103,42 @@ export class AlgorandAnchorFacet implements IDLTAdapter {
                 return true;
             }
             return false;
-        } catch (error) {
+        } catch {
             return false;
         }
     }
 
     // ─────────────────────────────────────────────────────────
-    // ESCROW — NOT IMPLEMENTED FOR ALGORAND (Phase 2)
+    // ESCROW -- Delegated to AlgorandAdapter
     // ─────────────────────────────────────────────────────────
 
-    async createEscrow(_params: EscrowParams): Promise<string> {
-        throw new Error('Escrow operations are not yet implemented for Algorand. Use Ethereum, Solana, or Stellar.');
+    async createEscrow(params: EscrowParams): Promise<string> {
+        const { AlgorandAdapter } = await import('../multi-chain/AlgorandAdapter');
+        const adapter = new AlgorandAdapter();
+        return adapter.createEscrow(params);
     }
 
-    async releaseEscrow(_escrowId: string, _txRef: string): Promise<string> {
-        throw new Error('Escrow operations are not yet implemented for Algorand. Use Ethereum, Solana, or Stellar.');
+    async releaseEscrow(escrowId: string, txRef: string): Promise<string> {
+        throw new Error('Algorand escrow release requires TEAL smart contract. Not yet implemented.');
     }
 
-    async cancelEscrow(_escrowId: string, _txRef: string): Promise<string> {
-        throw new Error('Escrow operations are not yet implemented for Algorand. Use Ethereum, Solana, or Stellar.');
+    async cancelEscrow(escrowId: string, txRef: string): Promise<string> {
+        throw new Error('Algorand escrow cancellation requires TEAL smart contract. Not yet implemented.');
     }
 
     // ─────────────────────────────────────────────────────────
-    // SEND / RECEIVE — NOT IMPLEMENTED FOR ALGORAND (Phase 2)
+    // SEND / RECEIVE -- Delegated to AlgorandAdapter
     // ─────────────────────────────────────────────────────────
 
-    async sendAsset(_params: TransferParams): Promise<string> {
-        throw new Error('Asset transfer operations are not yet implemented for Algorand. Use Ethereum, Solana, or Stellar.');
+    async sendAsset(params: TransferParams): Promise<string> {
+        const { AlgorandAdapter } = await import('../multi-chain/AlgorandAdapter');
+        const adapter = new AlgorandAdapter();
+        return adapter.sendAsset(params);
     }
 
-    async receiveAsset(_params: ReceiveParams): Promise<string> {
-        throw new Error('Asset transfer operations are not yet implemented for Algorand. Use Ethereum, Solana, or Stellar.');
+    async receiveAsset(params: ReceiveParams): Promise<string> {
+        const { AlgorandAdapter } = await import('../multi-chain/AlgorandAdapter');
+        const adapter = new AlgorandAdapter();
+        return adapter.receiveAsset(params);
     }
 }

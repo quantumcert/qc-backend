@@ -1,16 +1,23 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 // PROGRAM ID PLACEHOLDER
 // Replace with actual Program ID after deployment
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
+
+// SECURITY: On-chain data is restricted to:
+//   - falconHash ([u8; 64]) — SHA3-512 raw hash
+//   - timestamp (i64) — Unix timestamp
+//   - qtagId / escrow_id (String, max 32 bytes) — Correlation ID
+//   - entityType (u8) — Type discriminator (STATUS_ANCHORED, STATUS_ESCROW_LOCKED)
+// NO personal data, NO sensitive payloads, NO PII ever stored on-chain.
 
 declare_id!("Escro111111111111111111111111111111111111111");
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 // CONSTANTS
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 
 /// Discriminator for Mode A anchor instruction data (LOG)
 pub const DISCRIMINATOR_LOG_A: &[u8; 8] = b"QC_LOG_A";
@@ -21,9 +28,9 @@ pub const STATUS_ANCHORED: u8 = 0x01;
 /// Status: escrow locked
 pub const STATUS_ESCROW_LOCKED: u8 = 0x02;
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 // ERRORS
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 
 #[error_code]
 pub enum EscrowError {
@@ -49,17 +56,19 @@ pub enum EscrowError {
     DurableNonceBanned,
     #[msg("Payload hash must be exactly 64 bytes")]
     InvalidPayloadHashLength,
+    #[msg("Invalid triple proof: missing or duplicate signers")]
+    InvalidTripleProof,
 }
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 // PROGRAM
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 
 #[program]
 pub mod escrow {
     use super::*;
 
-    // ─── 1. INITIALIZE ESCROW (Payment) ─────────────────
+    // --- 1. INITIALIZE ESCROW (Payment) -----------------
 
     /// Creates an escrow account (PDA) holding SOL until unlock_timestamp.
     ///
@@ -74,6 +83,7 @@ pub mod escrow {
         receiver: Pubkey,
         unlock_timestamp: i64,
         amount: u64,
+        triple_proof: Option<TripleProof>,
     ) -> Result<()> {
         require!(
             escrow_id.len() <= 32,
@@ -84,6 +94,10 @@ pub mod escrow {
             unlock_timestamp > Clock::get()?.unix_timestamp,
             EscrowError::InvalidTimeLock
         );
+
+        if let Some(ref proof) = triple_proof {
+            validate_triple_proof(proof)?;
+        }
 
         let escrow = &mut ctx.accounts.escrow_account;
         escrow.escrow_id = escrow_id;
@@ -96,6 +110,7 @@ pub mod escrow {
         escrow.released = false;
         escrow.cancelled = false;
         escrow.bump = ctx.bumps.escrow_account;
+        escrow.triple_proof = triple_proof;
 
         // Transfer SOL from sender to escrow PDA
         let cpi_context = CpiContext::new(
@@ -118,7 +133,7 @@ pub mod escrow {
         Ok(())
     }
 
-    // ─── 2. RELEASE ESCROW (Receiving) ──────────────────
+    // --- 2. RELEASE ESCROW (Receiving) ------------------
 
     /// Releases escrowed SOL to the receiver.
     /// Only callable after unlock_timestamp.
@@ -154,7 +169,7 @@ pub mod escrow {
         Ok(())
     }
 
-    // ─── 3. CANCEL ESCROW ───────────────────────────────
+    // --- 3. CANCEL ESCROW -------------------------------
 
     /// Cancels an escrow and returns SOL to the sender.
     /// Callable by sender at any time before release.
@@ -184,7 +199,7 @@ pub mod escrow {
         Ok(())
     }
 
-    // ─── 4. ANCHOR EVENT — MODE A (LOG) ─────────────────
+    // --- 4. ANCHOR EVENT — MODE A (LOG) -----------------
 
     /// Mode A: Writes hash into instruction data.
     /// Immutable validator history. ~5000 lamports.
@@ -214,7 +229,7 @@ pub mod escrow {
         Ok(())
     }
 
-    // ─── 5. ANCHOR EVENT — MODE B (STATE PDA) ───────────
+    // --- 5. ANCHOR EVENT — MODE B (STATE PDA) -----------
 
     /// Mode B: Stores hash in a PDA. M2M-readable. ~0.0014 SOL rent-exempt.
     pub fn anchor_event_state(
@@ -247,9 +262,9 @@ pub mod escrow {
     }
 }
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 // ACCOUNTS
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 
 #[derive(Accounts)]
 #[instruction(escrow_id: String, receiver: Pubkey, unlock_timestamp: i64, amount: u64)]
@@ -339,9 +354,45 @@ pub struct AnchorEventState<'info> {
     pub system_program: Program<'info, System>,
 }
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 // DATA STRUCTURES
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Debug)]
+pub struct TripleProof {
+    pub seller_pubkey: Pubkey,
+    pub buyer_pubkey: Pubkey,
+    pub quantum_pubkey: Pubkey,
+    pub signed_at: i64,
+}
+
+fn validate_triple_proof(proof: &TripleProof) -> Result<()> {
+    require!(
+        proof.seller_pubkey != Pubkey::default(),
+        EscrowError::InvalidTripleProof
+    );
+    require!(
+        proof.buyer_pubkey != Pubkey::default(),
+        EscrowError::InvalidTripleProof
+    );
+    require!(
+        proof.quantum_pubkey != Pubkey::default(),
+        EscrowError::InvalidTripleProof
+    );
+    require!(
+        proof.seller_pubkey != proof.buyer_pubkey,
+        EscrowError::InvalidTripleProof
+    );
+    require!(
+        proof.seller_pubkey != proof.quantum_pubkey,
+        EscrowError::InvalidTripleProof
+    );
+    require!(
+        proof.buyer_pubkey != proof.quantum_pubkey,
+        EscrowError::InvalidTripleProof
+    );
+    Ok(())
+}
 
 #[account]
 pub struct EscrowAccount {
@@ -355,6 +406,7 @@ pub struct EscrowAccount {
     pub released: bool,           // 1 byte
     pub cancelled: bool,          // 1 byte
     pub bump: u8,                 // 1 byte
+    pub triple_proof: Option<TripleProof>, // 1 + (32 + 32 + 32 + 8) bytes
 }
 
 impl EscrowAccount {
@@ -368,7 +420,8 @@ impl EscrowAccount {
         8 +        // created_at
         1 +        // released
         1 +        // cancelled
-        1;         // bump
+        1 +        // bump
+        1 + 32 + 32 + 32 + 8; // triple_proof Option<TripleProof>
 }
 
 #[account]

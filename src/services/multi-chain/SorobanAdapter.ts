@@ -1,10 +1,14 @@
-// ==========================================================
-// SOROBAN ADAPTER — Stellar Soroban Smart Contract Integration
+// ============================================================
+// SOROBAN ADAPTER -- Stellar Soroban Smart Contract Integration
 // Uses @stellar/stellar-sdk for all blockchain interactions.
 // Supports: Payment (Escrow), Receiving, Sending, Anchoring
 // SECURITY: Classic Memo is BANNED (28b limit < 64b SHA3-512).
 //           Always uses Soroban contract invocation.
-// ==========================================================
+//
+// HYBRID SIGNATURE:
+//   - pqcProof embedded in Soroban contract invocation args
+//   - Classical EdDSA via Keypair for transport
+// ============================================================
 
 import {
   Keypair,
@@ -18,6 +22,8 @@ import {
   rpc as SorobanRpc,
 } from '@stellar/stellar-sdk';
 import prisma from '../../config/prisma';
+import { KMSService } from '../KMSService';
+import { QuantumSignerService } from '../QuantumSignerService';
 import {
   IDLTAdapter,
   AnchorOptions,
@@ -34,9 +40,10 @@ export class SorobanAdapter implements IDLTAdapter {
   private networkPassphrase: string;
 
   constructor() {
-    const horizonUrl = process.env.STELLAR_HORIZON_URL;
+    const kms = KMSService.getInstance();
+    const horizonUrl = kms.getKey('STELLAR', 'rpcUrl');
     const sorobanRpcUrl = process.env.STELLAR_SOROBAN_RPC_URL;
-    const secretKey = process.env.STELLAR_AUTHORITY_SECRET_KEY;
+    const secretKey = kms.getKey('STELLAR', 'secretKey');
     const contractId = process.env.STELLAR_ANCHOR_CONTRACT_ID;
     const networkPassphrase = process.env.STELLAR_NETWORK_PASSPHRASE || Networks.PUBLIC;
 
@@ -65,61 +72,48 @@ export class SorobanAdapter implements IDLTAdapter {
   // ----------------------------------------------------------
 
   async anchorEvent(eventId: string, hash: string, options?: AnchorOptions): Promise<string> {
-    const payloadHash = Buffer.from(hash.replace(/^0x/, ''), 'hex');
-    if (payloadHash.length !== 64 && payloadHash.length !== 32) {
-      throw new Error(`Invalid hash length: ${payloadHash.length}. Expected 32 or 64 bytes.`);
+    if (options?.tripleSign) {
+      const validation = await QuantumSignerService.getInstance().verifyTriple(options.tripleSign);
+      if (!validation.valid) {
+        throw new Error(`Triple-signature validation failed: ${validation.reason}`);
+      }
     }
-    const hash64 = payloadHash.length === 64 ? payloadHash : Buffer.concat([payloadHash, Buffer.alloc(32)]);
 
-    const unlockTimestamp = options?.unlockTimestamp ?? 0;
+    const hashBuf = Buffer.from(hash.replace(/^0x/, ''), 'hex');
+    if (hashBuf.length !== 64 && hashBuf.length !== 32) {
+      throw new Error(`Invalid hash length: ${hashBuf.length}. Expected 32 or 64 bytes.`);
+    }
+    const hash64 = hashBuf.length === 64 ? hashBuf : Buffer.concat([hashBuf, Buffer.alloc(32)]);
 
     const account = await this.horizonServer.loadAccount(this.keypair.publicKey());
     const contract = new Contract(this.contractId);
 
-    const txBuilder = new TransactionBuilder(account, {
+    const args = this._toScValArgs(eventId, hash64, options?.unlockTimestamp ?? 0);
+    if (options?.pqcProof) {
+      args.push(nativeToScVal(options.pqcProof, { type: 'string' }));
+    }
+
+    const tx = new TransactionBuilder(account, {
       fee: '100000',
       networkPassphrase: this.networkPassphrase,
     })
       .setTimeout(30)
-      .addOperation(
-        contract.call(
-          'anchor_event',
-          ...this._toScValArgs(eventId, hash64, unlockTimestamp)
-        )
-      );
+      .addOperation(contract.call('anchor_event', ...args))
+      .build();
 
-    const tx = txBuilder.build();
-    const simResult = await this.sorobanServer.simulateTransaction(tx);
+    tx.sign(this.keypair);
 
-    if (!simResult || simResult.error) {
-      throw new Error(`Soroban simulation failed: ${simResult?.error || 'unknown'}`);
+    const simulateResult = await this.sorobanServer.simulateTransaction(tx);
+    const preparedTx = SorobanRpc.assembleTransaction(tx, simulateResult);
+    preparedTx.sign(this.keypair);
+
+    const submitResult = await this.sorobanServer.sendTransaction(preparedTx);
+
+    if (submitResult.status === 'ERROR') {
+      throw new Error(`Soroban anchor failed: ${submitResult.status}`);
     }
 
-    const assembled = TransactionBuilder.fromXDR(
-      simResult.transactionData?.build().toXDR('base64') || tx.toXDR(),
-      this.networkPassphrase
-    );
-
-    assembled.sign(this.keypair);
-    const sendResult = await this.sorobanServer.sendTransaction(assembled);
-
-    if (sendResult.status !== 'PENDING') {
-      throw new Error(`Soroban send failed: ${sendResult.status}`);
-    }
-
-    const txHash = sendResult.hash;
-    let result = await this.sorobanServer.getTransaction(txHash);
-    const startTime = Date.now();
-    const timeout = 30000;
-
-    while (result.status === 'NOT_FOUND' && Date.now() - startTime < timeout) {
-      await new Promise((r) => setTimeout(r, 1000));
-      result = await this.sorobanServer.getTransaction(txHash);
-    }
-
-    if (result.status !== 'SUCCESS') {
-      throw new Error(`Soroban transaction failed: ${result.status}`);
-    }
+    const txHash = submitResult.hash;
 
     await this.logTransaction({
       tenantId: 'SYSTEM',
@@ -127,39 +121,17 @@ export class SorobanAdapter implements IDLTAdapter {
       chain: 'STELLAR',
       direction: 'ANCHOR',
       chainTxId: txHash,
-      status: 'CONFIRMED',
-      metadata: { eventId, hash: hash64.toString('hex'), unlockTimestamp },
+      status: 'PENDING',
+      metadata: { hash, pqcProof: options?.pqcProof, tripleSign: options?.tripleSign },
     });
 
     return txHash;
   }
 
-  async verifyAnchor(txId: string, expectedHash?: string): Promise<boolean> {
+  async verifyAnchor(txId: string, _expectedHash?: string): Promise<boolean> {
     try {
       const result = await this.sorobanServer.getTransaction(txId);
-      if (result.status !== 'SUCCESS') return false;
-
-      if (expectedHash) {
-        const account = await this.horizonServer.loadAccount(this.keypair.publicKey());
-        const contract = new Contract(this.contractId);
-
-        const txBuilder = new TransactionBuilder(account, {
-          fee: '100000',
-          networkPassphrase: this.networkPassphrase,
-        })
-          .setTimeout(30)
-          .addOperation(contract.call('get_anchor_hash', ...this._toScValArgsHashOnly(expectedHash)));
-
-        const tx = txBuilder.build();
-        const simResult = await this.sorobanServer.simulateTransaction(tx);
-
-        if (simResult && !simResult.error) {
-          return true;
-        }
-        return false;
-      }
-
-      return true;
+      return result.status === 'SUCCESS';
     } catch {
       return false;
     }
@@ -170,53 +142,41 @@ export class SorobanAdapter implements IDLTAdapter {
   // ----------------------------------------------------------
 
   async createEscrow(params: EscrowParams): Promise<string> {
-    const { escrowId, sender, receiver, amount, assetAddress, unlockTimestamp } = params;
+    if (params.tripleSign) {
+      const validation = await QuantumSignerService.getInstance().verifyTriple(params.tripleSign);
+      if (!validation.valid) {
+        throw new Error(`Triple-signature validation failed: ${validation.reason}`);
+      }
+    }
+
+    const { escrowId, receiver, amount, unlockTimestamp, pqcProof, tripleSign } = params;
 
     const account = await this.horizonServer.loadAccount(this.keypair.publicKey());
     const contract = new Contract(this.contractId);
 
-    const txBuilder = new TransactionBuilder(account, {
+    const args = this._toScValEscrowArgs(escrowId, receiver, amount, params.assetAddress, unlockTimestamp);
+    if (pqcProof) {
+      args.push(nativeToScVal(pqcProof, { type: 'string' }));
+    }
+
+    const tx = new TransactionBuilder(account, {
       fee: '100000',
       networkPassphrase: this.networkPassphrase,
     })
       .setTimeout(30)
-      .addOperation(
-        contract.call(
-          'create_escrow',
-          ...this._toScValEscrowArgs(escrowId, receiver, amount, assetAddress, unlockTimestamp)
-        )
-      );
+      .addOperation(contract.call('create_escrow', ...args))
+      .build();
 
-    const tx = txBuilder.build();
-    const simResult = await this.sorobanServer.simulateTransaction(tx);
+    tx.sign(this.keypair);
 
-    if (!simResult || simResult.error) {
-      throw new Error(`Soroban simulation failed: ${simResult?.error || 'unknown'}`);
-    }
+    const simulateResult = await this.sorobanServer.simulateTransaction(tx);
+    const preparedTx = SorobanRpc.assembleTransaction(tx, simulateResult);
+    preparedTx.sign(this.keypair);
 
-    const assembled = TransactionBuilder.fromXDR(
-      simResult.transactionData?.build().toXDR('base64') || tx.toXDR(),
-      this.networkPassphrase
-    );
-    assembled.sign(this.keypair);
+    const submitResult = await this.sorobanServer.sendTransaction(preparedTx);
 
-    const sendResult = await this.sorobanServer.sendTransaction(assembled);
-    if (sendResult.status !== 'PENDING') {
-      throw new Error(`Soroban send failed: ${sendResult.status}`);
-    }
-
-    const txHash = sendResult.hash;
-    let result = await this.sorobanServer.getTransaction(txHash);
-    const startTime = Date.now();
-    const timeout = 30000;
-
-    while (result.status === 'NOT_FOUND' && Date.now() - startTime < timeout) {
-      await new Promise((r) => setTimeout(r, 1000));
-      result = await this.sorobanServer.getTransaction(txHash);
-    }
-
-    if (result.status !== 'SUCCESS') {
-      throw new Error(`Soroban transaction failed: ${result.status}`);
+    if (submitResult.status === 'ERROR') {
+      throw new Error(`Soroban createEscrow failed: ${submitResult.status}`);
     }
 
     await this.logTransaction({
@@ -224,59 +184,39 @@ export class SorobanAdapter implements IDLTAdapter {
       txRef: escrowId,
       chain: 'STELLAR',
       direction: 'ESCROW_CREATE',
-      fromAddress: sender,
+      fromAddress: this.keypair.publicKey(),
       toAddress: receiver,
       amount,
-      assetAddress: assetAddress || null,
-      chainTxId: txHash,
-      status: 'CONFIRMED',
-      metadata: { unlockTimestamp },
+      chainTxId: submitResult.hash,
+      status: 'PENDING',
+      metadata: { unlockTimestamp, pqcProof, tripleSign },
     });
 
-    return txHash;
+    return submitResult.hash;
   }
 
   async releaseEscrow(escrowId: string, txRef: string): Promise<string> {
     const account = await this.horizonServer.loadAccount(this.keypair.publicKey());
     const contract = new Contract(this.contractId);
 
-    const txBuilder = new TransactionBuilder(account, {
+    const tx = new TransactionBuilder(account, {
       fee: '100000',
       networkPassphrase: this.networkPassphrase,
     })
       .setTimeout(30)
-      .addOperation(contract.call('release_escrow', ...this._toScValEscrowId(escrowId)));
+      .addOperation(contract.call('release_escrow', ...this._toScValEscrowId(escrowId)))
+      .build();
 
-    const tx = txBuilder.build();
-    const simResult = await this.sorobanServer.simulateTransaction(tx);
+    tx.sign(this.keypair);
 
-    if (!simResult || simResult.error) {
-      throw new Error(`Soroban simulation failed: ${simResult?.error || 'unknown'}`);
-    }
+    const simulateResult = await this.sorobanServer.simulateTransaction(tx);
+    const preparedTx = SorobanRpc.assembleTransaction(tx, simulateResult);
+    preparedTx.sign(this.keypair);
 
-    const assembled = TransactionBuilder.fromXDR(
-      simResult.transactionData?.build().toXDR('base64') || tx.toXDR(),
-      this.networkPassphrase
-    );
-    assembled.sign(this.keypair);
+    const submitResult = await this.sorobanServer.sendTransaction(preparedTx);
 
-    const sendResult = await this.sorobanServer.sendTransaction(assembled);
-    if (sendResult.status !== 'PENDING') {
-      throw new Error(`Soroban send failed: ${sendResult.status}`);
-    }
-
-    const txHash = sendResult.hash;
-    let result = await this.sorobanServer.getTransaction(txHash);
-    const startTime = Date.now();
-    const timeout = 30000;
-
-    while (result.status === 'NOT_FOUND' && Date.now() - startTime < timeout) {
-      await new Promise((r) => setTimeout(r, 1000));
-      result = await this.sorobanServer.getTransaction(txHash);
-    }
-
-    if (result.status !== 'SUCCESS') {
-      throw new Error(`Soroban transaction failed: ${result.status}`);
+    if (submitResult.status === 'ERROR') {
+      throw new Error(`Soroban releaseEscrow failed: ${submitResult.status}`);
     }
 
     await this.logTransaction({
@@ -284,55 +224,36 @@ export class SorobanAdapter implements IDLTAdapter {
       txRef,
       chain: 'STELLAR',
       direction: 'ESCROW_RELEASE',
-      chainTxId: txHash,
-      status: 'CONFIRMED',
+      chainTxId: submitResult.hash,
+      status: 'PENDING',
       metadata: { escrowId },
     });
 
-    return txHash;
+    return submitResult.hash;
   }
 
   async cancelEscrow(escrowId: string, txRef: string): Promise<string> {
     const account = await this.horizonServer.loadAccount(this.keypair.publicKey());
     const contract = new Contract(this.contractId);
 
-    const txBuilder = new TransactionBuilder(account, {
+    const tx = new TransactionBuilder(account, {
       fee: '100000',
       networkPassphrase: this.networkPassphrase,
     })
       .setTimeout(30)
-      .addOperation(contract.call('cancel_escrow', ...this._toScValEscrowId(escrowId)));
+      .addOperation(contract.call('cancel_escrow', ...this._toScValEscrowId(escrowId)))
+      .build();
 
-    const tx = txBuilder.build();
-    const simResult = await this.sorobanServer.simulateTransaction(tx);
+    tx.sign(this.keypair);
 
-    if (!simResult || simResult.error) {
-      throw new Error(`Soroban simulation failed: ${simResult?.error || 'unknown'}`);
-    }
+    const simulateResult = await this.sorobanServer.simulateTransaction(tx);
+    const preparedTx = SorobanRpc.assembleTransaction(tx, simulateResult);
+    preparedTx.sign(this.keypair);
 
-    const assembled = TransactionBuilder.fromXDR(
-      simResult.transactionData?.build().toXDR('base64') || tx.toXDR(),
-      this.networkPassphrase
-    );
-    assembled.sign(this.keypair);
+    const submitResult = await this.sorobanServer.sendTransaction(preparedTx);
 
-    const sendResult = await this.sorobanServer.sendTransaction(assembled);
-    if (sendResult.status !== 'PENDING') {
-      throw new Error(`Soroban send failed: ${sendResult.status}`);
-    }
-
-    const txHash = sendResult.hash;
-    let result = await this.sorobanServer.getTransaction(txHash);
-    const startTime = Date.now();
-    const timeout = 30000;
-
-    while (result.status === 'NOT_FOUND' && Date.now() - startTime < timeout) {
-      await new Promise((r) => setTimeout(r, 1000));
-      result = await this.sorobanServer.getTransaction(txHash);
-    }
-
-    if (result.status !== 'SUCCESS') {
-      throw new Error(`Soroban transaction failed: ${result.status}`);
+    if (submitResult.status === 'ERROR') {
+      throw new Error(`Soroban cancelEscrow failed: ${submitResult.status}`);
     }
 
     await this.logTransaction({
@@ -340,12 +261,12 @@ export class SorobanAdapter implements IDLTAdapter {
       txRef,
       chain: 'STELLAR',
       direction: 'ESCROW_CANCEL',
-      chainTxId: txHash,
-      status: 'CONFIRMED',
+      chainTxId: submitResult.hash,
+      status: 'PENDING',
       metadata: { escrowId },
     });
 
-    return txHash;
+    return submitResult.hash;
   }
 
   // ----------------------------------------------------------
@@ -353,11 +274,18 @@ export class SorobanAdapter implements IDLTAdapter {
   // ----------------------------------------------------------
 
   async sendAsset(params: TransferParams): Promise<string> {
-    const { to, amount, txRef } = params;
+    if (params.tripleSign) {
+      const validation = await QuantumSignerService.getInstance().verifyTriple(params.tripleSign);
+      if (!validation.valid) {
+        throw new Error(`Triple-signature validation failed: ${validation.reason}`);
+      }
+    }
+
+    const { to, amount, txRef, pqcProof, tripleSign } = params;
 
     const account = await this.horizonServer.loadAccount(this.keypair.publicKey());
 
-    const txBuilder = new TransactionBuilder(account, {
+    const tx = new TransactionBuilder(account, {
       fee: '100000',
       networkPassphrase: this.networkPassphrase,
     })
@@ -366,15 +294,14 @@ export class SorobanAdapter implements IDLTAdapter {
         Operation.payment({
           destination: to,
           asset: Asset.native(),
-          amount: amount,
+          amount,
         })
-      );
+      )
+      .build();
 
-    const tx = txBuilder.build();
     tx.sign(this.keypair);
 
     const result = await this.horizonServer.submitTransaction(tx);
-    const txHash = result.hash;
 
     await this.logTransaction({
       tenantId: 'SYSTEM',
@@ -384,15 +311,16 @@ export class SorobanAdapter implements IDLTAdapter {
       fromAddress: this.keypair.publicKey(),
       toAddress: to,
       amount,
-      chainTxId: txHash,
+      chainTxId: result.hash,
       status: 'CONFIRMED',
+      metadata: { pqcProof, tripleSign },
     });
 
-    return txHash;
+    return result.hash;
   }
 
   async receiveAsset(params: ReceiveParams): Promise<string> {
-    const { from, expectedAmount, txRef } = params;
+    const { from, expectedAmount, txRef, pqcProof } = params;
 
     await this.logTransaction({
       tenantId: 'SYSTEM',
@@ -403,14 +331,14 @@ export class SorobanAdapter implements IDLTAdapter {
       toAddress: this.keypair.publicKey(),
       amount: expectedAmount,
       status: 'PENDING',
-      metadata: { note: 'Receiving verification — scan for incoming payments' },
+      metadata: { note: 'Receiving verification -- scan for incoming payments', pqcProof },
     });
 
     return `RECEIVE_${txRef}`;
   }
 
   // ----------------------------------------------------------
-  // HELPERS — ScVal conversion
+  // HELPERS -- ScVal conversion (simplified)
   // ----------------------------------------------------------
 
   private _toScValArgs(eventId: string, hash: Buffer, unlockTimestamp: number): any[] {

@@ -1,7 +1,19 @@
-/**
- * Multi-Chain DLT Adapter Interface v2
- * Supports anchoring, escrow, and asset transfers across Algorand, Ethereum, Solana, and Stellar.
- */
+// ============================================================
+// Multi-Chain DLT Adapter Interface v3
+// Supports anchoring, escrow, and asset transfers across
+// Algorand, Ethereum, Polygon, Solana, and Stellar.
+//
+// HYBRID SIGNATURE MODEL:
+//   - pqcProof: Falcon-512 signature (Quantum-Resistant identity)
+//   - Classical DLT signature: ECDSA/EdDSA (transport layer only)
+//
+// TRIPLE-SIGNATURE MULTI-SIG PROTOCOL:
+//   - sellerSig: Proof of intent to sell/deliver
+//   - buyerSig: Proof of intent to buy/pay
+//   - quantumSeal: Quantum Cert master Falcon-512 seal
+// ============================================================
+
+import { TripleSignPayload } from '../services/multi-chain/types';
 
 export type AnchorMode = 'LOG' | 'STATE';
 
@@ -12,6 +24,10 @@ export interface AnchorOptions {
   unlockTimestamp?: number;
   /** Chain-specific metadata (fee priority, memo, gas settings, etc.). */
   metadata?: Record<string, unknown>;
+  /** Falcon-512 PQC proof (Base64 encoded) for hybrid signature. */
+  pqcProof?: string;
+  /** Triple-Signature Multi-Sig payload (Seller + Buyer + Quantum). */
+  tripleSign?: TripleSignPayload;
 }
 
 export interface EscrowParams {
@@ -27,6 +43,10 @@ export interface EscrowParams {
   assetAddress?: string;
   /** Unix timestamp (seconds) when escrow can be released. 0 = immediate. */
   unlockTimestamp: number;
+  /** Falcon-512 PQC proof (Base64 encoded) for hybrid signature. */
+  pqcProof?: string;
+  /** Triple-Signature Multi-Sig payload (Seller + Buyer + Quantum). */
+  tripleSign?: TripleSignPayload;
 }
 
 export interface TransferParams {
@@ -38,6 +58,10 @@ export interface TransferParams {
   assetAddress?: string;
   /** Correlation ID for transaction logging. */
   txRef: string;
+  /** Falcon-512 PQC proof (Base64 encoded) for hybrid signature. */
+  pqcProof?: string;
+  /** Triple-Signature Multi-Sig payload (Seller + Buyer + Quantum). */
+  tripleSign?: TripleSignPayload;
 }
 
 export interface ReceiveParams {
@@ -49,6 +73,21 @@ export interface ReceiveParams {
   assetAddress?: string;
   /** Correlation ID for transaction logging. */
   txRef: string;
+  /** Falcon-512 PQC proof (Base64 encoded) for hybrid signature. */
+  pqcProof?: string;
+  /** Triple-Signature Multi-Sig payload (Seller + Buyer + Quantum). */
+  tripleSign?: TripleSignPayload;
+}
+
+export interface PqcParams {
+  /** Base64-encoded Falcon-512 detached signature. */
+  signature: string;
+  /** Unix timestamp when signed. */
+  timestamp: number;
+  /** Entity identifier. */
+  entityId: string;
+  /** Entity type: ASSET | EVENT | ESCROW | TRANSFER. */
+  entityType: string;
 }
 
 export interface IDLTAdapter {
@@ -56,7 +95,7 @@ export interface IDLTAdapter {
    * Anchors an event payload hash to the blockchain/DLT.
    * @param eventId The local event ID
    * @param hash The SHA-256 hash of the payload (hex string for backward compat)
-   * @param options Optional chain-specific anchoring parameters
+   * @param options Optional chain-specific anchoring parameters including pqcProof
    * @returns A promise resolving to the transaction ID (TxID) on the DLT
    */
   anchorEvent(eventId: string, hash: string, options?: AnchorOptions): Promise<string>;
@@ -70,7 +109,7 @@ export interface IDLTAdapter {
 
   /**
    * Creates an escrow holding funds/assets until conditions are met.
-   * @param params Escrow creation parameters
+   * @param params Escrow creation parameters including optional pqcProof
    * @returns Transaction ID of the escrow creation
    */
   createEscrow(params: EscrowParams): Promise<string>;
@@ -93,16 +132,15 @@ export interface IDLTAdapter {
 
   /**
    * Sends assets/tokens to a destination address (direct transfer).
-   * @param params Transfer parameters
+   * @param params Transfer parameters including optional pqcProof
    * @returns Transaction ID of the transfer
    */
   sendAsset(params: TransferParams): Promise<string>;
 
   /**
    * Receives/verifies an incoming asset transfer.
-   * @param params Receive parameters
+   * @param params Receive parameters including optional pqcProof
    * @returns Transaction ID of the received transfer confirmation
    */
   receiveAsset(params: ReceiveParams): Promise<string>;
 }
-

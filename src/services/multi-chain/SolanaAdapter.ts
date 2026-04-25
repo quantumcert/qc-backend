@@ -1,10 +1,14 @@
-// ═══════════════════════════════════════════════════════════
-// SOLANA ADAPTER — Solana Program (Anchor Framework)
+// ============================================================
+// SOLANA ADAPTER -- Solana Program (Anchor Framework)
 // Uses @solana/web3.js for all blockchain interactions.
 // Supports: Payment (Escrow via PDA), Receiving, Sending, Anchoring
 // SECURITY: Durable Nonces are BANNED (Drift Exploit).
 //           Uses recentBlockhash with lastValidBlockHeight enforcement.
-// ═══════════════════════════════════════════════════════════
+//
+// HYBRID SIGNATURE:
+//   - pqcProof embedded in instruction data (after discriminator)
+//   - Classical EdDSA via Keypair for transport
+// ============================================================
 
 import {
   Connection,
@@ -16,6 +20,8 @@ import {
   LAMPORTS_PER_SOL,
 } from '@solana/web3.js';
 import prisma from '../../config/prisma';
+import { KMSService } from '../KMSService';
+import { QuantumSignerService } from '../QuantumSignerService';
 import {
   IDLTAdapter,
   AnchorOptions,
@@ -35,16 +41,11 @@ export class SolanaAdapter implements IDLTAdapter {
   private programId: PublicKey;
 
   constructor() {
-    const rpcUrl = process.env.SOLANA_RPC_URL;
-    const privateKeyBase64 = process.env.SOLANA_AUTHORITY_PRIVATE_KEY;
+    const kms = KMSService.getInstance();
+    const rpcUrl = kms.getKey('SOLANA', 'rpcUrl');
+    const privateKeyBase64 = kms.getKey('SOLANA', 'privateKey');
     const programId = process.env.SOLANA_ANCHOR_PROGRAM_ID;
 
-    if (!rpcUrl) {
-      throw new Error('SOLANA_RPC_URL is not defined in the environment.');
-    }
-    if (!privateKeyBase64) {
-      throw new Error('SOLANA_AUTHORITY_PRIVATE_KEY is not defined in the environment.');
-    }
     if (!programId) {
       throw new Error('SOLANA_ANCHOR_PROGRAM_ID is not defined in the environment.');
     }
@@ -54,11 +55,18 @@ export class SolanaAdapter implements IDLTAdapter {
     this.programId = new PublicKey(programId);
   }
 
-  // ─────────────────────────────────────────────────────────
+  // ----------------------------------------------------------
   // ANCHOR
-  // ─────────────────────────────────────────────────────────
+  // ----------------------------------------------------------
 
   async anchorEvent(eventId: string, hash: string, options?: AnchorOptions): Promise<string> {
+    if (options?.tripleSign) {
+      const validation = await QuantumSignerService.getInstance().verifyTriple(options.tripleSign);
+      if (!validation.valid) {
+        throw new Error(`Triple-signature validation failed: ${validation.reason}`);
+      }
+    }
+
     const payloadHash = Buffer.from(hash.replace(/^0x/, ''), 'hex');
     if (payloadHash.length !== 64 && payloadHash.length !== 32) {
       throw new Error(`Invalid hash length: ${payloadHash.length}. Expected 32 or 64 bytes.`);
@@ -69,7 +77,7 @@ export class SolanaAdapter implements IDLTAdapter {
     const { blockhash, lastValidBlockHeight } = await this.connection.getLatestBlockhash('confirmed');
 
     if (mode === 'LOG') {
-      return this._anchorModeA(hash64, eventId, blockhash, lastValidBlockHeight);
+      return this._anchorModeA(hash64, eventId, blockhash, lastValidBlockHeight, options?.pqcProof);
     } else {
       return this._anchorModeB(hash64, eventId, blockhash, lastValidBlockHeight, options);
     }
@@ -104,12 +112,19 @@ export class SolanaAdapter implements IDLTAdapter {
     }
   }
 
-  // ─────────────────────────────────────────────────────────
+  // ----------------------------------------------------------
   // ESCROW (via PDA)
-  // ─────────────────────────────────────────────────────────
+  // ----------------------------------------------------------
 
   async createEscrow(params: EscrowParams): Promise<string> {
-    const { escrowId, sender, receiver, amount, unlockTimestamp } = params;
+    if (params.tripleSign) {
+      const validation = await QuantumSignerService.getInstance().verifyTriple(params.tripleSign);
+      if (!validation.valid) {
+        throw new Error(`Triple-signature validation failed: ${validation.reason}`);
+      }
+    }
+
+    const { escrowId, sender, receiver, amount, unlockTimestamp, pqcProof, tripleSign } = params;
 
     const [escrowPda] = PublicKey.findProgramAddressSync(
       [Buffer.from('qc_escrow'), Buffer.from(escrowId)],
@@ -172,7 +187,7 @@ export class SolanaAdapter implements IDLTAdapter {
       amount,
       chainTxId: signature,
       status: 'CONFIRMED',
-      metadata: { unlockTimestamp, escrowPda: escrowPda.toBase58() },
+      metadata: { unlockTimestamp, escrowPda: escrowPda.toBase58(), pqcProof, tripleSign },
     });
 
     return signature;
@@ -288,12 +303,19 @@ export class SolanaAdapter implements IDLTAdapter {
     return signature;
   }
 
-  // ─────────────────────────────────────────────────────────
+  // ----------------------------------------------------------
   // SEND / RECEIVE
-  // ─────────────────────────────────────────────────────────
+  // ----------------------------------------------------------
 
   async sendAsset(params: TransferParams): Promise<string> {
-    const { to, amount, txRef } = params;
+    if (params.tripleSign) {
+      const validation = await QuantumSignerService.getInstance().verifyTriple(params.tripleSign);
+      if (!validation.valid) {
+        throw new Error(`Triple-signature validation failed: ${validation.reason}`);
+      }
+    }
+
+    const { to, amount, txRef, pqcProof, tripleSign } = params;
     const toPubkey = new PublicKey(to);
     const lamports = Math.floor(parseFloat(amount) * LAMPORTS_PER_SOL);
 
@@ -330,13 +352,14 @@ export class SolanaAdapter implements IDLTAdapter {
       amount,
       chainTxId: signature,
       status: 'CONFIRMED',
+      metadata: { pqcProof, tripleSign },
     });
 
     return signature;
   }
 
   async receiveAsset(params: ReceiveParams): Promise<string> {
-    const { from, expectedAmount, txRef } = params;
+    const { from, expectedAmount, txRef, pqcProof } = params;
 
     await this.logTransaction({
       tenantId: 'SYSTEM',
@@ -347,24 +370,26 @@ export class SolanaAdapter implements IDLTAdapter {
       toAddress: this.authority.publicKey.toBase58(),
       amount: expectedAmount,
       status: 'PENDING',
-      metadata: { note: 'Receiving verification — scan for incoming transfers' },
+      metadata: { note: 'Receiving verification -- scan for incoming transfers', pqcProof },
     });
 
     return `RECEIVE_${txRef}`;
   }
 
-  // ─────────────────────────────────────────────────────────
-  // MODE A — LOG (Instruction Data)
-  // ─────────────────────────────────────────────────────────
+  // ----------------------------------------------------------
+  // MODE A -- LOG (Instruction Data)
+  // ----------------------------------------------------------
 
   private async _anchorModeA(
     payloadHash: Buffer,
     eventId: string,
     blockhash: string,
-    lastValidBlockHeight: number
+    lastValidBlockHeight: number,
+    pqcProof?: string
   ): Promise<string> {
     const eventIdSlice = Buffer.from(eventId).slice(0, 16);
-    const ixData = Buffer.concat([DISCRIMINATOR_LOG_A, eventIdSlice, payloadHash]);
+    const pqcBuffer = pqcProof ? Buffer.from(pqcProof) : Buffer.alloc(0);
+    const ixData = Buffer.concat([DISCRIMINATOR_LOG_A, eventIdSlice, payloadHash, pqcBuffer]);
 
     const instruction = {
       programId: this.programId,
@@ -396,9 +421,9 @@ export class SolanaAdapter implements IDLTAdapter {
     return signature;
   }
 
-  // ─────────────────────────────────────────────────────────
-  // MODE B — STATE (PDA)
-  // ─────────────────────────────────────────────────────────
+  // ----------------------------------------------------------
+  // MODE B -- STATE (PDA)
+  // ----------------------------------------------------------
 
   private async _anchorModeB(
     payloadHash: Buffer,
@@ -413,10 +438,12 @@ export class SolanaAdapter implements IDLTAdapter {
     );
 
     const unlockTimestamp = BigInt(options?.unlockTimestamp ?? 0);
+    const pqcBuffer = options?.pqcProof ? Buffer.from(options.pqcProof) : Buffer.alloc(0);
     const pdaData = Buffer.concat([
       this.authority.publicKey.toBuffer(),
       payloadHash,
       Buffer.from([unlockTimestamp > 0n ? 0x02 : 0x01]),
+      pqcBuffer,
     ]);
 
     const ixData = Buffer.concat([DISCRIMINATOR_PDA_B, Buffer.alloc(8), pdaData]);
@@ -453,9 +480,9 @@ export class SolanaAdapter implements IDLTAdapter {
     return signature;
   }
 
-  // ─────────────────────────────────────────────────────────
+  // ----------------------------------------------------------
   // PRISMA LOGGING
-  // ─────────────────────────────────────────────────────────
+  // ----------------------------------------------------------
 
   private async logTransaction(data: {
     tenantId: string;

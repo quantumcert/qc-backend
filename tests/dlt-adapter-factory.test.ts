@@ -112,6 +112,8 @@ beforeAll(() => {
     process.env.STELLAR_SOROBAN_RPC_URL = 'https://fake-soroban.stellar.org';
     process.env.STELLAR_AUTHORITY_SECRET_KEY = 'S'.padEnd(56, 'A');
     process.env.STELLAR_ANCHOR_CONTRACT_ID = 'C'.padEnd(56, 'B');
+    process.env.POLYGON_PRIVATE_KEY = '0x'.padEnd(66, 'e');
+    process.env.POLYGON_TRANSFER_FACET_ADDRESS = '0x'.padEnd(42, 'f');
 });
 
 import { DLTAdapterFactory } from '../src/services/DLTAdapterFactory';
@@ -152,8 +154,18 @@ describe('DLTAdapterFactory.getAdapter', () => {
         expect(typeof adapter.sendAsset).toBe('function');
     });
 
-    it('🚫 Throws for POLYGON (not yet implemented)', () => {
-        expect(() => DLTAdapterFactory.getAdapter('POLYGON' as any))
+    it('✅ Returns an IDLTAdapter for POLYGON', () => {
+        process.env.POLYGON_RPC_URL = 'https://fake-polygon.rpc';
+        const adapter = DLTAdapterFactory.getAdapter('POLYGON');
+        expect(adapter).toBeDefined();
+        expect(typeof adapter.anchorEvent).toBe('function');
+        expect(typeof adapter.createEscrow).toBe('function');
+        expect(typeof adapter.sendAsset).toBe('function');
+    });
+
+    it('🚫 Throws for POLYGON without RPC URL', () => {
+        delete process.env.POLYGON_RPC_URL;
+        expect(() => DLTAdapterFactory.getAdapter('POLYGON'))
             .toThrow('DLT adapter not implemented for chain: POLYGON');
     });
 

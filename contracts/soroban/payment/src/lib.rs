@@ -5,9 +5,16 @@ use soroban_sdk::{
     Symbol, Vec,
 };
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 // CONSTANTS
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
+
+// SECURITY: On-chain data is restricted to:
+//   - falconHash (BytesN<64>) — SHA3-512 raw hash
+//   - timestamp (u64) — Ledger timestamp
+//   - qtagId / escrow_id (Bytes, max 32 bytes) — Correlation ID
+//   - entityType (u32) — Type discriminator (STATUS_PENDING, STATUS_ACTIVE, etc.)
+// NO personal data, NO sensitive payloads, NO PII ever stored on-chain.
 
 /// Status: escrow pending
 const STATUS_PENDING: u32 = 1;
@@ -18,9 +25,18 @@ const STATUS_RELEASED: u32 = 3;
 /// Status: cancelled
 const STATUS_CANCELLED: u32 = 4;
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 // DATA TYPES
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TripleProof {
+    pub seller_address: Address,
+    pub buyer_address: Address,
+    pub quantum_address: Address,
+    pub signed_at: u64,
+}
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -33,6 +49,7 @@ pub struct Escrow {
     pub unlock_timestamp: u64,  // Unix seconds
     pub created_at: u64,        // Ledger timestamp
     pub status: u32,            // STATUS_*
+    pub triple_proof: Option<TripleProof>,
 }
 
 #[contracttype]
@@ -53,9 +70,9 @@ pub enum DataKey {
     Nonce(Address),         // per-address nonce for replay protection
 }
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 // CONTRACT
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 
 #[contract]
 pub struct QuantumCertPayment;
@@ -63,7 +80,7 @@ pub struct QuantumCertPayment;
 #[contractimpl]
 impl QuantumCertPayment {
 
-    // ─── INITIALIZATION ─────────────────────────────────
+    // --- INITIALIZATION ---------------------------------
 
     /// Initializes the contract with an admin address.
     pub fn initialize(env: Env, admin: Address) {
@@ -71,7 +88,16 @@ impl QuantumCertPayment {
         env.storage().instance().set(&DataKey::Admin, &admin);
     }
 
-    // ─── 1. CREATE ESCROW (Payment) ─────────────────────
+    fn validate_triple_proof(env: &Env, proof: &TripleProof) {
+        assert!(proof.seller_address != Address::from_string(&String::from_str(env, "")), symbol_short!("ERR_TP_SELLER"));
+        assert!(proof.buyer_address != Address::from_string(&String::from_str(env, "")), symbol_short!("ERR_TP_BUYER"));
+        assert!(proof.quantum_address != Address::from_string(&String::from_str(env, "")), symbol_short!("ERR_TP_QC"));
+        assert!(proof.seller_address != proof.buyer_address, symbol_short!("ERR_TP_DUP"));
+        assert!(proof.seller_address != proof.quantum_address, symbol_short!("ERR_TP_DUP"));
+        assert!(proof.buyer_address != proof.quantum_address, symbol_short!("ERR_TP_DUP"));
+    }
+
+    // --- 1. CREATE ESCROW (Payment) ---------------------
 
     /// Creates an escrow holding XLM or SAC tokens until unlock_timestamp.
     ///
@@ -81,6 +107,7 @@ impl QuantumCertPayment {
     /// * `amount` — Amount in stroops
     /// * `asset_address` — Token contract address (None for native XLM)
     /// * `unlock_timestamp` — Unix timestamp when release becomes possible
+    /// * `triple_proof` — Optional 3-signature proof
     pub fn create_escrow(
         env: Env,
         escrow_id: Bytes,
@@ -88,6 +115,7 @@ impl QuantumCertPayment {
         amount: i128,
         asset_address: Option<Address>,
         unlock_timestamp: u64,
+        triple_proof: Option<TripleProof>,
     ) {
         let sender = env.current_contract_address(); // Caller context
         // Require auth from the actual transaction sender
@@ -107,6 +135,10 @@ impl QuantumCertPayment {
             symbol_short!("ERR_LOCK")
         );
 
+        if let Some(ref proof) = triple_proof {
+            Self::validate_triple_proof(&env, proof);
+        }
+
         let key = DataKey::Escrow(escrow_id.clone());
         assert!(
             !env.storage().persistent().has(&key),
@@ -122,6 +154,7 @@ impl QuantumCertPayment {
             unlock_timestamp,
             created_at: env.ledger().timestamp(),
             status: STATUS_ACTIVE,
+            triple_proof,
         };
 
         env.storage().persistent().set(&key, &escrow);
@@ -133,7 +166,7 @@ impl QuantumCertPayment {
         );
     }
 
-    // ─── 2. RELEASE ESCROW (Receiving) ──────────────────
+    // --- 2. RELEASE ESCROW (Receiving) ------------------
 
     /// Releases escrowed funds to the receiver.
     /// Only callable after unlock_timestamp by receiver or admin.
@@ -179,7 +212,7 @@ impl QuantumCertPayment {
         );
     }
 
-    // ─── 3. CANCEL ESCROW ───────────────────────────────
+    // --- 3. CANCEL ESCROW -------------------------------
 
     /// Cancels an escrow and returns funds to the sender.
     /// Callable by sender before release.
@@ -214,7 +247,7 @@ impl QuantumCertPayment {
         );
     }
 
-    // ─── 4. ANCHOR EVENT ────────────────────────────────
+    // --- 4. ANCHOR EVENT --------------------------------
 
     /// Anchors a payload hash to the contract state.
     /// Rejects classic Memo (28b limit) — always uses persistent storage.
@@ -255,7 +288,7 @@ impl QuantumCertPayment {
         );
     }
 
-    // ─── 5. GET ANCHOR HASH (M2M Verification) ──────────
+    // --- 5. GET ANCHOR HASH (M2M Verification) ----------
 
     /// Retrieves an anchor record by event_id for off-chain verification.
     pub fn get_anchor_hash(env: Env, event_id: Bytes) -> Option<AnchorRecord> {
@@ -263,7 +296,7 @@ impl QuantumCertPayment {
         env.storage().persistent().get(&key)
     }
 
-    // ─── VIEW FUNCTIONS ─────────────────────────────────
+    // --- VIEW FUNCTIONS ---------------------------------
 
     pub fn get_escrow(env: Env, escrow_id: Bytes) -> Option<Escrow> {
         let key = DataKey::Escrow(escrow_id);

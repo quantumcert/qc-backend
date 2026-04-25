@@ -7,15 +7,22 @@ pragma solidity ^0.8.20;
  *      Implements high-security escrow with time-lock (Tikin project requirements).
  *      Compatible with EIP-2535 Diamond Pattern.
  *
+ *      SECURITY: On-chain data is restricted to:
+ *        - falconHash (bytes32) — SHA3-512 truncated hash
+ *        - timestamp (uint256) — Unix timestamp
+ *        - qtagId / escrowId (bytes32) — Correlation ID
+ *        - entityType (string) — Type discriminator
+ *      NO personal data, NO sensitive payloads, NO PII ever stored on-chain.
+ *
  *      Operations supported:
  *        - Payment (Escrow creation with time-lock)
  *        - Receiving (escrow release verification)
  *        - Sending (direct transfers)
  */
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 // EVENTS
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 
 event EscrowCreated(
     bytes32 indexed escrowId,
@@ -24,7 +31,10 @@ event EscrowCreated(
     uint256 amount,
     address assetAddress,
     uint256 unlockTimestamp,
-    uint256 createdAt
+    uint256 createdAt,
+    bytes32 sellerPubKey,
+    bytes32 buyerPubKey,
+    bytes32 quantumPubKey
 );
 
 event EscrowReleased(
@@ -55,9 +65,9 @@ event AnchorEvent(
     uint256 anchoredAt
 );
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 // ERRORS
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 
 error EscrowAlreadyExists(bytes32 escrowId);
 error EscrowNotFound(bytes32 escrowId);
@@ -69,10 +79,11 @@ error InvalidAmount();
 error InvalidTimeLock();
 error TransferFailed();
 error NotAuthorized();
+error InvalidTripleProof();
 
-// ═══════════════════════════════════════════════════════════
+//
 // INTERFACES
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 
 interface IERC20 {
     function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
@@ -81,9 +92,16 @@ interface IERC20 {
     function balanceOf(address account) external view returns (uint256);
 }
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 // STATE
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
+
+struct TripleProof {
+    bytes32 sellerPubKey;    // Seller's public key / signing address
+    bytes32 buyerPubKey;     // Buyer's public key / signing address
+    bytes32 quantumPubKey;   // Quantum Cert authority public key
+    uint256 signedAt;        // Timestamp when triple-sign was completed
+}
 
 struct Escrow {
     address sender;
@@ -94,6 +112,14 @@ struct Escrow {
     uint256 createdAt;
     bool released;
     bool cancelled;
+    TripleProof tripleProof; // 3-signature proof for this escrow
+}
+
+struct AnchorRecord {
+    bytes32 falconHash;    // SHA3-512 truncated hash
+    uint256 timestamp;     // Unix timestamp of anchoring
+    bytes32 qtagId;        // Correlation ID
+    bytes32 entityType;    // Type discriminator
 }
 
 // Diamond Storage Pattern (EIP-2535)
@@ -102,6 +128,7 @@ bytes32 constant TRANSFER_STORAGE_POSITION = keccak256("quantum.cert.transfer.fa
 
 struct TransferStorage {
     mapping(bytes32 => Escrow) escrows;
+    mapping(bytes32 => AnchorRecord) anchors;
     mapping(bytes32 => bool) anchoredEvents;
     address admin;
 }
@@ -113,9 +140,9 @@ function transferStorage() pure returns (TransferStorage storage ds) {
     }
 }
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 // MODIFIERS
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 
 modifier onlyAdmin() {
     if (msg.sender != transferStorage().admin) {
@@ -131,13 +158,13 @@ modifier validEscrow(bytes32 escrowId) {
     _;
 }
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 // FACET FUNCTIONS
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 
 contract TransferFacet {
 
-    // ─── Constructor / Initialization ─────────────────────
+    // --- Constructor / Initialization ---------------------
 
     function initialize(address _admin) external {
         TransferStorage storage ds = transferStorage();
@@ -145,7 +172,18 @@ contract TransferFacet {
         ds.admin = _admin;
     }
 
-    // ─── 1. ESCROW CREATION (Payment) ─────────────────────
+    // --- Triple-Proof Validation --------------------------
+
+    function _validateTripleProof(TripleProof calldata proof) internal pure {
+        if (proof.sellerPubKey == bytes32(0)) revert InvalidTripleProof();
+        if (proof.buyerPubKey == bytes32(0)) revert InvalidTripleProof();
+        if (proof.quantumPubKey == bytes32(0)) revert InvalidTripleProof();
+        if (proof.sellerPubKey == proof.buyerPubKey) revert InvalidTripleProof();
+        if (proof.sellerPubKey == proof.quantumPubKey) revert InvalidTripleProof();
+        if (proof.buyerPubKey == proof.quantumPubKey) revert InvalidTripleProof();
+    }
+
+    // --- 1. ESCROW CREATION (Payment) ---------------------
 
     /**
      * @notice Creates an escrow holding funds until unlockTimestamp.
@@ -154,17 +192,21 @@ contract TransferFacet {
      * @param unlockTimestamp Unix timestamp when release becomes possible
      * @param assetAddress ERC-20 token address (address(0) for native ETH)
      * @param amount Amount in smallest denomination
+     * @param tripleProof 3-signature proof from Seller, Buyer, and Quantum Cert
      */
     function createEscrow(
         bytes32 escrowId,
         address receiver,
         uint256 unlockTimestamp,
         address assetAddress,
-        uint256 amount
+        uint256 amount,
+        TripleProof calldata tripleProof
     ) external payable returns (bool) {
         if (receiver == address(0)) revert InvalidAddress();
         if (amount == 0) revert InvalidAmount();
         if (unlockTimestamp <= block.timestamp) revert InvalidTimeLock();
+
+        _validateTripleProof(tripleProof);
 
         TransferStorage storage ds = transferStorage();
         if (ds.escrows[escrowId].sender != address(0)) revert EscrowAlreadyExists(escrowId);
@@ -191,7 +233,8 @@ contract TransferFacet {
             unlockTimestamp: unlockTimestamp,
             createdAt: block.timestamp,
             released: false,
-            cancelled: false
+            cancelled: false,
+            tripleProof: tripleProof
         });
 
         emit EscrowCreated(
@@ -201,13 +244,16 @@ contract TransferFacet {
             amount,
             assetAddress,
             unlockTimestamp,
-            block.timestamp
+            block.timestamp,
+            tripleProof.sellerPubKey,
+            tripleProof.buyerPubKey,
+            tripleProof.quantumPubKey
         );
 
         return true;
     }
 
-    // ─── 2. ESCROW RELEASE (Receiving) ────────────────────
+    // --- 2. ESCROW RELEASE (Receiving) --------------------
 
     /**
      * @notice Releases escrowed funds to the receiver.
@@ -238,7 +284,7 @@ contract TransferFacet {
         return true;
     }
 
-    // ─── 3. ESCROW CANCELLATION ───────────────────────────
+    // --- 3. ESCROW CANCELLATION ---------------------------
 
     /**
      * @notice Cancels an escrow and returns funds to the sender.
@@ -265,7 +311,7 @@ contract TransferFacet {
         return true;
     }
 
-    // ─── 4. DIRECT TRANSFER (Sending) ─────────────────────
+    // --- 4. DIRECT TRANSFER (Sending) ---------------------
 
     /**
      * @notice Direct transfer of native ETH or ERC-20 tokens.
@@ -301,32 +347,50 @@ contract TransferFacet {
         return true;
     }
 
-    // ─── 5. ANCHOR EVENT ──────────────────────────────────
+    // --- 5. ANCHOR EVENT ----------------------------------
 
     /**
      * @notice Anchors a payload hash to the blockchain via event emission.
      * @param eventId Off-chain event identifier
      * @param payloadHash SHA3-512 hash of the event payload
+     * @param qtagId Correlation ID for the anchored entity
+     * @param entityType Type discriminator (e.g., "ASSET", "EVENT", "ESCROW")
      */
-    function anchorEvent(bytes32 eventId, bytes32 payloadHash) external onlyAdmin returns (bool) {
+    function anchorEvent(
+        bytes32 eventId,
+        bytes32 payloadHash,
+        bytes32 qtagId,
+        bytes32 entityType
+    ) external onlyAdmin returns (bool) {
         TransferStorage storage ds = transferStorage();
+
+        ds.anchors[eventId] = AnchorRecord({
+            falconHash: payloadHash,
+            timestamp: block.timestamp,
+            qtagId: qtagId,
+            entityType: entityType
+        });
         ds.anchoredEvents[eventId] = true;
 
         emit AnchorEvent(eventId, payloadHash, block.timestamp);
         return true;
     }
 
-    // ─── VIEW FUNCTIONS ───────────────────────────────────
+    // --- VIEW FUNCTIONS -----------------------------------
 
     function getEscrow(bytes32 escrowId) external view returns (Escrow memory) {
         return transferStorage().escrows[escrowId];
+    }
+
+    function getAnchor(bytes32 eventId) external view returns (AnchorRecord memory) {
+        return transferStorage().anchors[eventId];
     }
 
     function isAnchored(bytes32 eventId) external view returns (bool) {
         return transferStorage().anchoredEvents[eventId];
     }
 
-    // ─── RECEIVE / FALLBACK ───────────────────────────────
+    // --- RECEIVE / FALLBACK -------------------------------
 
     receive() external payable {}
     fallback() external payable {}

@@ -1,11 +1,11 @@
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 // QUANTUM CERT — DIAMOND PATTERN UNIVERSAL CORE SCHEMA
 // Architecture: EIP-2535 Faceted Diamond Pattern
 // Version: 3.2.0 — Multi-Chain DLT Adapters & Escrow
 // 
 // GOLDEN RULE: 100% AGNOSTIC. No domain-specific terminology.
 // Only universal terms: Tenant, Asset, Device, Event, Owner, Metadata.
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 
 generator client {
   provider = "prisma-client-js"
@@ -16,11 +16,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 // PHASE 1: MULTI-TENANT ENGINE & ACCESS CONTROL
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 
-// ─── TENANT — SaaS Client Isolation Unit ─────────────────
+// --- TENANT — SaaS Client Isolation Unit -----------------
 model Tenant {
   id           String  @id @default(cuid())
   name         String
@@ -33,7 +33,7 @@ model Tenant {
   maxRequestsPerMinute Int?
   maxRequestsPerDay    Int?
 
-  // ─── Phase X: Dynamic Pricing ─────────────────────────
+  // --- Phase X: Dynamic Pricing -------------------------
   customTransferFee Float?
   customTagFee      Float?
 
@@ -43,7 +43,7 @@ model Tenant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // ─── Relations ────────────────────────────────────────
+  // --- Relations ----------------------------------------
   apiKeys           ApiKey[]
   rateLimitCounters RateLimitCounter[]
   assets            Asset[] // Phase 2
@@ -52,6 +52,7 @@ model Tenant {
   webhooks          TenantWebhook[] // Phase 6: B2B Notifications
   escrows           Escrow[] // Multi-Chain Escrow
   chainTransactions ChainTransaction[] // Multi-Chain Tx Logging
+  pendingTransactions PendingTransaction[] // Retry Worker Queue
 
   @@index([slug])
   @@index([planTier])
@@ -64,7 +65,7 @@ enum PlanTier {
   ENTERPRISE
 }
 
-// ─── API KEY — Authenticated Access Credentials ─────────
+// --- API KEY — Authenticated Access Credentials ---------
 model ApiKey {
   id       String @id @default(cuid())
   tenantId String
@@ -94,7 +95,7 @@ enum ApiKeyRole {
   READER
 }
 
-// ─── RATE LIMIT COUNTER ─────────────────────────────────
+// --- RATE LIMIT COUNTER ---------------------------------
 model RateLimitCounter {
   id       String @id @default(cuid())
   tenantId String
@@ -117,7 +118,7 @@ enum RateLimitWindow {
   DAILY
 }
 
-// ─── AUDIT LOG ──────────────────────────────────────────
+// --- AUDIT LOG ------------------------------------------
 model AuditLog {
   id           String  @id @default(cuid())
   tenantId     String?
@@ -139,11 +140,11 @@ model AuditLog {
   @@index([timestamp])
 }
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 // PHASE 2: AGNOSTIC ASSET ENGINE & ZERO KNOWLEDGE SECURITY
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 
-// ─── ASSET — The Universal Agnostic Container ───────────
+// --- ASSET — The Universal Agnostic Container -----------
 // The Asset is a 100% agnostic container. It stores only
 // structural identifiers and a FREE-FORM JSON payload.
 // The Tenant injects whatever data structure they need
@@ -154,61 +155,61 @@ model AuditLog {
 model Asset {
   id String @id @default(cuid())
 
-  // ─── Phase 5: Asset Status Machine ────────────────────
+  // --- Phase 5: Asset Status Machine --------------------
   status AssetStatus @default(ACTIVE)
 
-  // ─── Tenant Isolation ─────────────────────────────────
+  // --- Tenant Isolation ---------------------------------
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id])
 
-  // ─── Immutable Core Identifiers ───────────────────────
+  // --- Immutable Core Identifiers -----------------------
   // externalId: Tenant-provided external reference (e.g., SKU, serial)
   // Must be unique within the Tenant scope.
   externalId String?
 
-  // ─── Hardware Binding (optional — for physical assets) ─
+  // --- Hardware Binding (optional — for physical assets) -
   // Links this asset to a physical NFC/QTag Device.
   // null = purely digital asset (no hardware).
   deviceId String? @unique
   device   Device? @relation(fields: [deviceId], references: [id])
 
-  // ─── Free-Form Metadata (HEART OF THE ASSET) ─────────
+  // --- Free-Form Metadata (HEART OF THE ASSET) ---------
   // This JSON field is 100% owned by the Tenant.
   // The platform NEVER interprets its contents.
   // The Tenant can store ANY structure they need.
   metadata Json @default("{}")
 
-  // ─── Phase 3: Public Profile & Privacy Control ────────
+  // --- Phase 3: Public Profile & Privacy Control --------
   // Public, unique, and persistent URL for QR Payload / Open Read
   publicUrl      String   @unique
   // Which keys in the `metadata` JSON are exposed publicly
   publicDataKeys String[] @default([])
 
-  // ─── Ownership ────────────────────────────────────────
+  // --- Ownership ----------------------------------------
   // Multi-owner support via Owner junction table.
   owners Owner[]
 
-  // ─── Phase 4: Event Engine & Quarantine ───────────────
+  // --- Phase 4: Event Engine & Quarantine ---------------
   events EventLog[]
 
-  // ─── Phase 5: Double-Blind Quarantine ─────────────────
+  // --- Phase 5: Double-Blind Quarantine -----------------
   blindContactLogs BlindContactLog[]
 
-  // ─── Phase 6: ESG Provenance (Ancestry Tracking) ──────
+  // --- Phase 6: ESG Provenance (Ancestry Tracking) ------
   parentAssetId String?
   parentAsset   Asset?  @relation("AssetToAsset", fields: [parentAssetId], references: [id])
   childAssets   Asset[] @relation("AssetToAsset")
 
-  // ─── Phase 6: Audit & Telemetry ───────────────────────
+  // --- Phase 6: Audit & Telemetry -----------------------
   tagScanLogs TagScanLog[]
 
-  // ─── FractionalOwnershipFacet Preparation ─────────────
+  // --- FractionalOwnershipFacet Preparation -------------
   // Enables future fractional ownership (e.g., 40% Owner A, 60% Owner B).
   // false = standard single/multi-owner mode
   // true  = ownership percentages tracked in Owner.sharePercent
   isFractionable Boolean @default(false)
 
-  // ─── FungibleFacet Preparation ────────────────────────
+  // --- FungibleFacet Preparation ------------------------
   // Enables future fungible token emission.
   // false = unique/non-fungible asset (1:1)
   // true  = fungible (1:N, tracked by totalSupply)
@@ -216,7 +217,7 @@ model Asset {
   totalSupply       Int? // Only set when isFungible=true
   circulatingSupply Int? // Minted so far (fungible mode)
 
-  // ─── Lifecycle ────────────────────────────────────────
+  // --- Lifecycle ----------------------------------------
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -228,7 +229,7 @@ model Asset {
   @@index([createdAt])
 }
 
-// ─── OWNER — Multi-Owner Relationship ───────────────────
+// --- OWNER — Multi-Owner Relationship -------------------
 // Junction table linking Assets to their Owners.
 // Supports co-ownership and fractional ownership.
 //
@@ -242,7 +243,7 @@ model Owner {
   assetId String
   asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
-  // ─── Owner Identification ─────────────────────────────
+  // --- Owner Identification -----------------------------
   // Universal owner reference — format defined by the Tenant.
   ownerRef String
 
@@ -250,15 +251,15 @@ model Owner {
   document     String?  // digits only, no mask (e.g. "12345678909")
   documentType String?  // 'CPF' | 'CNPJ'
 
-  // ─── Optional Display / Contact ───────────────────────
+  // --- Optional Display / Contact -----------------------
   label String? // Human-readable label (e.g., "Primary Owner")
 
-  // ─── FractionalOwnershipFacet Fields ──────────────────
+  // --- FractionalOwnershipFacet Fields ------------------
   // Only used when Asset.isFractionable = true.
   // Represents the percentage share (0.00 to 100.00).
   sharePercent Decimal? @db.Decimal(6, 2)
 
-  // ─── Ownership Lifecycle ──────────────────────────────
+  // --- Ownership Lifecycle ------------------------------
   acquiredAt DateTime  @default(now())
   revokedAt  DateTime? // null = active owner
 
@@ -268,7 +269,7 @@ model Owner {
   @@index([assetId, document])
 }
 
-// ─── DEVICE — Hardware State & Anti-Replay Guardian ─────
+// --- DEVICE — Hardware State & Anti-Replay Guardian -----
 // Tracks the physical lifecycle of an NFC/QTag chip.
 // Stores the monotonic counter for Replay Attack protection.
 //
@@ -279,37 +280,37 @@ model Owner {
 model Device {
   id String @id @default(cuid())
 
-  // ─── Hardware Identifier ──────────────────────────────
+  // --- Hardware Identifier ------------------------------
   // The UID is the unique hardware identifier burned into
   // the NFC chip during manufacturing. It is immutable.
   uid String @unique // e.g., "04A1B2C3D4E5F6" (NTAG 424 DNA UID)
 
-  // ─── Tenant Scope ─────────────────────────────────────
+  // --- Tenant Scope -------------------------------------
   tenantId String
 
-  // ─── Anti-Replay Monotonic Counter ────────────────────
+  // --- Anti-Replay Monotonic Counter --------------------
   // This is the LAST VALID counter value read from this chip.
   // Atomically updated on each valid NFC tap.
   // RULE: incoming CTR must be STRICTLY GREATER than this value.
   lastCounter Int @default(0)
 
-  // ─── Tap Audit Trail ──────────────────────────────────
+  // --- Tap Audit Trail ----------------------------------
   lastTapAt DateTime? // Timestamp of last valid NFC tap
   totalTaps Int       @default(0) // Lifetime tap count
   lastTapIp String? // IP of last reader (audit)
 
-  // ─── Device State ─────────────────────────────────────
+  // --- Device State -------------------------------------
   isActive     Boolean  @default(true)
   registeredAt DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  // ─── Zero-Knowledge Master Key ────────────────────────
+  // --- Zero-Knowledge Master Key ------------------------
   masterKey Json? // Stored encrypted via CryptoService
 
-  // ─── Reverse Relation ─────────────────────────────────
+  // --- Reverse Relation ---------------------------------
   asset Asset? // The asset linked to this device (if any)
 
-  // ─── Tap History ──────────────────────────────────────
+  // --- Tap History --------------------------------------
   tapLog DeviceTapLog[]
 
   @@index([uid])
@@ -317,7 +318,7 @@ model Device {
   @@index([isActive])
 }
 
-// ─── DEVICE TAP LOG — Immutable NFC Tap History ─────────
+// --- DEVICE TAP LOG — Immutable NFC Tap History ---------
 // Every NFC tap (valid or rejected) is logged here for
 // audit, forensics, and fraud detection.
 model DeviceTapLog {
@@ -326,15 +327,15 @@ model DeviceTapLog {
   deviceId String
   device   Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
 
-  // ─── Tap Data ─────────────────────────────────────────
+  // --- Tap Data -----------------------------------------
   counterValue Int // The CTR value received
   cmacReceived String // The CMAC transmitted by the chip
   cmacValid    Boolean // Did the CMAC pass cryptographic validation?
 
-  // ─── Verdict ──────────────────────────────────────────
+  // --- Verdict ------------------------------------------
   verdict TapVerdict // VALID, REPLAY_BLOCKED, CMAC_INVALID, DEVICE_INACTIVE
 
-  // ─── Request Context ──────────────────────────────────
+  // --- Request Context ----------------------------------
   ipAddress String?
   userAgent String?
   rawUrl    String? // The full NFC URL for forensic analysis
@@ -354,11 +355,11 @@ enum TapVerdict {
   DEVICE_NOT_FOUND // UID not registered in the system
 }
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 // PHASE 4: ATTESTATION ENGINE, EVENTS & QUARANTINE
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 
-// ─── EVENT LOG — Chronological Asset Attachments ────────
+// --- EVENT LOG — Chronological Asset Attachments --------
 // Events append data/milestones to an Asset's history.
 // Supports direct (APPROVED) or quarantined (PENDING) writes.
 model EventLog {
@@ -402,9 +403,9 @@ enum EventStatus {
   PENDING_FUNDS // For Queue
 }
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 // PHASE 5: STATUS MANAGEMENT & DOUBLE-BLIND QUARANTINE
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 
 enum AssetStatus {
   DRAFT
@@ -419,7 +420,7 @@ enum AssetStatus {
   INACTIVE
 }
 
-// ─── BLIND CONTACT LOG — Finder's Quarantine ────────────
+// --- BLIND CONTACT LOG — Finder's Quarantine ------------
 // Double-blind privacy zone for assets in ALERT status.
 model BlindContactLog {
   id String @id @default(cuid())
@@ -444,43 +445,43 @@ model BlindContactLog {
   @@index([createdAt])
 }
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 // MULTI-CHAIN: ESCROW & CROSS-CHAIN TRANSACTION LOGGING
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 
-// ─── ESCROW — Cross-Chain Escrow Record ─────────────────
+// --- ESCROW — Cross-Chain Escrow Record -----------------
 model Escrow {
   id String @id @default(cuid())
 
-  // ─── Tenant Isolation ─────────────────────────────────
+  // --- Tenant Isolation ---------------------------------
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  // ─── Correlation ──────────────────────────────────────
+  // --- Correlation --------------------------------------
   escrowId String @unique // Off-chain unique identifier
   assetId  String? // Optional link to Asset
 
-  // ─── Chain Identification ─────────────────────────────
+  // --- Chain Identification -----------------------------
   chain      String // 'ETHEREUM' | 'SOLANA' | 'STELLAR' | 'ALGORAND'
   chainTxId  String? // On-chain transaction ID
 
-  // ─── Parties ──────────────────────────────────────────
+  // --- Parties ------------------------------------------
   sender   String // Wallet address (chain-native format)
   receiver String // Wallet address (chain-native format)
 
-  // ─── Financials ───────────────────────────────────────
+  // --- Financials ---------------------------------------
   amount       String // Stored as string to avoid precision loss
   assetAddress String? // Token contract address (null for native)
 
-  // ─── Time-Lock ────────────────────────────────────────
+  // --- Time-Lock ----------------------------------------
   unlockTimestamp DateTime? // When escrow becomes releasable
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  // ─── Status ───────────────────────────────────────────
+  // --- Status -------------------------------------------
   status EscrowStatus @default(PENDING)
 
-  // ─── Audit ────────────────────────────────────────────
+  // --- Audit --------------------------------------------
   metadata Json? // Chain-specific metadata
 
   @@index([tenantId])
@@ -498,22 +499,22 @@ enum EscrowStatus {
   EXPIRED
 }
 
-// ─── CHAIN TRANSACTION — Universal Cross-Chain Tx Log ───
+// --- CHAIN TRANSACTION — Universal Cross-Chain Tx Log ---
 model ChainTransaction {
   id String @id @default(cuid())
 
-  // ─── Tenant Isolation ─────────────────────────────────
+  // --- Tenant Isolation ---------------------------------
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  // ─── Correlation ──────────────────────────────────────
+  // --- Correlation --------------------------------------
   txRef String // Off-chain correlation ID
 
-  // ─── Chain Identification ─────────────────────────────
+  // --- Chain Identification -----------------------------
   chain     String // 'ETHEREUM' | 'SOLANA' | 'STELLAR' | 'ALGORAND'
   direction String // 'SEND' | 'RECEIVE' | 'ESCROW_CREATE' | 'ESCROW_RELEASE' | 'ESCROW_CANCEL' | 'ANCHOR'
 
-  // ─── On-Chain Data ────────────────────────────────────
+  // --- On-Chain Data ------------------------------------
   fromAddress String?
   toAddress   String?
   amount      String?
@@ -522,10 +523,10 @@ model ChainTransaction {
   blockNumber String?
   confirmedAt DateTime?
 
-  // ─── Status ───────────────────────────────────────────
+  // --- Status -------------------------------------------
   status String @default("PENDING") // PENDING | CONFIRMED | FAILED
 
-  // ─── Audit ────────────────────────────────────────────
+  // --- Audit --------------------------------------------
   metadata  Json?
   error     String?
   createdAt DateTime @default(now())
@@ -538,11 +539,84 @@ model ChainTransaction {
   @@index([createdAt])
 }
 
-// ═══════════════════════════════════════════════════════════
-// PHASE 6: ESG PROVENANCE, TELEMETRY & B2B NOTIFICATIONS
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
+// PHASE 4.5: MULTI-CHAIN RETRY WORKER (Pending Transactions)
+// ===========================================================
 
-// ─── TAG SCAN LOG — Telemetria de Scans (Fraude/Auditoria) 
+// --- PENDING TRANSACTION — Retry Queue for DLT Operations -
+// Stores failed or retryable blockchain operations.
+// Processed by RetryWorker with exponential backoff.
+// After max retries, moved to DLQ (Dead Letter Queue).
+model PendingTransaction {
+  id String @id @default(cuid())
+
+  // --- Tenant Isolation ---------------------------------
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // --- Correlation --------------------------------------
+  txRef String // Off-chain correlation ID (e.g., eventLog.id or escrowId)
+
+  // --- Operation Type -----------------------------------
+  txType PendingTxType // ANCHOR | ESCROW_CREATE | ESCROW_RELEASE | ESCROW_CANCEL | TRANSFER
+
+  // --- Chain Identification -----------------------------
+  chain String // 'ETHEREUM' | 'SOLANA' | 'STELLAR' | 'ALGORAND' | 'POLYGON'
+
+  // --- Payload ------------------------------------------
+  // Serialized parameters for the DLT operation
+  payload Json
+
+  // --- Retry Management ---------------------------------
+  status      PendingTxStatus @default(PENDING)
+  attemptCount Int            @default(0)
+  maxAttempts Int             @default(5)
+  nextRetryAt DateTime?       // Scheduled time for next attempt
+  lastError   String?         // Last error message
+
+  // --- DLQ (Dead Letter Queue) --------------------------
+  isDlq     Boolean   @default(false)
+  dlqReason String?   // Reason for moving to DLQ
+  dlqAt     DateTime?
+
+  // --- Success Tracking ---------------------------------
+  chainTxId   String?   // On-chain tx hash after success
+  confirmedAt DateTime?
+
+  // --- Audit --------------------------------------------
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([chain])
+  @@index([txType])
+  @@index([nextRetryAt])
+  @@index([isDlq])
+  @@index([status, nextRetryAt]) // For retry worker query
+}
+
+enum PendingTxStatus {
+  PENDING    // Waiting for first attempt
+  PROCESSING // Currently being processed
+  FAILED     // Failed, will retry
+  SUCCESS    // Completed successfully
+  DLQ        // Max retries exceeded
+}
+
+enum PendingTxType {
+  ANCHOR
+  ESCROW_CREATE
+  ESCROW_RELEASE
+  ESCROW_CANCEL
+  TRANSFER
+}
+
+// ===========================================================
+// PHASE 6: ESG PROVENANCE, TELEMETRY & B2B NOTIFICATIONS
+// ===========================================================
+
+// --- TAG SCAN LOG — Telemetria de Scans (Fraude/Auditoria) 
 model TagScanLog {
   id          String   @id @default(cuid())
   assetId     String
@@ -558,7 +632,7 @@ model TagScanLog {
   @@index([isValid])
 }
 
-// ─── TENANT WEBHOOK — Motor B2B (Notificações Ativas) ───
+// --- TENANT WEBHOOK — Motor B2B (Notificações Ativas) ---
 model TenantWebhook {
   id          String   @id @default(cuid())
   tenantId    String
@@ -572,10 +646,10 @@ model TenantWebhook {
   @@index([isActive])
 }
 
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 // WEBHOOK INBOX — Inbox Pattern for external payment events
 // Persisted before 200 OK to guarantee no lost payments on crash.
-// ═══════════════════════════════════════════════════════════
+// ===========================================================
 model WebhookInbox {
   id           String    @id @default(cuid())
   provider     String    // 'MERCADOPAGO'

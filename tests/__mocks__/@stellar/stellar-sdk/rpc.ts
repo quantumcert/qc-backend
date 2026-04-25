@@ -10,3 +10,8 @@ export const Server = vi.fn().mockImplementation(() => ({
   }),
   getTransaction: vi.fn().mockResolvedValue({ status: 'SUCCESS' }),
 }));
+
+export const assembleTransaction = vi.fn().mockReturnValue({
+  sign: vi.fn(),
+  toXDR: vi.fn().mockReturnValue('fake_xdr'),
+});

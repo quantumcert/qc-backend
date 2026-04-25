@@ -2,11 +2,13 @@
 import prisma from '../config/prisma';
 import { DLTAdapterFactory, SupportedChain } from './DLTAdapterFactory';
 import { WebhookDispatcher } from '../utils/WebhookDispatcher';
+import { RetryWorker } from './RetryWorker';
 
 export class AnchorQueueService {
     /**
      * Processes the queue of APPROVED events that do not yet have a DLT TxID.
      * Groups events by tenant chain to minimize adapter instantiations per batch.
+     * On failure, inserts into PendingTransaction for RetryWorker to handle.
      */
     static async processQueue() {
         const pendingEvents = await prisma.eventLog.findMany({
@@ -91,15 +93,29 @@ export class AnchorQueueService {
                             data: { dltTxId: null, status: 'PENDING_FUNDS' },
                         });
                     } else {
-                        await prisma.eventLog.updateMany({
-                            where: { id: event.id, dltTxId: 'PROCESSING' },
-                            data: { dltTxId: 'FAILED_TIMEOUT' },
+                        // Insert into PendingTransaction for RetryWorker instead of marking as FAILED_TIMEOUT
+                        await RetryWorker.enqueue({
+                            tenantId: event.tenantId,
+                            txRef: event.id,
+                            txType: 'ANCHOR',
+                            chain,
+                            payload: {
+                                eventId: event.id,
+                                hash: event.signatureHash,
+                            },
+                            error: error.message,
                         });
 
-                        await WebhookDispatcher.dispatch(event.tenantId, 'ANCHOR_FAILED', {
+                        // Mark eventLog as failed but leave dltTxId as marker
+                        await prisma.eventLog.updateMany({
+                            where: { id: event.id, dltTxId: 'PROCESSING' },
+                            data: { dltTxId: 'RETRY_QUEUED' },
+                        });
+
+                        await WebhookDispatcher.dispatch(event.tenantId, 'ANCHOR_RETRY_QUEUED', {
                             eventId: event.id,
                             assetId: event.assetId,
-                            status: 'DLQ',
+                            status: 'RETRY_QUEUED',
                             errorReason: error.message,
                         });
                     }
