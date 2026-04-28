@@ -300,6 +300,12 @@ model Device {
   lastTapAt DateTime? // Timestamp of last valid NFC tap
   totalTaps Int       @default(0) // Lifetime tap count
   lastTapIp String? // IP of last reader (audit)
+  lastLat     Float?    // Last tap latitude (for Haversine)
+  lastLon     Float?    // Last tap longitude (for Haversine)
+
+  // --- SDM Key References (wrapped ciphertext, never plaintext) ----
+  sdmMacKeyId String?   // KMS-wrapped AES-128 for tap CMAC validation
+  sdmEncKeyId String?   // KMS-wrapped AES-128 for picc_data decryption
 
   // --- Device State -------------------------------------
   isActive     Boolean  @default(true)
@@ -355,6 +361,7 @@ enum TapVerdict {
   CMAC_INVALID // CMAC signature mismatch
   DEVICE_INACTIVE // Device exists but is deactivated
   DEVICE_NOT_FOUND // UID not registered in the system
+  RELAY_ATTACK // Distance bounding / relay attack detected
 }
 
 // ===========================================================
@@ -847,3 +854,32 @@ model WebhookInbox {
   @@index([status, receivedAt])
 }
 
+// ===========================================================
+// QTAG SUB-SYSTEM: NFC Tag Commissioning & SDM Encoding
+// ===========================================================
+
+enum EncodingStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+model EncodingSession {
+  id          String         @id @default(cuid())
+  tenantId    String
+  assetId     String         @unique
+  ntagUID     String
+  status      EncodingStatus @default(PENDING)
+  layoutB64   String
+  sdmMacKeyId String
+  sdmEncKeyId String
+  anchorTxId  String?
+  lockedAt    DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([tenantId])
+  @@index([ntagUID])
+  @@index([status])
+}
