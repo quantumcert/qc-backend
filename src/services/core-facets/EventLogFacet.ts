@@ -15,10 +15,20 @@ export class EventLogFacet {
         let role = secureContext.role || 'ADMIN';
         let apiKeyId = secureContext.apiKeyId || secureContext.origin;
 
+        let documentHash: string | null = null;
+
         if (requestPayload && requestPayload.assetId) {
             assetId = requestPayload.assetId;
             origin = requestPayload.origin || 'API_KEY';
             payload = requestPayload.payload || requestPayload;
+
+            if (requestPayload.documentHash !== undefined) {
+                const dh = requestPayload.documentHash;
+                if (typeof dh !== 'string' || !/^[a-f0-9]{128}$/i.test(dh)) {
+                    throw Object.assign(new Error('Invalid documentHash: must be a 128-char hex string (SHA3-512)'), { httpStatus: 400 });
+                }
+                documentHash = dh;
+            }
         } else {
             assetId = secureContext.assetId;
             origin = secureContext.origin;
@@ -52,7 +62,8 @@ export class EventLogFacet {
                     origin: role === 'EXPERT' || role === 'AUDITOR' ? `BYPASS_${role}` : origin,
                     status: 'APPROVED',
                     payload,
-                    signatureHash
+                    signatureHash,
+                    documentHash
                 }
             });
 

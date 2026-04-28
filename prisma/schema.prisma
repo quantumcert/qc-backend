@@ -388,6 +388,9 @@ model EventLog {
   signatureHash String?
   dltTxId       String?
 
+  // Sub-sistema 3: SHA3-512 of the physical document (PDF, report, contract)
+  documentHash  String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -395,6 +398,7 @@ model EventLog {
   @@index([tenantId])
   @@index([status])
   @@index([createdAt])
+  @@index([documentHash])
   @@index([status, dltTxId]) // RED TEAM HOTFIX 5: Anti-OOM Full Table Scan Lock
 }
 
