@@ -41,6 +41,13 @@ describe('QTagCryptoService', () => {
       const cmac2 = QTagCryptoService.computeSdmCmac(uid, 2, key);
       expect(cmac1).not.toBe(cmac2);
     });
+
+    it('throws or handles invalid UID hex gracefully', () => {
+      // short UID should not crash — Buffer.from handles it, result may be wrong but no exception
+      expect(() =>
+        QTagCryptoService.computeSdmCmac('ZZZZ', 1, '00'.repeat(16))
+      ).not.toThrow(); // UID validation is caller's responsibility; service is tolerant
+    });
   });
 
   describe('deriveDAT', () => {
@@ -56,6 +63,13 @@ describe('QTagCryptoService', () => {
       const dat1 = QTagCryptoService.deriveDAT(falconHash, '04aabbccddee00');
       const dat2 = QTagCryptoService.deriveDAT(falconHash, '04aabbccddee01');
       expect(dat1).not.toBe(dat2);
+    });
+
+    it('returns consistent output for same inputs (deterministic)', () => {
+      const falconHash = Buffer.alloc(64, 0x11).toString('hex');
+      const uid = '04aabbccddee00';
+      expect(QTagCryptoService.deriveDAT(falconHash, uid))
+        .toBe(QTagCryptoService.deriveDAT(falconHash, uid));
     });
   });
 
@@ -95,6 +109,18 @@ describe('QTagCryptoService', () => {
         lastTapAt: new Date(),
       });
       expect(result.ok).toBe(true);
+    });
+
+    it('does not divide by zero when lastTapAt is now (same millisecond)', () => {
+      const now = new Date();
+      const result = QTagCryptoService.haversineCheck({
+        lat: -23.5505, lon: -46.6333,
+        lastLat: -23.5510, lastLon: -46.6340,
+        lastTapAt: now,
+      });
+      // elapsedMs ≈ 0, floor at 1 second — should not throw or return Infinity
+      expect(result.ok).toBe(true);
+      expect(result.speedKmh).toBeLessThan(1000);
     });
   });
 

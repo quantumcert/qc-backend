@@ -32,16 +32,20 @@ export class QTagCryptoService {
       throw new Error('Invalid picc_data: must be 32 hex characters');
     }
     const key = Buffer.from(sdmEncKeyHex, 'hex');
-    const encrypted = Buffer.from(piccDataHex, 'hex');
-    const decipher = crypto.createDecipheriv('aes-128-ecb', key, null);
-    decipher.setAutoPadding(false);
-    const plaintext = Buffer.concat([decipher.update(encrypted), decipher.final()]);
+    try {
+      const encrypted = Buffer.from(piccDataHex, 'hex');
+      const decipher = crypto.createDecipheriv('aes-128-ecb', key, null);
+      decipher.setAutoPadding(false);
+      const plaintext = Buffer.concat([decipher.update(encrypted), decipher.final()]);
 
-    const uid = plaintext.slice(0, 7).toString('hex');
-    // NTAG 424 DNA SDM: UID is bytes 0-6, then 1 byte padding, then 3-byte CTR little-endian
-    const ctr = plaintext[7] | (plaintext[8] << 8) | (plaintext[9] << 16);
+      const uid = plaintext.slice(0, 7).toString('hex');
+      // NTAG 424 DNA SDM: UID is bytes 0-6, then 1 byte padding, then 3-byte CTR little-endian
+      const ctr = plaintext[7] | (plaintext[8] << 8) | (plaintext[9] << 16);
 
-    return { uid, ctr };
+      return { uid, ctr };
+    } finally {
+      key.fill(0);
+    }
   }
 
   /**
@@ -51,18 +55,22 @@ export class QTagCryptoService {
    */
   static computeSdmCmac(uidHex: string, ctr: number, sdmMacKeyHex: string): string {
     const key = Buffer.from(sdmMacKeyHex, 'hex');
-    const uidBytes = Buffer.from(uidHex, 'hex');
-    const ctrBuf = Buffer.alloc(3);
-    ctrBuf.writeUIntLE(ctr, 0, 3);
-    const macInput = Buffer.concat([uidBytes, ctrBuf]);
+    try {
+      const uidBytes = Buffer.from(uidHex, 'hex');
+      const ctrBuf = Buffer.alloc(3);
+      ctrBuf.writeUIntLE(ctr, 0, 3);
+      const macInput = Buffer.concat([uidBytes, ctrBuf]);
 
-    const fullMac = Buffer.from(aesCmac(key, macInput) as string, 'hex');
+      const fullMac = Buffer.from(aesCmac(key, macInput) as string, 'hex');
 
-    const truncated = Buffer.alloc(8);
-    for (let i = 0; i < 8; i++) {
-      truncated[i] = fullMac[1 + i * 2];
+      const truncated = Buffer.alloc(8);
+      for (let i = 0; i < 8; i++) {
+        truncated[i] = fullMac[1 + i * 2];
+      }
+      return truncated.toString('hex');
+    } finally {
+      key.fill(0);
     }
-    return truncated.toString('hex');
   }
 
   /**
