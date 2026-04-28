@@ -38,8 +38,8 @@ export class QTagCryptoService {
     const plaintext = Buffer.concat([decipher.update(encrypted), decipher.final()]);
 
     const uid = plaintext.slice(0, 7).toString('hex');
-    // NTAG 424 DNA SDM: UID is bytes 0-6, then 1 byte padding, then 3-byte CTR big-endian
-    const ctr = (plaintext[7] << 16) | (plaintext[8] << 8) | plaintext[9];
+    // NTAG 424 DNA SDM: UID is bytes 0-6, then 1 byte padding, then 3-byte CTR little-endian
+    const ctr = plaintext[7] | (plaintext[8] << 8) | (plaintext[9] << 16);
 
     return { uid, ctr };
   }

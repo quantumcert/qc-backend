@@ -6,7 +6,7 @@ describe('QTagCryptoService', () => {
   describe('decryptPiccData', () => {
     it('decrypts picc_data and returns uid + ctr', () => {
       const key = Buffer.alloc(16, 0);
-      const plaintext = Buffer.from('04AABBCCDDEE00000001000000000000', 'hex');
+      const plaintext = Buffer.from('04AABBCCDDEE00010000000000000000', 'hex');
       const crypto = require('node:crypto');
       const cipher = crypto.createCipheriv('aes-128-ecb', key, null);
       cipher.setAutoPadding(false);
