@@ -21,3 +21,8 @@ MASTER_PLAN.md
 TODO_CLOSEOUT.md
 TODO_DEPOSIT_FLOW.md
 TODO_PQC_INSTITUTIONAL.md
+
+# MemPalace / local tooling
+entities.json
+mempalace.yaml
+package-lock.json
