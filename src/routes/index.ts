@@ -18,6 +18,7 @@ import tenantRoutes from './v1/tenantRoutes';
 import apiKeyRoutes from './v1/apiKeyRoutes';
 import assetRoutes from './v1/assetRoutes';
 import deviceRoutes from './v1/deviceRoutes';
+import publicRoutes from './v1/publicRoutes';
 import lifecycleRoutes from './v1/lifecycleRoutes';
 import webhookRoutes from './v1/webhookRoutes';
 import walletRoutes from './v1/walletRoutes';
@@ -48,9 +49,9 @@ router.use('/v1/assets', assetRoutes);
 router.use('/v1/devices', deviceRoutes);
 
 // ═══════════════════════════════════════════════════════════
-// PHASE 3: Context Router & RBAC (PLACEHOLDER)
-// router.use('/v1/public', publicRoutes);
+// PHASE 3 / SUB-SISTEMA 3: Public Routes
 // ═══════════════════════════════════════════════════════════
+router.use('/v1/public', publicRoutes);
 
 // ═══════════════════════════════════════════════════════════
 // SUB-SISTEMA 1: Core Gap Closure
