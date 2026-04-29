@@ -44,7 +44,7 @@ function makeError(message: string, code: string, httpStatus: number): Error {
   return err;
 }
 
-const WORKER_API_KEY_ID = 'ESCROW_WORKER';
+export const ESCROW_WORKER_API_KEY_ID = 'ESCROW_WORKER';
 
 export class EscrowFacet {
   static async lock(secureContext: SecureContext, payload: LockPayload) {
@@ -133,7 +133,11 @@ export class EscrowFacet {
 
   static async release(secureContext: SecureContext, payload: ReleasePayload) {
     const { tenantId, apiKeyId, role } = secureContext;
-    const isWorker = apiKeyId === WORKER_API_KEY_ID;
+    const isWorker = apiKeyId === ESCROW_WORKER_API_KEY_ID;
+
+    if (!isWorker && role !== 'ADMIN' && role !== 'OPERATOR') {
+      throw makeError('Insufficient role to release escrow', 'INSUFFICIENT_ROLE', 403);
+    }
 
     const escrow = await prisma.escrow.findFirst({
       where: { escrowId: payload.escrowId, tenantId },
@@ -153,10 +157,6 @@ export class EscrowFacet {
         'RELEASE_MODE_MISMATCH',
         422
       );
-    }
-
-    if (!isWorker && role !== 'ADMIN' && role !== 'OPERATOR') {
-      throw makeError('Insufficient role to release escrow', 'INSUFFICIENT_ROLE', 403);
     }
 
     const adapter = DLTAdapterFactory.getAdapter(escrow.chain as SupportedChain);

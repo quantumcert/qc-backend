@@ -32,7 +32,7 @@ vi.mock('../src/services/DLTAdapterFactory', () => ({
 
 import prisma from '../src/config/prisma';
 import { DLTAdapterFactory } from '../src/services/DLTAdapterFactory';
-import { EscrowFacet } from '../src/services/core-facets/EscrowFacet';
+import { EscrowFacet, ESCROW_WORKER_API_KEY_ID } from '../src/services/core-facets/EscrowFacet';
 
 const adminCtx = { tenantId: 'tenant-1', apiKeyId: 'key-1', role: 'ADMIN' };
 const operatorCtx = { tenantId: 'tenant-1', apiKeyId: 'key-2', role: 'OPERATOR' };
@@ -150,7 +150,7 @@ describe('EscrowFacet.release', () => {
   });
 
   it('✅ release AUTO pelo worker (secureContext sintético)', async () => {
-    const workerCtx = { tenantId: 'tenant-1', apiKeyId: 'ESCROW_WORKER', role: 'ADMIN' };
+    const workerCtx = { tenantId: 'tenant-1', apiKeyId: ESCROW_WORKER_API_KEY_ID, role: 'ADMIN' };
     vi.mocked(prisma.escrow.findFirst).mockResolvedValue(mockEscrowActive as any);
     vi.mocked(prisma.escrow.update).mockResolvedValue({ ...mockEscrowActive, status: 'RELEASED' } as any);
     vi.mocked(prisma.asset.update).mockResolvedValue({} as any);
