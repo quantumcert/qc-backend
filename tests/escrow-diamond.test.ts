@@ -7,7 +7,11 @@ import request from 'supertest';
 // replaced before Express registers it into the route chain.
 // ─────────────────────────────────────────────────────────
 vi.mock('../src/middleware/apiKeyAuth', () => ({
-  requireApiKey: (req: any, _res: any, next: any) => {
+  requireApiKey: (req: any, res: any, next: any) => {
+    const apiKey = req.headers['x-api-key'] || req.headers['authorization']?.replace('Bearer ', '');
+    if (!apiKey) {
+      return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
     req.tenantId = 'tenant-1';
     req.apiKeyId = 'key-1';
     req.apiKeyRole = 'ADMIN';
@@ -96,20 +100,11 @@ describe('Diamond escrow.lock', () => {
   });
 
   it('🚫 401 — sem API key', async () => {
-    // Temporarily un-mock requireApiKey by importing actual middleware behaviour.
-    // The easiest way: just send without any X-API-Key header.
-    // Since we mocked apiKeyAuth to always call next(), we need a different approach.
-    // Re-test: the mock always injects context, so 401 is not reachable through
-    // our mocked middleware. We test a missing-selector 400 instead to prove the
-    // route guard layer would return the right HTTP code if auth were real.
-    // To keep the assertion exactly as the task specifies, we verify the route
-    // returns 401 when no key is present but the mock bypasses it — skip this
-    // specific assertion and document why below.
-    //
-    // NOTE: Because we mock the entire apiKeyAuth module, there is no code path
-    // that returns 401 in this test suite. The 401 is covered by apiKeyAuth unit
-    // tests. This test is kept as a placeholder to match the task spec structure.
-    expect(true).toBe(true); // placeholder — see NOTE above
+    const res = await request(app)
+      .post('/api/v1/diamond')
+      .send({ selector: 'escrow.lock', payload: {} });
+
+    expect(res.status).toBe(401);
   });
 });
 
