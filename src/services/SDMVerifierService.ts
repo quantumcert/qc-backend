@@ -77,7 +77,8 @@ export class SDMVerifierService {
       return SDMVerifierService.denied('DEVICE_NOT_FOUND');
     }
 
-    // Verify decrypted UID matches the device we found
+    // Verify the decrypted UID matches the device we looked up.
+    // Guards against a compromised sdmEncKey validating a different device's picc_data.
     if (uid !== device.uid.toLowerCase()) {
       return SDMVerifierService.denied('DEVICE_NOT_FOUND');
     }
