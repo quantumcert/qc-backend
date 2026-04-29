@@ -55,6 +55,7 @@ model Tenant {
   pendingTransactions PendingTransaction[] // Retry Worker Queue
   userWallets       UserWallet[] // Custodial deposit addresses
   deposits          Deposit[] // Incoming stablecoin deposits
+  agents            Agent[] // M2M / IoT Agent identities
 
   @@index([slug])
   @@index([planTier])
@@ -85,6 +86,9 @@ model ApiKey {
 
   createdAt DateTime @default(now())
 
+  // Back-reference for Agent — FK lives in Agent.apiKeyId, no extra column here
+  agent Agent?
+
   @@index([tenantId])
   @@index([keyHash])
   @@index([keyPrefix])
@@ -95,6 +99,34 @@ enum ApiKeyRole {
   ADMIN
   OPERATOR
   READER
+}
+
+// ═══════════════════════════════════════════════════════════
+// AGENT — Machine Identity for M2M / IoT
+// Separate from Device (NFC hardware). Agent is a software
+// identity that authenticates via ApiKey + Falcon-512 signature.
+// ═══════════════════════════════════════════════════════════
+model Agent {
+  id          String  @id @default(cuid())
+  tenantId    String
+  tenant      Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+
+  // Falcon-512 public key in base64 — verifies payload signatures
+  publicKeyFalcon  String
+  // Selectors this agent is allowed to execute (e.g. ["event.recordAuthenticated"])
+  allowedSelectors String[]
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // FK to the ApiKey created at registration time (role: OPERATOR)
+  apiKeyId String? @unique
+  apiKey   ApiKey? @relation(fields: [apiKeyId], references: [id])
+
+  @@index([tenantId, isActive])
 }
 
 // --- RATE LIMIT COUNTER ---------------------------------
