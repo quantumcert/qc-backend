@@ -126,7 +126,7 @@ model Agent {
   apiKeyId String? @unique
   apiKey   ApiKey? @relation(fields: [apiKeyId], references: [id])
 
-  @@index([tenantId])
+  @@index([tenantId, isActive])
 }
 
 // --- RATE LIMIT COUNTER ---------------------------------
