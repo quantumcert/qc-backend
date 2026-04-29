@@ -194,4 +194,19 @@ describe('CommissioningFacet.statusQuery', () => {
       CommissioningFacet.statusQuery(ctx, { sessionId: 'ghost' })
     ).rejects.toThrow('Session not found');
   });
+
+  it('throws if session belongs to different tenant', async () => {
+    mockEncodingSession.findUnique.mockResolvedValue({
+      id: 'session-1',
+      tenantId: 'OTHER',
+      status: 'COMPLETED',
+      ntagUID: '04aabbccddee11',
+      assetId: 'asset-1',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    await expect(
+      CommissioningFacet.statusQuery(ctx, { sessionId: 'session-1' })
+    ).rejects.toThrow('Session not found');
+  });
 });

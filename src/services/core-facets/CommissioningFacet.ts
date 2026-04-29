@@ -44,6 +44,8 @@ export class CommissioningFacet {
     const kms = KMSService.getInstance();
     const signer = QuantumSignerService.getInstance();
     const metadataJson = JSON.stringify(metadata);
+    // TODO: replace with tenant-scoped key from KMS (e.g. KMSService.getInstance().getTenantSecret(ctx.tenantId))
+    // Using zero buffer as dev-only placeholder. Never deploy to production without this resolved.
     const tenantSecretHex = Buffer.alloc(64, 0).toString('hex');
 
     // Step 1-2: Falcon-512 sign metadata
@@ -55,7 +57,7 @@ export class CommissioningFacet {
     );
     const falconHashFull = crypto
       .createHash('sha3-512')
-      .update(hybrid.pqcProof.signature)
+      .update(Buffer.from(hybrid.pqcProof.signature, 'base64'))
       .digest();
     const falconHashHex = falconHashFull.toString('hex');
     const truncatedFalconHash = falconHashFull.slice(0, 32).toString('hex');
