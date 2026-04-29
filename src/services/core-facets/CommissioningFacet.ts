@@ -45,7 +45,9 @@ export class CommissioningFacet {
     const signer = QuantumSignerService.getInstance();
     const metadataJson = JSON.stringify(metadata);
     // TODO: replace with tenant-scoped key from KMS (e.g. KMSService.getInstance().getTenantSecret(ctx.tenantId))
-    // Using zero buffer as dev-only placeholder. Never deploy to production without this resolved.
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('[CommissioningFacet] tenantSecretHex must be configured via KMS in production');
+    }
     const tenantSecretHex = Buffer.alloc(64, 0).toString('hex');
 
     // Step 1-2: Falcon-512 sign metadata
@@ -81,6 +83,8 @@ export class CommissioningFacet {
     // Step 5: Generate SDM keys — plaintext never persisted
     const sdmMacKeyPlain = crypto.randomBytes(16).toString('hex');
     const sdmEncKeyPlain = crypto.randomBytes(16).toString('hex');
+    // writeKey is ephemeral by design: used once by the encoding station for APDU authentication,
+    // never stored on backend. If write fails, client calls commissioning.start again for a new session.
     const writeKeyPlain = crypto.randomBytes(16).toString('hex');
     const sdmMacKeyId = kms.wrapUserKey(sdmMacKeyPlain);
     const sdmEncKeyId = kms.wrapUserKey(sdmEncKeyPlain);
