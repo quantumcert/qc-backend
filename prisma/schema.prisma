@@ -704,6 +704,10 @@ model Escrow {
   // --- Status -------------------------------------------
   status EscrowStatus @default(PENDING)
 
+  // --- Release Control ----------------------------------
+  releaseMode        String    @default("AUTO")  // 'AUTO' | 'MANUAL'
+  releaseConfirmedAt DateTime?                   // audit timestamp for manual releases
+
   // --- Audit --------------------------------------------
   metadata Json? // Chain-specific metadata
 
@@ -717,6 +721,7 @@ model Escrow {
 enum EscrowStatus {
   PENDING
   ACTIVE
+  PROCESSING  // atomic lock used by EscrowReleaseWorker
   RELEASED
   CANCELLED
   EXPIRED

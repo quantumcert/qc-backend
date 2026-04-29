@@ -15,6 +15,7 @@ import { LifecycleFacet } from '../services/core-facets/LifecycleFacet';
 import { TransferRegistryFacet } from '../services/core-facets/TransferRegistryFacet';
 import { CommissioningFacet } from '../services/core-facets/CommissioningFacet';
 import { AgentRegistryFacet } from '../services/core-facets/AgentRegistryFacet';
+import { EscrowFacet } from '../services/core-facets/EscrowFacet';
 
 export type FacetFunction = (...args: any[]) => Promise<any> | any;
 
@@ -58,4 +59,10 @@ export const FacetRegistry: Record<string, FacetFunction> = {
     'agent.register': AgentRegistryFacet.register,
     'agent.revoke': AgentRegistryFacet.revoke,
     'agent.status': AgentRegistryFacet.status,
+
+    // ESCROW TIME-LOCK
+    'escrow.lock':    (ctx: any, payload: any) => EscrowFacet.lock(ctx, payload),
+    'escrow.release': (ctx: any, payload: any) => EscrowFacet.release(ctx, payload),
+    'escrow.cancel':  (ctx: any, payload: any) => EscrowFacet.cancel(ctx, payload),
+    'escrow.status':  (ctx: any, payload: any) => EscrowFacet.getStatus(ctx, payload),
 };
