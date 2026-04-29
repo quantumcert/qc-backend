@@ -26,3 +26,4 @@ TODO_PQC_INSTITUTIONAL.md
 entities.json
 mempalace.yaml
 package-lock.json
+.worktrees/
