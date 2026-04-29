@@ -126,11 +126,10 @@ describe('EscrowFacet.lock', () => {
   });
 
   it('🚫 READER não pode fazer lock', async () => {
-    vi.mocked(prisma.asset.findUnique).mockResolvedValue(mockAsset as any);
-
     await expect(EscrowFacet.lock(readerCtx, lockPayload)).rejects.toMatchObject({
       code: 'INSUFFICIENT_ROLE',
     });
+    expect(prisma.asset.findUnique).not.toHaveBeenCalled();
   });
 });
 
@@ -159,6 +158,9 @@ describe('EscrowFacet.release', () => {
 
     const result = await EscrowFacet.release(workerCtx, { escrowId: 'escrow-1', assetId: 'asset-1' });
     expect(result.status).toBe('RELEASED');
+    expect(prisma.escrow.update).not.toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ releaseConfirmedAt: expect.anything() }) })
+    );
   });
 
   it('🚫 rejeita release REST em escrow AUTO', async () => {
@@ -211,6 +213,14 @@ describe('EscrowFacet.cancel', () => {
     await expect(
       EscrowFacet.cancel(adminCtx, { escrowId: 'escrow-1', assetId: 'asset-1' })
     ).rejects.toMatchObject({ code: 'ESCROW_ALREADY_CLOSED' });
+  });
+
+  it('🚫 rejeita se escrow não encontrado', async () => {
+    vi.mocked(prisma.escrow.findFirst).mockResolvedValue(null);
+
+    await expect(
+      EscrowFacet.cancel(adminCtx, { escrowId: 'no-escrow', assetId: 'asset-1' })
+    ).rejects.toMatchObject({ code: 'ESCROW_NOT_FOUND' });
   });
 });
 
