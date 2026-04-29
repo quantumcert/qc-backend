@@ -4,7 +4,7 @@
 // Phase 3: Public Profile & Privacy Control
 // ═══════════════════════════════════════════════════════════
 
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { ContextRouterController } from '../../controllers/ContextRouterController';
 import { BlindContactController } from '../../controllers/BlindContactController';
 import { DocumentVerificationFacet } from '../../services/core-facets/DocumentVerificationFacet';
