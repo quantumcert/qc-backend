@@ -4,6 +4,7 @@ import { AnchorQueueService } from './AnchorQueueService';
 import { RetryWorker } from './RetryWorker';
 import { BlockchainObserverService } from './BlockchainObserverService';
 import { SecurityWatchdogService } from './SecurityWatchdogService';
+import { EscrowReleaseWorker } from './EscrowReleaseWorker';
 
 export class SchedulerService {
     /**
@@ -125,5 +126,32 @@ export class SchedulerService {
         });
 
         console.log(`[Scheduler] SecurityWatchdog cron started — interval: ${watchdogInterval}s (pattern: ${watchdogPattern})`);
+
+        // ─── Escrow Release Worker Cron ─────────────────────
+        let escrowRunning = false;
+        const escrowInterval = parseInt(process.env.ESCROW_RELEASE_INTERVAL_SECONDS ?? '60', 10);
+        const escrowPattern = `*/${escrowInterval} * * * * *`;
+
+        cron.schedule(escrowPattern, async () => {
+            if (escrowRunning) {
+                console.log('[Scheduler] EscrowRelease already running, skipping this cycle.');
+                return;
+            }
+            escrowRunning = true;
+            try {
+                const result = await EscrowReleaseWorker.processReleases();
+                if (result.released > 0 || result.failed > 0) {
+                    console.log(
+                        `[Scheduler] EscrowRelease: ${result.released} released, ${result.failed} failed.`
+                    );
+                }
+            } catch (err) {
+                console.error('[Scheduler] EscrowRelease error:', err);
+            } finally {
+                escrowRunning = false;
+            }
+        });
+
+        console.log(`[Scheduler] EscrowRelease cron started — interval: ${escrowInterval}s (pattern: ${escrowPattern})`);
     }
 }
