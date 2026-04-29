@@ -13,7 +13,8 @@
 // GOLDEN RULE: 100% AGNOSTIC — No domain-specific terms.
 // ═══════════════════════════════════════════════════════════
 
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
+import { SDMVerifierService } from '../services/SDMVerifierService';
 import tenantRoutes from './v1/tenantRoutes';
 import apiKeyRoutes from './v1/apiKeyRoutes';
 import assetRoutes from './v1/assetRoutes';
@@ -109,6 +110,37 @@ router.use('/v1/circuit-breaker', circuitBreakerRoutes);
  */
 // The Universal EIP-2535 Router
 router.post('/v1/diamond', requireApiKey, DiamondProxy.delegateCall);
+
+// ═══════════════════════════════════════════════════════════
+// QTAG SDM Scan — public endpoint, no apiKeyAuth
+// Rate limit is applied in server.ts before this route
+// ═══════════════════════════════════════════════════════════
+router.get('/v1/scan', async (req: Request, res: Response) => {
+  const { p, m, lat, lon, uid } = req.query as Record<string, string>;
+
+  if (!p || !m) {
+    return res.status(400).json({ error: 'Missing required parameters: p, m' });
+  }
+
+  try {
+    const result = await SDMVerifierService.verifyTap({
+      piccDataHex: p,
+      cmacHex: m,
+      lat: lat ? parseFloat(lat) : null,
+      lon: lon ? parseFloat(lon) : null,
+      ip: req.ip ?? '0.0.0.0',
+      uidHex: uid ?? undefined,
+    });
+
+    const httpStatus = result.status === 'APPROVED' ? 200 : 403;
+    return res.status(httpStatus).json(result);
+  } catch (err: any) {
+    if (err.message === 'INVALID_INPUT') {
+      return res.status(400).json({ error: 'Invalid NFC parameters.' });
+    }
+    return res.status(500).json({ error: 'Internal error' });
+  }
+});
 
 // ═══════════════════════════════════════════════════════════
 // PHASE 4: Events & Quarantine (PLACEHOLDER)

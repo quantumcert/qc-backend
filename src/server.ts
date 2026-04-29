@@ -184,7 +184,7 @@ app.get('/health', async (req, res) => {
 // QTAG scan public rate limit: 30 requests per minute per IP
 // -----------------------------------------------------------
 const scanRateLimitMap = new Map<string, { count: number; resetAt: number }>();
-app.use('/api/v1/public/scan', (req: Request, res: Response, next: NextFunction) => {
+app.use('/api/v1/scan', (req: Request, res: Response, next: NextFunction) => {
   const ip = req.ip ?? '0.0.0.0';
   const now = Date.now();
   const window = 60_000;
