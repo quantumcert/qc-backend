@@ -18,6 +18,7 @@ export interface AuthenticatedRequest extends Request {
     apiKeyId?: string;
     apiKeyRole?: ApiKeyRole;
     apiKeyPrefix?: string;
+    agentId?: string; // set by requireAgentSignature when request comes from a machine identity
 }
 
 // ─── PUBLIC REQUEST ─────────────────────────────────────
