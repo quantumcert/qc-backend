@@ -17,6 +17,11 @@ export class AgentController {
   static async handleEvent(req: AuthenticatedRequest, res: Response): Promise<void> {
     const { selector, assetId, payload } = req.body;
 
+    if (!selector) {
+      res.status(400).json({ success: false, error: 'Selector is required.', code: 'SELECTOR_REQUIRED' });
+      return;
+    }
+
     if (!Object.prototype.hasOwnProperty.call(FacetRegistry, selector)) {
       res.status(400).json({ success: false, error: 'Unknown selector.', code: 'UNKNOWN_SELECTOR' });
       return;
@@ -40,7 +45,7 @@ export class AgentController {
         meta: { selector, executionMode: 'AGENT_EVENT', timestamp: new Date().toISOString() },
       });
     } catch (error: any) {
-      console.error(`[AgentController] Error executing ${selector}:`, error);
+      console.error(`[AgentController] Error executing ${selector}:`, error.stack || error);
       if (error.code && error.message) {
         res.status(400).json({ success: false, error: error.message, code: error.code });
         return;
