@@ -138,6 +138,10 @@ export const AuditActions = {
     NFC_TAP_VALID: 'NFC_TAP_VALID',
     NFC_TAP_REPLAY_BLOCKED: 'NFC_TAP_REPLAY_BLOCKED',
     NFC_TAP_CMAC_INVALID: 'NFC_TAP_CMAC_INVALID',
+
+    // M2M / Agent Registry
+    AGENT_REGISTERED: 'AGENT_REGISTERED',
+    AGENT_REVOKED: 'AGENT_REVOKED',
 } as const;
 
 export const ResourceTypes = {
@@ -148,6 +152,7 @@ export const ResourceTypes = {
     OWNER: 'Owner',
     DEVICE: 'Device',
     DEVICE_TAP_LOG: 'DeviceTapLog',
+    AGENT: 'AGENT',
 } as const;
 
 // ─── PHASE 2: NFC TAP RESULT ────────────────────────────

@@ -12,6 +12,7 @@ import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import prisma from '../../config/prisma';
 import { ApiKeyRole } from '@prisma/client';
+import { AuditActions, ResourceTypes } from '../../types';
 
 interface SecureContext {
   tenantId: string;
@@ -57,7 +58,7 @@ export class AgentRegistryFacet {
     const keyPrefix = rawApiKey.substring(0, 16);
 
     const agent = await prisma.$transaction(async (tx) => {
-      const newApiKey = await (tx as any).apiKey.create({
+      const newApiKey = await tx.apiKey.create({
         data: {
           tenantId,
           keyHash,
@@ -67,7 +68,7 @@ export class AgentRegistryFacet {
         },
       });
 
-      const newAgent = await (tx as any).agent.create({
+      const newAgent = await tx.agent.create({
         data: {
           tenantId,
           name,
@@ -78,12 +79,12 @@ export class AgentRegistryFacet {
         },
       });
 
-      await (tx as any).auditLog.create({
+      await tx.auditLog.create({
         data: {
           tenantId,
           apiKeyPrefix: keyPrefix,
-          action: 'AGENT_REGISTERED',
-          resourceType: 'AGENT',
+          action: AuditActions.AGENT_REGISTERED,
+          resourceType: ResourceTypes.AGENT,
           resourceId: newAgent.id,
           metadata: { name, allowedSelectors },
         },
@@ -111,17 +112,27 @@ export class AgentRegistryFacet {
     if (!agent.isActive) throw new AgentError('AGENT_ALREADY_REVOKED', 'Agent is already revoked.');
 
     await prisma.$transaction(async (tx) => {
-      await (tx as any).agent.update({
+      await tx.agent.update({
         where: { id: agent.id },
         data: { isActive: false },
       });
 
       if (agent.apiKeyId) {
-        await (tx as any).apiKey.update({
+        await tx.apiKey.update({
           where: { id: agent.apiKeyId },
           data: { isActive: false, revokedAt: new Date() },
         });
       }
+
+      await tx.auditLog.create({
+        data: {
+          tenantId,
+          action: AuditActions.AGENT_REVOKED,
+          resourceType: ResourceTypes.AGENT,
+          resourceId: agent.id,
+          metadata: { agentId: agent.id, name: agent.name },
+        },
+      });
     });
 
     return { revoked: true };
