@@ -13,6 +13,7 @@ import { DeviceRegistryFacet } from '../services/core-facets/DeviceRegistryFacet
 import { DeviceGuardFacet } from '../services/core-facets/DeviceGuardFacet';
 import { LifecycleFacet } from '../services/core-facets/LifecycleFacet';
 import { TransferRegistryFacet } from '../services/core-facets/TransferRegistryFacet';
+import { CommissioningFacet } from '../services/core-facets/CommissioningFacet';
 
 export type FacetFunction = (...args: any[]) => Promise<any> | any;
 
@@ -46,4 +47,9 @@ export const FacetRegistry: Record<string, FacetFunction> = {
 
     // TRANSFER REGISTRY
     'transfer.initiate': TransferRegistryFacet.initiateTransfer,
+
+    // QTAG COMMISSIONING
+    'commissioning.start': CommissioningFacet.start,
+    'commissioning.confirm': CommissioningFacet.confirm,
+    'commissioning.status': CommissioningFacet.statusQuery,
 };

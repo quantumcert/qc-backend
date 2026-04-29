@@ -12,7 +12,7 @@
 // Only universal terms: Tenant, Asset, Device, Event, Owner, Metadata.
 // ===========================================================
 
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
@@ -178,6 +178,28 @@ app.get('/health', async (req, res) => {
       ],
     },
   });
+});
+
+// -----------------------------------------------------------
+// QTAG scan public rate limit: 30 requests per minute per IP
+// -----------------------------------------------------------
+const scanRateLimitMap = new Map<string, { count: number; resetAt: number }>();
+app.use('/api/v1/public/scan', (req: Request, res: Response, next: NextFunction) => {
+  const ip = req.ip ?? '0.0.0.0';
+  const now = Date.now();
+  const window = 60_000;
+  const limit = 30;
+
+  const entry = scanRateLimitMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    scanRateLimitMap.set(ip, { count: 1, resetAt: now + window });
+    return next();
+  }
+  if (entry.count >= limit) {
+    return res.status(429).json({ error: 'Too many requests. Try again later.' });
+  }
+  entry.count++;
+  return next();
 });
 
 // -----------------------------------------------------------
