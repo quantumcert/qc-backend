@@ -207,6 +207,7 @@ describe('AgentController.handleEvent', () => {
   });
 
   it('returns 400 with business error code when facet throws a known error', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.mocked(FacetRegistry['event.recordAuthenticated']).mockRejectedValue(
       Object.assign(new Error('Asset not found'), { code: 'ASSET_NOT_FOUND' })
     );
@@ -217,5 +218,21 @@ describe('AgentController.handleEvent', () => {
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({ code: 'ASSET_NOT_FOUND' })
     );
+    consoleSpy.mockRestore();
+  });
+
+  it('returns 500 E500 when facet throws an untyped error', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(FacetRegistry['event.recordAuthenticated']).mockRejectedValue(
+      new Error('unexpected db failure') // no .code property
+    );
+    const req = makeControllerReq();
+    const res = mockRes();
+    await AgentController.handleEvent(req, res);
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ code: 'E500' })
+    );
+    consoleSpy.mockRestore();
   });
 });
