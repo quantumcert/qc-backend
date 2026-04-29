@@ -128,4 +128,26 @@ export class PostQuantumCrypto {
         // Strings are immutable in JS; we can't truly zeroize them.
         // For high-security scenarios, use Buffer for all key material.
     }
+
+    // ============================================================
+    // SIGNATURE VERIFICATION
+    // Verifies a Falcon-512 detached signature against a public key.
+    // Both signature and publicKey are base64-encoded.
+    // Returns false on any error (invalid inputs, wrong key, tampered message).
+    // ============================================================
+    static async verifySignatureFalcon512(
+        message: string,
+        signatureB64: string,
+        publicKeyB64: string
+    ): Promise<boolean> {
+        try {
+            const messageBytes = Buffer.from(message);
+            const signature = Buffer.from(signatureB64, 'base64');
+            const publicKey = Buffer.from(publicKeyB64, 'base64');
+            // verifyDetached returns boolean; throws if inputs are malformed
+            return await falcon.verifyDetached(signature, messageBytes, publicKey);
+        } catch {
+            return false;
+        }
+    }
 }
