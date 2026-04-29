@@ -1,6 +1,6 @@
 # API Docs (Scalar + swagger-jsdoc) Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Adicionar documentação interativa da API com testes embutidos via Scalar UI, gerada a partir de anotações JSDoc nas rotas existentes.
 
@@ -36,7 +36,7 @@
 **Files:**
 - Modify: `package.json`
 
-- [ ] **Step 1: Instalar dependências**
+- [x] **Step 1: Instalar dependências**
 
 ```bash
 cd "/Volumes/External SSD/Projects/backend-QC-new"
@@ -46,7 +46,7 @@ npm install --save-dev @types/swagger-jsdoc
 
 Expected: `added N packages` sem erros
 
-- [ ] **Step 2: Verificar instalação**
+- [x] **Step 2: Verificar instalação**
 
 ```bash
 node -e "require('@scalar/express-api-reference'); require('swagger-jsdoc'); console.log('OK')"
@@ -54,7 +54,7 @@ node -e "require('@scalar/express-api-reference'); require('swagger-jsdoc'); con
 
 Expected: `OK`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add package.json package-lock.json
@@ -68,7 +68,7 @@ git commit -m "chore(deps): add swagger-jsdoc and @scalar/express-api-reference"
 **Files:**
 - Create: `src/docs/openapi.ts`
 
-- [ ] **Step 1: Criar o arquivo**
+- [x] **Step 1: Criar o arquivo**
 
 ```typescript
 // src/docs/openapi.ts
@@ -263,7 +263,7 @@ export function getSpec(): object {
 }
 ```
 
-- [ ] **Step 2: Verificar que compila sem erros**
+- [x] **Step 2: Verificar que compila sem erros**
 
 ```bash
 cd "/Volumes/External SSD/Projects/backend-QC-new"
@@ -279,7 +279,7 @@ Expected: sem erros de tipo
 **Files:**
 - Create: `tests/docs.test.ts`
 
-- [ ] **Step 1: Criar o arquivo de teste**
+- [x] **Step 1: Criar o arquivo de teste**
 
 ```typescript
 // tests/docs.test.ts
@@ -346,7 +346,7 @@ describe('GET /api-docs', () => {
 });
 ```
 
-- [ ] **Step 2: Rodar os testes e confirmar que falham (docsRoutes ainda não existe)**
+- [x] **Step 2: Rodar os testes e confirmar que falham (docsRoutes ainda não existe)**
 
 ```bash
 cd "/Volumes/External SSD/Projects/backend-QC-new"
@@ -362,7 +362,7 @@ Expected: FAIL — `Cannot find module` ou `404` nos endpoints
 **Files:**
 - Create: `src/routes/v1/docsRoutes.ts`
 
-- [ ] **Step 1: Criar o arquivo**
+- [x] **Step 1: Criar o arquivo**
 
 ```typescript
 // src/routes/v1/docsRoutes.ts
@@ -424,7 +424,7 @@ export default router;
 - Modify: `src/server.ts`
 - Modify: `.env.example`
 
-- [ ] **Step 1: Adicionar import e mount em `src/server.ts`**
+- [x] **Step 1: Adicionar import e mount em `src/server.ts`**
 
 Logo após os outros imports de routes (antes de `import routes from './routes/index'`), adicione:
 
@@ -443,7 +443,7 @@ app.use('/', docsRoutes);
 
 A posição correta é após `app.use('/api', routes)` e antes de `app.use(notFoundHandler)`.
 
-- [ ] **Step 2: Adicionar env var ao `.env.example`**
+- [x] **Step 2: Adicionar env var ao `.env.example`**
 
 Leia o `.env.example` e adicione no final:
 
@@ -453,7 +453,7 @@ Leia o `.env.example` e adicione no final:
 DOCS_DEFAULT_API_KEY=qc_sua_chave_dev_aqui
 ```
 
-- [ ] **Step 3: Rodar os testes para confirmar que passam**
+- [x] **Step 3: Rodar os testes para confirmar que passam**
 
 ```bash
 cd "/Volumes/External SSD/Projects/backend-QC-new"
@@ -462,7 +462,7 @@ npx vitest run tests/docs.test.ts
 
 Expected: todos os testes passam (5 passes)
 
-- [ ] **Step 4: Verificar compilação TypeScript**
+- [x] **Step 4: Verificar compilação TypeScript**
 
 ```bash
 npx tsc --noEmit
@@ -470,7 +470,7 @@ npx tsc --noEmit
 
 Expected: sem erros
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/docs/openapi.ts src/routes/v1/docsRoutes.ts src/server.ts .env.example tests/docs.test.ts
@@ -484,7 +484,7 @@ git commit -m "feat(docs): add Scalar API docs — /api-docs UI + /api-docs/spec
 **Files:**
 - Modify: `src/routes/v1/tenantRoutes.ts`
 
-- [ ] **Step 1: Substituir o conteúdo do arquivo com os blocos JSDoc**
+- [x] **Step 1: Substituir o conteúdo do arquivo com os blocos JSDoc**
 
 ```typescript
 // ═══════════════════════════════════════════════════════════
@@ -780,7 +780,7 @@ router.get('/:id/usage', TenantController.getUsage);
 export default router;
 ```
 
-- [ ] **Step 2: Verificar spec contém paths de tenants**
+- [x] **Step 2: Verificar spec contém paths de tenants**
 
 ```bash
 cd "/Volumes/External SSD/Projects/backend-QC-new"
@@ -789,7 +789,7 @@ npx vitest run tests/docs.test.ts
 
 Expected: todos os testes passam
 
-- [ ] **Step 3: Verificar via curl que o path aparece**
+- [x] **Step 3: Verificar via curl que o path aparece**
 
 ```bash
 curl -s http://localhost:3000/api-docs/spec.json | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(Object.keys(d.paths).filter(p=>p.includes('tenant')))"
@@ -806,7 +806,7 @@ Expected: `[ '/api/v1/tenants', '/api/v1/tenants/{id}', ... ]`
 **Files:**
 - Modify: `src/routes/v1/apiKeyRoutes.ts`
 
-- [ ] **Step 1: Substituir o conteúdo do arquivo com os blocos JSDoc**
+- [x] **Step 1: Substituir o conteúdo do arquivo com os blocos JSDoc**
 
 ```typescript
 // ═══════════════════════════════════════════════════════════
@@ -993,7 +993,7 @@ router.post('/:id/rotate', ApiKeyController.rotate);
 export default router;
 ```
 
-- [ ] **Step 2: Rodar testes**
+- [x] **Step 2: Rodar testes**
 
 ```bash
 npx vitest run tests/docs.test.ts
@@ -1008,7 +1008,7 @@ Expected: todos passam
 **Files:**
 - Modify: `src/routes/v1/assetRoutes.ts`
 
-- [ ] **Step 1: Substituir o conteúdo do arquivo com os blocos JSDoc**
+- [x] **Step 1: Substituir o conteúdo do arquivo com os blocos JSDoc**
 
 ```typescript
 // ═══════════════════════════════════════════════════════════
@@ -1223,7 +1223,7 @@ router.use('/', transferRoutes);
 export default router;
 ```
 
-- [ ] **Step 2: Rodar testes**
+- [x] **Step 2: Rodar testes**
 
 ```bash
 npx vitest run tests/docs.test.ts
@@ -1238,7 +1238,7 @@ Expected: todos passam
 **Files:**
 - Modify: `src/routes/v1/lifecycleRoutes.ts`
 
-- [ ] **Step 1: Substituir o conteúdo do arquivo com o bloco JSDoc**
+- [x] **Step 1: Substituir o conteúdo do arquivo com o bloco JSDoc**
 
 ```typescript
 // ═══════════════════════════════════════════════════════════
@@ -1328,7 +1328,7 @@ router.patch(
 export default router;
 ```
 
-- [ ] **Step 2: Rodar testes**
+- [x] **Step 2: Rodar testes**
 
 ```bash
 npx vitest run tests/docs.test.ts
@@ -1343,7 +1343,7 @@ Expected: todos passam
 **Files:**
 - Modify: `src/routes/v1/transferRoutes.ts`
 
-- [ ] **Step 1: Substituir o conteúdo do arquivo com o bloco JSDoc**
+- [x] **Step 1: Substituir o conteúdo do arquivo com o bloco JSDoc**
 
 ```typescript
 // ═══════════════════════════════════════════════════════════
@@ -1430,7 +1430,7 @@ router.patch(
 export default router;
 ```
 
-- [ ] **Step 2: Rodar testes**
+- [x] **Step 2: Rodar testes**
 
 ```bash
 npx vitest run tests/docs.test.ts
@@ -1445,7 +1445,7 @@ Expected: todos passam
 **Files:**
 - Modify: `src/routes/v1/deviceRoutes.ts`
 
-- [ ] **Step 1: Substituir o conteúdo do arquivo com os blocos JSDoc**
+- [x] **Step 1: Substituir o conteúdo do arquivo com os blocos JSDoc**
 
 ```typescript
 // ═══════════════════════════════════════════════════════════
@@ -1583,7 +1583,7 @@ router.get('/tap', nfcValidateLimiter, optionalApiKey, tenantRateLimiter, Device
 export default router;
 ```
 
-- [ ] **Step 2: Rodar testes**
+- [x] **Step 2: Rodar testes**
 
 ```bash
 npx vitest run tests/docs.test.ts
@@ -1600,7 +1600,7 @@ Expected: todos passam
 - Modify: `src/routes/index.ts`
 - Modify: `src/server.ts` (apenas bloco JSDoc no /health)
 
-- [ ] **Step 1: Atualizar `src/routes/v1/webhookRoutes.ts`**
+- [x] **Step 1: Atualizar `src/routes/v1/webhookRoutes.ts`**
 
 ```typescript
 // src/routes/v1/webhookRoutes.ts
@@ -1661,7 +1661,7 @@ router.post('/mercadopago', WebhookController.handleMercadoPago);
 export default router;
 ```
 
-- [ ] **Step 2: Adicionar JSDoc do Diamond Proxy em `src/routes/index.ts`**
+- [x] **Step 2: Adicionar JSDoc do Diamond Proxy em `src/routes/index.ts`**
 
 Logo acima da linha `router.post('/v1/diamond', requireApiKey, DiamondProxy.delegateCall)`, adicione:
 
@@ -1707,7 +1707,7 @@ Logo acima da linha `router.post('/v1/diamond', requireApiKey, DiamondProxy.dele
 router.post('/v1/diamond', requireApiKey, DiamondProxy.delegateCall);
 ```
 
-- [ ] **Step 3: Adicionar JSDoc do /health em `src/server.ts`**
+- [x] **Step 3: Adicionar JSDoc do /health em `src/server.ts`**
 
 Logo acima da linha `app.get('/health', async (req, res) => {`, adicione:
 
@@ -1746,7 +1746,7 @@ Logo acima da linha `app.get('/health', async (req, res) => {`, adicione:
 app.get('/health', async (req, res) => {
 ```
 
-- [ ] **Step 4: Rodar todos os testes**
+- [x] **Step 4: Rodar todos os testes**
 
 ```bash
 cd "/Volumes/External SSD/Projects/backend-QC-new"
@@ -1755,7 +1755,7 @@ npx vitest run tests/docs.test.ts
 
 Expected: todos os 5 testes passam
 
-- [ ] **Step 5: Rodar a suite completa para garantir nenhuma regressão**
+- [x] **Step 5: Rodar a suite completa para garantir nenhuma regressão**
 
 ```bash
 npx vitest run
@@ -1763,7 +1763,7 @@ npx vitest run
 
 Expected: todos os testes existentes continuam passando
 
-- [ ] **Step 6: Verificar que o TypeScript compila**
+- [x] **Step 6: Verificar que o TypeScript compila**
 
 ```bash
 npx tsc --noEmit
@@ -1771,7 +1771,7 @@ npx tsc --noEmit
 
 Expected: sem erros
 
-- [ ] **Step 7: Commit final**
+- [x] **Step 7: Commit final**
 
 ```bash
 git add src/routes/v1/tenantRoutes.ts src/routes/v1/apiKeyRoutes.ts src/routes/v1/assetRoutes.ts

@@ -1,6 +1,6 @@
 # Sub-sistema 1 — Core Gap Closure: Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Close 4 production gaps in the Quantum Cert Diamond API: implement LifecycleFacet state machine, refactor TransferRegistryFacet to use CPF/CNPJ documents, add MercadoPago webhook with inbox pattern, and wire up AnchorQueueService with a cron scheduler and DLTAdapterFactory.
 
@@ -44,7 +44,7 @@
 **Files:**
 - Modify: `prisma/schema.prisma`
 
-- [ ] **Step 1: Apply schema changes**
+- [x] **Step 1: Apply schema changes**
 
 Replace the `AssetStatus` enum:
 
@@ -122,7 +122,7 @@ model WebhookInbox {
 }
 ```
 
-- [ ] **Step 2: Run migration**
+- [x] **Step 2: Run migration**
 
 ```bash
 npm run db:migrate
@@ -131,7 +131,7 @@ npm run db:migrate
 
 Expected output: `✓ Generated Prisma Client` and `The following migration was applied: core_gap_closure_schema`
 
-- [ ] **Step 3: Regenerate Prisma client**
+- [x] **Step 3: Regenerate Prisma client**
 
 ```bash
 npm run db:generate
@@ -139,7 +139,7 @@ npm run db:generate
 
 Expected: `✓ Generated Prisma Client (v5.x) to node_modules/@prisma/client`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add prisma/schema.prisma prisma/migrations/
@@ -153,14 +153,14 @@ git commit -m "feat(schema): add lifecycle states, Owner.document, Tenant.target
 **Files:**
 - Modify: `package.json`
 
-- [ ] **Step 1: Install**
+- [x] **Step 1: Install**
 
 ```bash
 npm install node-cron
 npm install --save-dev @types/node-cron
 ```
 
-- [ ] **Step 2: Verify**
+- [x] **Step 2: Verify**
 
 ```bash
 node -e "const cron = require('node-cron'); console.log(cron.schedule.toString().slice(0, 50))"
@@ -168,7 +168,7 @@ node -e "const cron = require('node-cron'); console.log(cron.schedule.toString()
 
 Expected: prints beginning of schedule function definition (no error)
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add package.json package-lock.json
@@ -182,7 +182,7 @@ git commit -m "chore: add node-cron dependency for SchedulerService"
 **Files:**
 - Create: `tests/lifecycle.test.ts`
 
-- [ ] **Step 1: Create test file**
+- [x] **Step 1: Create test file**
 
 ```typescript
 // tests/lifecycle.test.ts
@@ -368,7 +368,7 @@ describe('LifecycleFacet.transition', () => {
 });
 ```
 
-- [ ] **Step 2: Run to confirm tests fail**
+- [x] **Step 2: Run to confirm tests fail**
 
 ```bash
 npm test -- lifecycle
@@ -383,7 +383,7 @@ Expected: `FAIL tests/lifecycle.test.ts` — all tests fail because `LifecycleFa
 **Files:**
 - Modify: `src/services/core-facets/LifecycleFacet.ts`
 
-- [ ] **Step 1: Write the implementation**
+- [x] **Step 1: Write the implementation**
 
 ```typescript
 // src/services/core-facets/LifecycleFacet.ts
@@ -481,7 +481,7 @@ export class LifecycleFacet {
 }
 ```
 
-- [ ] **Step 2: Run tests to confirm they pass**
+- [x] **Step 2: Run tests to confirm they pass**
 
 ```bash
 npm test -- lifecycle
@@ -489,7 +489,7 @@ npm test -- lifecycle
 
 Expected: `PASS tests/lifecycle.test.ts` — all 10 tests green
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/services/core-facets/LifecycleFacet.ts tests/lifecycle.test.ts
@@ -504,7 +504,7 @@ git commit -m "feat(lifecycle): implement LifecycleFacet state machine with full
 - Create: `src/controllers/LifecycleController.ts`
 - Create: `src/routes/v1/lifecycleRoutes.ts`
 
-- [ ] **Step 1: Create LifecycleController**
+- [x] **Step 1: Create LifecycleController**
 
 ```typescript
 // src/controllers/LifecycleController.ts
@@ -548,7 +548,7 @@ export class LifecycleController {
 }
 ```
 
-- [ ] **Step 2: Create lifecycleRoutes**
+- [x] **Step 2: Create lifecycleRoutes**
 
 ```typescript
 // src/routes/v1/lifecycleRoutes.ts
@@ -573,7 +573,7 @@ router.patch('/:assetId/lifecycle',
 export default router;
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/controllers/LifecycleController.ts src/routes/v1/lifecycleRoutes.ts
@@ -589,7 +589,7 @@ git commit -m "feat(lifecycle): add LifecycleController and PATCH /assets/:asset
 
 The existing test uses `buyerEmail`. After the refactor the API changes to `buyerDocument + documentType`. Also, the facet will call `owner.findFirst` (new) before `owner.create`.
 
-- [ ] **Step 1: Add `findFirst` to mockOwner and update the TransferRegistryFacet test**
+- [x] **Step 1: Add `findFirst` to mockOwner and update the TransferRegistryFacet test**
 
 In `tests/facets.test.ts`, locate the `vi.hoisted` block and add `findFirst` to `mockOwner`:
 
@@ -662,7 +662,7 @@ describe('FACETA 2: TransferRegistryFacet — Transferência e Billing', () => {
 });
 ```
 
-- [ ] **Step 2: Run to confirm the updated tests fail**
+- [x] **Step 2: Run to confirm the updated tests fail**
 
 ```bash
 npm test -- facets
@@ -677,7 +677,7 @@ Expected: the TransferRegistryFacet describe block fails (old implementation doe
 **Files:**
 - Modify: `src/services/core-facets/TransferRegistryFacet.ts`
 
-- [ ] **Step 1: Rewrite the facet**
+- [x] **Step 1: Rewrite the facet**
 
 ```typescript
 // src/services/core-facets/TransferRegistryFacet.ts
@@ -786,7 +786,7 @@ export class TransferRegistryFacet {
 }
 ```
 
-- [ ] **Step 2: Run all unit tests**
+- [x] **Step 2: Run all unit tests**
 
 ```bash
 npm test
@@ -794,7 +794,7 @@ npm test
 
 Expected: all tests green (lifecycle.test.ts + updated facets.test.ts)
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/services/core-facets/TransferRegistryFacet.ts tests/facets.test.ts
@@ -809,7 +809,7 @@ git commit -m "feat(transfer): refactor TransferRegistryFacet — buyerDocument/
 - Create: `src/controllers/TransferController.ts`
 - Create: `src/routes/v1/transferRoutes.ts`
 
-- [ ] **Step 1: Create TransferController**
+- [x] **Step 1: Create TransferController**
 
 ```typescript
 // src/controllers/TransferController.ts
@@ -856,7 +856,7 @@ export class TransferController {
 }
 ```
 
-- [ ] **Step 2: Create transferRoutes**
+- [x] **Step 2: Create transferRoutes**
 
 ```typescript
 // src/routes/v1/transferRoutes.ts
@@ -881,7 +881,7 @@ router.patch('/:assetId/transfer',
 export default router;
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/controllers/TransferController.ts src/routes/v1/transferRoutes.ts
@@ -895,7 +895,7 @@ git commit -m "feat(transfer): add TransferController and PATCH /assets/:assetId
 **Files:**
 - Create: `tests/webhook.test.ts`
 
-- [ ] **Step 1: Create test file**
+- [x] **Step 1: Create test file**
 
 ```typescript
 // tests/webhook.test.ts
@@ -1023,7 +1023,7 @@ describe('WebhookController.handleMercadoPago', () => {
 });
 ```
 
-- [ ] **Step 2: Run to confirm tests fail**
+- [x] **Step 2: Run to confirm tests fail**
 
 ```bash
 npm test -- webhook
@@ -1039,7 +1039,7 @@ Expected: `FAIL tests/webhook.test.ts` — `WebhookController` does not exist ye
 - Create: `src/controllers/WebhookController.ts`
 - Create: `src/routes/v1/webhookRoutes.ts`
 
-- [ ] **Step 1: Create WebhookController**
+- [x] **Step 1: Create WebhookController**
 
 ```typescript
 // src/controllers/WebhookController.ts
@@ -1113,7 +1113,7 @@ export class WebhookController {
 }
 ```
 
-- [ ] **Step 2: Create webhookRoutes**
+- [x] **Step 2: Create webhookRoutes**
 
 ```typescript
 // src/routes/v1/webhookRoutes.ts
@@ -1129,7 +1129,7 @@ router.post('/mercadopago', WebhookController.handleMercadoPago);
 export default router;
 ```
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
 ```bash
 npm test -- webhook
@@ -1137,7 +1137,7 @@ npm test -- webhook
 
 Expected: `PASS tests/webhook.test.ts` — all 5 tests green
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/controllers/WebhookController.ts src/routes/v1/webhookRoutes.ts tests/webhook.test.ts
@@ -1151,7 +1151,7 @@ git commit -m "feat(webhook): add WebhookController with HMAC-SHA256 validation 
 **Files:**
 - Create: `tests/dlt-adapter-factory.test.ts`
 
-- [ ] **Step 1: Create test file**
+- [x] **Step 1: Create test file**
 
 ```typescript
 // tests/dlt-adapter-factory.test.ts
@@ -1185,7 +1185,7 @@ describe('DLTAdapterFactory.getAdapter', () => {
 });
 ```
 
-- [ ] **Step 2: Run to confirm tests fail**
+- [x] **Step 2: Run to confirm tests fail**
 
 ```bash
 npm test -- dlt-adapter-factory
@@ -1200,7 +1200,7 @@ Expected: `FAIL` — `DLTAdapterFactory` does not exist
 **Files:**
 - Create: `src/services/DLTAdapterFactory.ts`
 
-- [ ] **Step 1: Create the factory**
+- [x] **Step 1: Create the factory**
 
 ```typescript
 // src/services/DLTAdapterFactory.ts
@@ -1234,7 +1234,7 @@ export class DLTAdapterFactory {
 }
 ```
 
-- [ ] **Step 2: Run tests**
+- [x] **Step 2: Run tests**
 
 ```bash
 npm test -- dlt-adapter-factory
@@ -1242,7 +1242,7 @@ npm test -- dlt-adapter-factory
 
 Expected: `PASS tests/dlt-adapter-factory.test.ts`
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/services/DLTAdapterFactory.ts tests/dlt-adapter-factory.test.ts
@@ -1256,7 +1256,7 @@ git commit -m "feat(dlt): add DLTAdapterFactory — pluggable chain resolution f
 **Files:**
 - Create: `tests/scheduler.test.ts`
 
-- [ ] **Step 1: Create test file**
+- [x] **Step 1: Create test file**
 
 ```typescript
 // tests/scheduler.test.ts
@@ -1337,7 +1337,7 @@ describe('SchedulerService.start', () => {
 });
 ```
 
-- [ ] **Step 2: Run to confirm tests fail**
+- [x] **Step 2: Run to confirm tests fail**
 
 ```bash
 npm test -- scheduler
@@ -1352,7 +1352,7 @@ Expected: `FAIL tests/scheduler.test.ts` — `SchedulerService` does not exist
 **Files:**
 - Create: `src/services/SchedulerService.ts`
 
-- [ ] **Step 1: Create SchedulerService**
+- [x] **Step 1: Create SchedulerService**
 
 ```typescript
 // src/services/SchedulerService.ts
@@ -1391,7 +1391,7 @@ export class SchedulerService {
 }
 ```
 
-- [ ] **Step 2: Run tests**
+- [x] **Step 2: Run tests**
 
 ```bash
 npm test -- scheduler
@@ -1399,7 +1399,7 @@ npm test -- scheduler
 
 Expected: `PASS tests/scheduler.test.ts` — all 4 tests green
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/services/SchedulerService.ts tests/scheduler.test.ts
@@ -1420,7 +1420,7 @@ The current implementation takes `adapter: IDLTAdapter` in its constructor. Refa
 - Group events by chain using a Map
 - Resolve adapter via `DLTAdapterFactory.getAdapter(chain)` per group
 
-- [ ] **Step 1: Rewrite AnchorQueueService**
+- [x] **Step 1: Rewrite AnchorQueueService**
 
 ```typescript
 // src/services/AnchorQueueService.ts
@@ -1534,7 +1534,7 @@ export class AnchorQueueService {
 }
 ```
 
-- [ ] **Step 2: Run full test suite**
+- [x] **Step 2: Run full test suite**
 
 ```bash
 npm test
@@ -1542,7 +1542,7 @@ npm test
 
 Expected: all tests green (lifecycle, facets, webhook, dlt-adapter-factory, scheduler, security-regression)
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/services/AnchorQueueService.ts
@@ -1558,7 +1558,7 @@ git commit -m "refactor(anchor): AnchorQueueService — static processQueue, DLT
 - Modify: `src/routes/index.ts`
 - Modify: `src/server.ts`
 
-- [ ] **Step 1: Register new selectors in FacetRegistry**
+- [x] **Step 1: Register new selectors in FacetRegistry**
 
 Add imports at the top of `src/diamond/FacetRegistry.ts`:
 
@@ -1577,7 +1577,7 @@ Add selectors to the `FacetRegistry` object (after `'publicProfile.filter'`):
     'transfer.initiate': TransferRegistryFacet.initiateTransfer,
 ```
 
-- [ ] **Step 2: Mount routes in routes/index.ts**
+- [x] **Step 2: Mount routes in routes/index.ts**
 
 Add imports after existing route imports:
 
@@ -1604,7 +1604,7 @@ router.use('/v1/assets', transferRoutes);
 router.use('/v1/webhooks', webhookRoutes);
 ```
 
-- [ ] **Step 3: Start SchedulerService in server.ts**
+- [x] **Step 3: Start SchedulerService in server.ts**
 
 Add import after existing imports in `src/server.ts`:
 
@@ -1625,7 +1625,7 @@ app.listen(PORT, () => {
 });
 ```
 
-- [ ] **Step 4: Build to check TypeScript**
+- [x] **Step 4: Build to check TypeScript**
 
 ```bash
 npm run build
@@ -1633,7 +1633,7 @@ npm run build
 
 Expected: `dist/` generated with zero TypeScript errors
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/diamond/FacetRegistry.ts src/routes/index.ts src/server.ts
@@ -1647,7 +1647,7 @@ git commit -m "feat(integration): wire lifecycle/transfer/webhook routes, FacetR
 **Files:**
 - Modify: `.env.example`
 
-- [ ] **Step 1: Add new variables to .env.example**
+- [x] **Step 1: Add new variables to .env.example**
 
 Find the section with existing env vars and append:
 
@@ -1660,7 +1660,7 @@ MP_WEBHOOK_SECRET=
 ANCHOR_QUEUE_INTERVAL_SECONDS=30
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add .env.example
@@ -1671,7 +1671,7 @@ git commit -m "chore(env): document MP_WEBHOOK_SECRET and ANCHOR_QUEUE_INTERVAL_
 
 ## Task 18: Final verification
 
-- [ ] **Step 1: Run full test suite**
+- [x] **Step 1: Run full test suite**
 
 ```bash
 npm test
@@ -1679,7 +1679,7 @@ npm test
 
 Expected: all test files pass with zero failures
 
-- [ ] **Step 2: TypeScript build**
+- [x] **Step 2: TypeScript build**
 
 ```bash
 npm run build
@@ -1687,7 +1687,7 @@ npm run build
 
 Expected: `dist/` generated, zero errors
 
-- [ ] **Step 3: Smoke test server startup (optional, requires .env)**
+- [x] **Step 3: Smoke test server startup (optional, requires .env)**
 
 ```bash
 npm run dev
@@ -1695,7 +1695,7 @@ npm run dev
 
 Expected: server starts, `[Scheduler] AnchorQueue cron started — interval: 30s` appears in stdout, `/health` returns `200 OK`
 
-- [ ] **Step 4: Final commit if any fixups needed**
+- [x] **Step 4: Final commit if any fixups needed**
 
 ```bash
 git add -A

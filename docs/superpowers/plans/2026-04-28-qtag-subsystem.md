@@ -1,6 +1,6 @@
 # QTAG Sub-system Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Implementar o ciclo de vida físico de QTAGs NTAG 424 DNA — commissioning criptográfico (backend steps 1-6) e verificação SDM em 4 camadas por smartphone.
 
@@ -36,7 +36,7 @@
 
 O `Device` não tem `sdmMacKeyId`, `sdmEncKeyId`, `lastLat`, `lastLon`. O `TapVerdict` enum não tem `RELAY_ATTACK`. A tabela `EncodingSession` não existe.
 
-- [ ] **Step 1: Adicionar `EncodingStatus` enum e `EncodingSession` model**
+- [x] **Step 1: Adicionar `EncodingStatus` enum e `EncodingSession` model**
 
 Adicionar antes do último `}` do arquivo, após o model `DeviceTapLog`:
 
@@ -68,7 +68,7 @@ model EncodingSession {
 }
 ```
 
-- [ ] **Step 2: Estender `Device` com campos SDM e geo**
+- [x] **Step 2: Estender `Device` com campos SDM e geo**
 
 Dentro do `model Device`, após `lastTapIp String?`:
 
@@ -81,7 +81,7 @@ Dentro do `model Device`, após `lastTapIp String?`:
   sdmEncKeyId String?   // KMS-wrapped AES-128 for picc_data decryption
 ```
 
-- [ ] **Step 3: Adicionar `RELAY_ATTACK` ao enum `TapVerdict`**
+- [x] **Step 3: Adicionar `RELAY_ATTACK` ao enum `TapVerdict`**
 
 Localizar o enum `TapVerdict` no schema e adicionar o valor:
 
@@ -95,7 +95,7 @@ enum TapVerdict {
 }
 ```
 
-- [ ] **Step 4: Aplicar a migration**
+- [x] **Step 4: Aplicar a migration**
 
 ```bash
 cd "/Volumes/External SSD/Projects/backend-QC-new"
@@ -106,7 +106,7 @@ Quando perguntado o nome, digitar: `add_qtag_encoding_session`
 
 Expected: `Your database is now in sync with your schema.`
 
-- [ ] **Step 5: Regenerar o Prisma client**
+- [x] **Step 5: Regenerar o Prisma client**
 
 ```bash
 npm run db:generate
@@ -114,7 +114,7 @@ npm run db:generate
 
 Expected: `Generated Prisma Client`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add prisma/
@@ -128,7 +128,7 @@ git commit -m "feat(schema): add EncodingSession, SDM key fields on Device, RELA
 **Files:**
 - Create: `tests/qtag-crypto.test.ts`
 
-- [ ] **Step 1: Criar o arquivo de testes**
+- [x] **Step 1: Criar o arquivo de testes**
 
 ```typescript
 import { describe, it, expect } from 'vitest';
@@ -283,7 +283,7 @@ describe('QTagCryptoService', () => {
 });
 ```
 
-- [ ] **Step 2: Rodar os testes para confirmar que falham**
+- [x] **Step 2: Rodar os testes para confirmar que falham**
 
 ```bash
 cd "/Volumes/External SSD/Projects/backend-QC-new"
@@ -299,7 +299,7 @@ Expected: `FAIL` — `Cannot find module '../src/services/QTagCryptoService'`
 **Files:**
 - Create: `src/services/QTagCryptoService.ts`
 
-- [ ] **Step 1: Criar o serviço**
+- [x] **Step 1: Criar o serviço**
 
 ```typescript
 import crypto from 'node:crypto';
@@ -486,7 +486,7 @@ export class QTagCryptoService {
 }
 ```
 
-- [ ] **Step 2: Rodar os testes**
+- [x] **Step 2: Rodar os testes**
 
 ```bash
 npx vitest run tests/qtag-crypto.test.ts
@@ -494,7 +494,7 @@ npx vitest run tests/qtag-crypto.test.ts
 
 Expected: `PASS` — todos os testes verdes.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/services/QTagCryptoService.ts tests/qtag-crypto.test.ts
@@ -508,7 +508,7 @@ git commit -m "feat(qtag): add QTagCryptoService with CMAC, DAT, Haversine, layo
 **Files:**
 - Create: `tests/commissioning.test.ts`
 
-- [ ] **Step 1: Criar o arquivo de testes**
+- [x] **Step 1: Criar o arquivo de testes**
 
 ```typescript
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -695,7 +695,7 @@ describe('CommissioningFacet.statusQuery', () => {
 });
 ```
 
-- [ ] **Step 2: Rodar os testes para confirmar falha**
+- [x] **Step 2: Rodar os testes para confirmar falha**
 
 ```bash
 npx vitest run tests/commissioning.test.ts
@@ -710,7 +710,7 @@ Expected: `FAIL` — `Cannot find module '../src/services/core-facets/Commission
 **Files:**
 - Create: `src/services/core-facets/CommissioningFacet.ts`
 
-- [ ] **Step 1: Criar o facet**
+- [x] **Step 1: Criar o facet**
 
 ```typescript
 import crypto from 'node:crypto';
@@ -893,7 +893,7 @@ export class CommissioningFacet {
 }
 ```
 
-- [ ] **Step 2: Rodar os testes**
+- [x] **Step 2: Rodar os testes**
 
 ```bash
 npx vitest run tests/commissioning.test.ts
@@ -901,7 +901,7 @@ npx vitest run tests/commissioning.test.ts
 
 Expected: `PASS` — todos os testes verdes.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/services/core-facets/CommissioningFacet.ts tests/commissioning.test.ts
@@ -915,7 +915,7 @@ git commit -m "feat(qtag): add CommissioningFacet with steps 1-6"
 **Files:**
 - Create: `tests/sdm-verifier.test.ts`
 
-- [ ] **Step 1: Criar o arquivo de testes**
+- [x] **Step 1: Criar o arquivo de testes**
 
 ```typescript
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -1159,7 +1159,7 @@ describe('SDMVerifierService.verifyTap', () => {
 });
 ```
 
-- [ ] **Step 2: Rodar para confirmar falha**
+- [x] **Step 2: Rodar para confirmar falha**
 
 ```bash
 npx vitest run tests/sdm-verifier.test.ts
@@ -1174,7 +1174,7 @@ Expected: `FAIL` — `Cannot find module '../src/services/SDMVerifierService'`
 **Files:**
 - Create: `src/services/SDMVerifierService.ts`
 
-- [ ] **Step 1: Criar o serviço**
+- [x] **Step 1: Criar o serviço**
 
 ```typescript
 import crypto from 'node:crypto';
@@ -1409,7 +1409,7 @@ export class SDMVerifierService {
 }
 ```
 
-- [ ] **Step 2: Rodar os testes**
+- [x] **Step 2: Rodar os testes**
 
 ```bash
 npx vitest run tests/sdm-verifier.test.ts
@@ -1417,7 +1417,7 @@ npx vitest run tests/sdm-verifier.test.ts
 
 Expected: `PASS` — todos os testes verdes.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/services/SDMVerifierService.ts tests/sdm-verifier.test.ts
@@ -1431,7 +1431,7 @@ git commit -m "feat(qtag): add SDMVerifierService with 4-layer tap validation"
 **Files:**
 - Modify: `src/diamond/FacetRegistry.ts`
 
-- [ ] **Step 1: Adicionar import e selectors**
+- [x] **Step 1: Adicionar import e selectors**
 
 No início do arquivo, adicionar o import:
 
@@ -1448,7 +1448,7 @@ No objeto `FacetRegistry`, adicionar a seção:
     'commissioning.status': CommissioningFacet.statusQuery,
 ```
 
-- [ ] **Step 2: Verificar build**
+- [x] **Step 2: Verificar build**
 
 ```bash
 npx tsc --noEmit
@@ -1456,7 +1456,7 @@ npx tsc --noEmit
 
 Expected: sem erros de tipo.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/diamond/FacetRegistry.ts
@@ -1471,7 +1471,7 @@ git commit -m "feat(qtag): register commissioning selectors in FacetRegistry"
 - Modify: `src/routes/v1/publicRoutes.ts`
 - Modify: `src/server.ts`
 
-- [ ] **Step 1: Adicionar `GET /api/v1/scan` em publicRoutes.ts**
+- [x] **Step 1: Adicionar `GET /api/v1/scan` em publicRoutes.ts**
 
 Abrir `src/routes/v1/publicRoutes.ts`. Adicionar ao final (antes do `export default router`):
 
@@ -1505,7 +1505,7 @@ router.get('/scan', async (req, res) => {
 });
 ```
 
-- [ ] **Step 2: Adicionar rate limit de 30 req/min por IP em server.ts**
+- [x] **Step 2: Adicionar rate limit de 30 req/min por IP em server.ts**
 
 Em `src/server.ts`, localizar o bloco de rate limiters (IP rate limiter existente). Adicionar **antes** da montagem das rotas:
 
@@ -1531,7 +1531,7 @@ app.use('/api/v1/scan', (req, res, next) => {
 });
 ```
 
-- [ ] **Step 3: Verificar build**
+- [x] **Step 3: Verificar build**
 
 ```bash
 npx tsc --noEmit
@@ -1539,7 +1539,7 @@ npx tsc --noEmit
 
 Expected: sem erros.
 
-- [ ] **Step 4: Rodar suite completa**
+- [x] **Step 4: Rodar suite completa**
 
 ```bash
 npm test
@@ -1547,7 +1547,7 @@ npm test
 
 Expected: todos os testes passam, nenhuma regressão.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/routes/v1/publicRoutes.ts src/server.ts
@@ -1558,7 +1558,7 @@ git commit -m "feat(qtag): add GET /api/v1/scan route with 30 req/min rate limit
 
 ## Task 10: Smoke Test Manual
 
-- [ ] **Step 1: Iniciar o servidor em modo dev**
+- [x] **Step 1: Iniciar o servidor em modo dev**
 
 ```bash
 npm run dev
@@ -1566,7 +1566,7 @@ npm run dev
 
 Expected: `Server running on port 3000`
 
-- [ ] **Step 2: Testar commissioning.start via DiamondProxy**
+- [x] **Step 2: Testar commissioning.start via DiamondProxy**
 
 ```bash
 curl -s -X POST http://localhost:3000/api/v1/diamond \
@@ -1585,7 +1585,7 @@ curl -s -X POST http://localhost:3000/api/v1/diamond \
 
 Expected: resposta com `sessionId`, `layout`, `pages` (36 itens), `sdmMacKey` (32 hex chars), `writeKey`, `lockAfterWrite: false`.
 
-- [ ] **Step 3: Testar scan com parâmetros inválidos**
+- [x] **Step 3: Testar scan com parâmetros inválidos**
 
 ```bash
 curl -s "http://localhost:3000/api/v1/scan?p=ZZZZ&m=YYYY" | jq .
@@ -1593,7 +1593,7 @@ curl -s "http://localhost:3000/api/v1/scan?p=ZZZZ&m=YYYY" | jq .
 
 Expected: `{ "error": "Invalid NFC parameters." }` com HTTP 400.
 
-- [ ] **Step 4: Commit final se necessário**
+- [x] **Step 4: Commit final se necessário**
 
 ```bash
 git add .
