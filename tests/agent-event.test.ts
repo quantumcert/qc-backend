@@ -21,8 +21,16 @@ vi.mock('../src/utils/PostQuantumCrypto', () => ({
   },
 }));
 
+vi.mock('../src/diamond/FacetRegistry', () => ({
+  FacetRegistry: {
+    'event.recordAuthenticated': vi.fn(),
+  },
+}));
+
 import { requireAgentSignature } from '../src/middleware/requireAgentSignature';
 import { PostQuantumCrypto } from '../src/utils/PostQuantumCrypto';
+import { AgentController } from '../src/controllers/AgentController';
+import { FacetRegistry } from '../src/diamond/FacetRegistry';
 
 const mockRes = () => {
   const res: Partial<Response> = {};
@@ -121,6 +129,93 @@ describe('requireAgentSignature', () => {
     expect(res.status).toHaveBeenCalledWith(403);
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({ code: 'SELECTOR_NOT_ALLOWED' })
+    );
+  });
+});
+
+// ─────────────────────────────────────────────────────────
+// AgentController.handleEvent
+// ─────────────────────────────────────────────────────────
+
+describe('AgentController.handleEvent', () => {
+  const makeControllerReq = (overrides: Partial<AuthenticatedRequest> = {}): AuthenticatedRequest =>
+    ({
+      tenantId: 'tenant-1',
+      apiKeyId: 'apk-1',
+      apiKeyRole: 'OPERATOR',
+      agentId: 'agt-1',
+      body: {
+        selector: 'event.recordAuthenticated',
+        assetId: 'asset-1',
+        payload: { note: 'sensor reading' },
+        signature: 'sig',
+      },
+      ...overrides,
+    } as unknown as AuthenticatedRequest);
+
+  beforeEach(() => vi.clearAllMocks());
+
+  it('executes the facet and returns 200 with result', async () => {
+    vi.mocked(FacetRegistry['event.recordAuthenticated']).mockResolvedValue({ id: 'evt-1' });
+    const req = makeControllerReq();
+    const res = mockRes();
+    await AgentController.handleEvent(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ success: true, data: { id: 'evt-1' } })
+    );
+  });
+
+  it('returns 400 UNKNOWN_SELECTOR for unregistered selectors', async () => {
+    const req = makeControllerReq({
+      body: {
+        selector: 'does.not.exist',
+        assetId: 'asset-1',
+        payload: {},
+        signature: 'sig',
+      },
+    } as any);
+    const res = mockRes();
+    await AgentController.handleEvent(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ code: 'UNKNOWN_SELECTOR' })
+    );
+  });
+
+  it('returns 400 SELECTOR_REQUIRED when selector is missing', async () => {
+    const req = makeControllerReq({
+      body: { assetId: 'asset-1', payload: {}, signature: 'sig' },
+    } as any);
+    const res = mockRes();
+    await AgentController.handleEvent(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ code: 'SELECTOR_REQUIRED' })
+    );
+  });
+
+  it('passes agentId in secureContext to the facet', async () => {
+    const facetSpy = vi.mocked(FacetRegistry['event.recordAuthenticated']).mockResolvedValue({});
+    const req = makeControllerReq();
+    const res = mockRes();
+    await AgentController.handleEvent(req, res);
+    expect(facetSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ agentId: 'agt-1' }),
+      expect.any(Object)
+    );
+  });
+
+  it('returns 400 with business error code when facet throws a known error', async () => {
+    vi.mocked(FacetRegistry['event.recordAuthenticated']).mockRejectedValue(
+      Object.assign(new Error('Asset not found'), { code: 'ASSET_NOT_FOUND' })
+    );
+    const req = makeControllerReq();
+    const res = mockRes();
+    await AgentController.handleEvent(req, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ code: 'ASSET_NOT_FOUND' })
     );
   });
 });
