@@ -78,9 +78,28 @@ router.use('/v1/agent', agentRoutes);
  *   post:
  *     summary: Diamond Proxy — roteador universal de Facets
  *     description: |
- *       Ponto de entrada para operações via Diamond Pattern. O selector mapeia para
- *       uma função de Facet registrada no FacetRegistry. O secureContext é injetado
- *       pelo middleware — nunca confie em tenantId vindo do payload.
+ *       Ponto de entrada único para todas as operações mutantes autenticadas.
+ *       O `selector` mapeia para uma função de Facet registrada no FacetRegistry.
+ *       O `secureContext` ({ tenantId, apiKeyId, role }) é injetado pelo middleware
+ *       — nunca confie em tenantId vindo do payload.
+ *
+ *       **Seletores disponíveis:**
+ *
+ *       | Selector | Descrição | Role mínimo |
+ *       |---|---|---|
+ *       | `asset.register` | Criar novo ativo | OPERATOR |
+ *       | `asset.update` | Atualizar metadata | OPERATOR |
+ *       | `lifecycle.transition` | Transicionar estado do ativo | OPERATOR |
+ *       | `transfer.initiate` | Iniciar transferência de propriedade | OPERATOR |
+ *       | `escrow.lock` | Bloquear ativo em escrow time-lock | OPERATOR |
+ *       | `escrow.release` | Liberar escrow MANUAL | OPERATOR |
+ *       | `escrow.cancel` | Cancelar escrow | ADMIN |
+ *       | `escrow.status` | Consultar status do escrow | READER |
+ *       | `agent.register` | Registrar agente M2M/IoT | ADMIN |
+ *       | `agent.revoke` | Revogar agente | ADMIN |
+ *       | `agent.status` | Consultar status do agente | READER |
+ *       | `commissioning.start` | Iniciar comissionamento de tag NFC | OPERATOR |
+ *       | `commissioning.finalize` | Finalizar comissionamento | OPERATOR |
  *     tags: [Diamond]
  *     security:
  *       - ApiKeyAuth: []
@@ -88,8 +107,50 @@ router.use('/v1/agent', agentRoutes);
  *       required: true
  *       content:
  *         application/json:
+ *           examples:
+ *             lifecycle:
+ *               summary: Transicionar estado de um ativo
+ *               value:
+ *                 selector: lifecycle.transition
+ *                 payload:
+ *                   assetId: "uuid-do-ativo"
+ *                   targetState: ACTIVE
+ *             transfer:
+ *               summary: Iniciar transferência de propriedade
+ *               value:
+ *                 selector: transfer.initiate
+ *                 payload:
+ *                   assetId: "uuid-do-ativo"
+ *                   buyerDocument: "123.456.789-00"
+ *                   documentType: CPF
+ *             escrowLock:
+ *               summary: Bloquear ativo em escrow com time-lock
+ *               value:
+ *                 selector: escrow.lock
+ *                 payload:
+ *                   assetId: "uuid-do-ativo"
+ *                   escrowId: "uuid-do-escrow"
+ *                   chain: SOLANA
+ *                   sender: "carteira-vendedor"
+ *                   receiver: "carteira-comprador"
+ *                   amount: "1000000"
+ *                   unlockTimestamp: 1800000000
+ *                   releaseMode: AUTO
+ *             escrowStatus:
+ *               summary: Consultar status de um escrow
+ *               value:
+ *                 selector: escrow.status
+ *                 payload:
+ *                   escrowId: "uuid-do-escrow"
  *           schema:
- *             $ref: '#/components/schemas/DiamondCallPayload'
+ *             type: object
+ *             required: [selector, payload]
+ *             properties:
+ *               selector:
+ *                 type: string
+ *                 example: lifecycle.transition
+ *               payload:
+ *                 type: object
  *     responses:
  *       200:
  *         description: Facet executado com sucesso
@@ -98,13 +159,19 @@ router.use('/v1/agent', agentRoutes);
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
  *       400:
- *         description: Selector inválido ou não registrado no FacetRegistry
+ *         description: Erro de negócio (selector inválido, estado proibido, escrow já fechado, etc.)
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
  *         description: API key ausente ou inválida
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Role insuficiente para o selector solicitado
  *         content:
  *           application/json:
  *             schema:
