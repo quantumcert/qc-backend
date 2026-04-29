@@ -158,9 +158,8 @@ describe('EscrowFacet.release', () => {
 
     const result = await EscrowFacet.release(workerCtx, { escrowId: 'escrow-1', assetId: 'asset-1' });
     expect(result.status).toBe('RELEASED');
-    expect(prisma.escrow.update).not.toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ releaseConfirmedAt: expect.anything() }) })
-    );
+    const updateCall = vi.mocked(prisma.escrow.update).mock.calls[0][0] as any;
+    expect(updateCall.data).not.toHaveProperty('releaseConfirmedAt');
   });
 
   it('🚫 rejeita release REST em escrow AUTO', async () => {
