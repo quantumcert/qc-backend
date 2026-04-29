@@ -14,6 +14,7 @@ import { DeviceGuardFacet } from '../services/core-facets/DeviceGuardFacet';
 import { LifecycleFacet } from '../services/core-facets/LifecycleFacet';
 import { TransferRegistryFacet } from '../services/core-facets/TransferRegistryFacet';
 import { CommissioningFacet } from '../services/core-facets/CommissioningFacet';
+import { AgentRegistryFacet } from '../services/core-facets/AgentRegistryFacet';
 
 export type FacetFunction = (...args: any[]) => Promise<any> | any;
 
@@ -52,4 +53,9 @@ export const FacetRegistry: Record<string, FacetFunction> = {
     'commissioning.start': CommissioningFacet.start,
     'commissioning.confirm': CommissioningFacet.confirm,
     'commissioning.status': CommissioningFacet.statusQuery,
+
+    // AGENT REGISTRY (M2M / IoT)
+    'agent.register': AgentRegistryFacet.register,
+    'agent.revoke': AgentRegistryFacet.revoke,
+    'agent.status': AgentRegistryFacet.status,
 };

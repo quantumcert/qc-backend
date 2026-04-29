@@ -24,6 +24,7 @@ import lifecycleRoutes from './v1/lifecycleRoutes';
 import webhookRoutes from './v1/webhookRoutes';
 import walletRoutes from './v1/walletRoutes';
 import circuitBreakerRoutes from './v1/circuitBreakerRoutes';
+import agentRoutes from './v1/agentRoutes';
 import { DiamondProxy } from '../diamond/DiamondProxy';
 import { requireApiKey } from '../middleware/apiKeyAuth';
 
@@ -69,6 +70,11 @@ router.use('/v1/wallet', walletRoutes);
 
 // Circuit Breaker — POST /api/v1/circuit-breaker/pause, POST /api/v1/circuit-breaker/resume
 router.use('/v1/circuit-breaker', circuitBreakerRoutes);
+
+// ═══════════════════════════════════════════════════════════
+// SUB-SISTEMA 4: M2M / Agent Registry
+// ═══════════════════════════════════════════════════════════
+router.use('/v1/agent', agentRoutes);
 
 /**
  * @openapi
