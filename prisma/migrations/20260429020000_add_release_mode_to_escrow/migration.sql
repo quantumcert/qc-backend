@@ -1,6 +1,4 @@
--- AlterEnum (safe — ADD VALUE IF NOT EXISTS)
-ALTER TYPE "EscrowStatus" ADD VALUE IF NOT EXISTS 'PROCESSING';
-
--- AlterTable (safe — ADD COLUMN IF NOT EXISTS)
-ALTER TABLE "Escrow" ADD COLUMN IF NOT EXISTS "releaseConfirmedAt" TIMESTAMP(3);
-ALTER TABLE "Escrow" ADD COLUMN IF NOT EXISTS "releaseMode" TEXT NOT NULL DEFAULT 'AUTO';
+-- Escrow table and releaseMode/releaseConfirmedAt columns are created in
+-- 20260430000001_prod_baseline_missing_tables which runs after this migration.
+-- This is a no-op placeholder kept for migration history integrity.
+SELECT 1;
