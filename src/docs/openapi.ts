@@ -5,7 +5,13 @@
 // @openapi nos arquivos de rota.
 // ═══════════════════════════════════════════════════════════
 
+import path from 'path';
 import swaggerJsdoc from 'swagger-jsdoc';
+
+// In production the compiled file lives at dist/docs/openapi.js, so __dirname
+// points into dist/. In dev (tsx) it points into src/. Detect and use correct ext.
+const isProd = __dirname.includes(`${path.sep}dist${path.sep}`) || __dirname.endsWith(`${path.sep}dist`);
+const ext = isProd ? 'js' : 'ts';
 
 const options: swaggerJsdoc.Options = {
   definition: {
@@ -23,8 +29,8 @@ const options: swaggerJsdoc.Options = {
       },
     },
     servers: [
+      { url: 'https://api.quantumcert.com.br', description: 'Production' },
       { url: 'http://localhost:3000', description: 'Development' },
-      { url: 'https://api.quantumcert.io', description: 'Production' },
     ],
     components: {
       securitySchemes: {
@@ -174,9 +180,9 @@ const options: swaggerJsdoc.Options = {
     security: [{ ApiKeyAuth: [] }],
   },
   apis: [
-    './src/routes/v1/*.ts',
-    './src/routes/index.ts',
-    './src/server.ts',
+    path.resolve(__dirname, `../routes/v1/*.${ext}`),
+    path.resolve(__dirname, `../routes/index.${ext}`),
+    path.resolve(__dirname, `../server.${ext}`),
   ],
 };
 
