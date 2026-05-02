@@ -1,8 +1,15 @@
 -- CreateEnum
 CREATE TYPE "EncodingStatus" AS ENUM ('PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED');
 
+-- CreateEnum (if not exists — TapVerdict was missing from production DB)
+DO $$ BEGIN
+  CREATE TYPE "TapVerdict" AS ENUM ('VALID', 'REPLAY_BLOCKED', 'CMAC_INVALID', 'DEVICE_INACTIVE', 'DEVICE_NOT_FOUND');
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
 -- AlterEnum
-ALTER TYPE "TapVerdict" ADD VALUE 'RELAY_ATTACK';
+ALTER TYPE "TapVerdict" ADD VALUE IF NOT EXISTS 'RELAY_ATTACK';
 
 -- AlterTable
 ALTER TABLE "Device" ADD COLUMN     "lastLat" DOUBLE PRECISION,
