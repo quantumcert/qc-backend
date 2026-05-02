@@ -1,5 +1,4 @@
--- Composite index on Agent(tenantId, isActive) for admin list query pattern
-DROP INDEX IF EXISTS "Agent_tenantId_idx";
-
--- CreateIndex
-CREATE INDEX "Agent_tenantId_isActive_idx" ON "Agent"("tenantId", "isActive");
+-- Agent composite index migration (moved to 20260430000001_prod_baseline_missing_tables)
+-- This is a no-op placeholder kept for migration history integrity.
+-- The actual index creation is handled in the baseline migration which runs after Agent is created.
+SELECT 1;
