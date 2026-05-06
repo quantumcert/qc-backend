@@ -71,12 +71,18 @@ router.post('/asset/:id/contact', BlindContactController.submitContact);
 // Sub-sistema 3: Zero-Knowledge Document Verification
 router.get('/verify/document/:hash', async (req, res, next) => {
     try {
-        const result = await DocumentVerificationFacet.verifyByHash(req.params.hash);
-        const statusCode = result.verified ? 200 : (result.reason === 'Invalid hash format' ? 400 : 404);
-        res.status(statusCode).json(result);
+        const hash = req.params.hash;
+        const result = await DocumentVerificationFacet.verifyByHash(hash);
+
+        if (!result.valid) {
+            return res.status(404).json({ valid: false, asset: null });
+        }
+
+        return res.status(200).json({ valid: true, asset: result.asset });
     } catch (err) {
         next(err);
     }
 });
+
 
 export default router;
