@@ -71,6 +71,7 @@ export class DocumentVerificationFacet {
             where: { documentHash: hash },
             select: {
                 id: true,
+                assetId: true,
                 asset: {
                     select: {
                         status: true,
@@ -78,8 +79,6 @@ export class DocumentVerificationFacet {
                     },
                 },
                 dltTxId: true,
-                // chain is not exposed directly in this query today; keep best-effort.
-                chain: true as any,
             },
         });
 

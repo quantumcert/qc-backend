@@ -38,7 +38,7 @@ const options: swaggerJsdoc.Options = {
           type: 'apiKey',
           in: 'header',
           name: 'X-API-Key',
-        'qc_ prefixed API key generated via POST /api/v1/api-keys.',
+          description: 'qc_ prefixed API key generated via POST /api/v1/api-keys.',
         },
       },
       schemas: {
