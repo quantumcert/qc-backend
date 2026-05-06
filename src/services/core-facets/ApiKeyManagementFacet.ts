@@ -10,8 +10,7 @@
 //   - Key format: qc_{env}_{32 random hex chars}
 //   - The raw key is returned ONCE at creation time.
 //
-// GOLDEN RULE: 100% AGNOSTIC — No domain-specific terms.
-// ═══════════════════════════════════════════════════════════
+// Agnostic facet - no domain terms.
 
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';

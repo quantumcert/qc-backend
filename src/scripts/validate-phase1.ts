@@ -14,10 +14,10 @@ let failed = 0;
 
 function assert(condition: boolean, label: string) {
     if (condition) {
-        console.log(`  ✅ ${label}`);
+        console.log(`  PASS ${label}`);
         passed++;
     } else {
-        console.log(`  ❌ ${label}`);
+        console.log(`  FAIL ${label}`);
         failed++;
     }
 }
@@ -149,7 +149,7 @@ for (const term of forbiddenTerms) {
     // e.g., "production" should not match "product"
     const regex = new RegExp(`\\b${term}\\b`, 'i');
     if (regex.test(combinedContent)) {
-        console.log(`  ❌ VIOLATION: Found forbidden term "${term}" in type definitions or schema`);
+        console.log(`  VIOLATION: Found forbidden term "${term}" in type definitions or schema`);
         agnosticPass = false;
         failed++;
     }
@@ -165,7 +165,7 @@ console.log(`  RESULTS: ${passed} passed, ${failed} failed`);
 if (failed === 0) {
     console.log('  🏆 ALL TESTS PASSED — Phase 1 architecture validated!');
 } else {
-    console.log('  ⚠️  Some tests failed. Review above.');
+    console.log('  Some tests failed. Review above.');
 }
 console.log('═══════════════════════════════════════════════════════════');
 console.log('');

@@ -32,7 +32,7 @@ export class WebhookDispatcher {
             // Dispatch to each webhook asynchronously
             for (const webhook of webhooks) {
                 this.deliverWebhook(webhook, bodyString).catch((err) => {
-                    console.error(`[WebhookDispatcher] Failed to deliver webhook to ${webhook.endpointUrl}:`, err);
+console.error(`WebhookDispatcher failed to deliver to ${webhook.endpointUrl}:`, err);
                 });
             }
         } catch (error) {

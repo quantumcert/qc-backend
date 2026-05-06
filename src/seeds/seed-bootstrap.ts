@@ -35,7 +35,7 @@ async function main() {
     });
 
     if (platformTenant) {
-        console.log(`  ✅ Platform Tenant already exists: ${platformTenant.id}`);
+console.log(`  Platform Tenant already exists: ${platformTenant.id}`);
     } else {
         platformTenant = await prisma.tenant.create({
             data: {
@@ -46,7 +46,7 @@ async function main() {
                 isActive: true,
             },
         });
-        console.log(`  ✅ Platform Tenant created: ${platformTenant.id}`);
+console.log(`  Platform Tenant created: ${platformTenant.id}`);
 
         // Create audit log for bootstrap
         await prisma.auditLog.create({
@@ -87,7 +87,7 @@ async function main() {
         console.log(`  ✅ Admin API Key generated!`);
         console.log('');
         console.log('  ╔═══════════════════════════════════════════════════════╗');
-        console.log('  ║  ⚠️  SAVE THIS KEY — IT WILL NOT BE SHOWN AGAIN!    ║');
+console.log('  Save this key - it will not be shown again!');
         console.log('  ╠═══════════════════════════════════════════════════════╣');
         console.log(`  ║  Key: ${result.rawKey}`);
         console.log(`  ║  Prefix: ${result.keyPrefix}`);

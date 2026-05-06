@@ -74,7 +74,7 @@ export class DeviceGuardFacet {
             };
         }
 
-        // 🔴 ZERO-KNOWLEDGE: Extract and Decrypt Master Key strictly in memory
+// Zero-knowledge: Extract and Decrypt Master Key strictly in memory
         let sessionMasterKey: string | undefined = undefined;
         if (device.masterKey) {
             sessionMasterKey = CryptoService.decryptJson(device.masterKey) as string;
@@ -157,7 +157,7 @@ export class DeviceGuardFacet {
             throw error;
         }
 
-        // 🔴 ORCHESTRATOR FIX: Context Injection Pós-Tap
+// Orchestrator: Context Injection Post-Tap
         let contextData = null;
         if (device.asset?.id) {
             // Load Context through the ContextRouterFacet (Public Profile Filtering)

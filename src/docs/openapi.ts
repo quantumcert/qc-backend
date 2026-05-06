@@ -38,7 +38,7 @@ const options: swaggerJsdoc.Options = {
           type: 'apiKey',
           in: 'header',
           name: 'X-API-Key',
-          description: 'API key com prefixo `qc_`. Gerada via POST /api/v1/api-keys.',
+        'qc_ prefixed API key generated via POST /api/v1/api-keys.',
         },
       },
       schemas: {
@@ -47,7 +47,7 @@ const options: swaggerJsdoc.Options = {
           required: ['success', 'error'],
           properties: {
             success: { type: 'boolean', example: false },
-            error: { type: 'string', example: 'Mensagem de erro descritiva' },
+            error: { type: 'string', example: 'Descriptive error message' },
           },
         },
         SuccessResponse: {
@@ -93,7 +93,7 @@ const options: swaggerJsdoc.Options = {
           properties: {
             id: { type: 'string', format: 'uuid' },
             tenantId: { type: 'string', format: 'uuid' },
-            name: { type: 'string', example: 'Chave de produção' },
+            name: { type: 'string', example: 'Production key' },
             role: { type: 'string', enum: ['ADMIN', 'OPERATOR', 'READER'] },
             isActive: { type: 'boolean' },
             createdAt: { type: 'string', format: 'date-time' },
@@ -104,7 +104,7 @@ const options: swaggerJsdoc.Options = {
           required: ['tenantId', 'name', 'role'],
           properties: {
             tenantId: { type: 'string', format: 'uuid' },
-            name: { type: 'string', example: 'Chave de integração' },
+            name: { type: 'string', example: 'Integration key' },
             role: { type: 'string', enum: ['ADMIN', 'OPERATOR', 'READER'] },
           },
         },

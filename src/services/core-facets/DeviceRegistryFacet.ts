@@ -13,7 +13,7 @@ export class DeviceRegistryFacet {
             throw new Error("Missing required parameters for Device provisioning.");
         }
 
-        // 🔴 ZERO-KNOWLEDGE: Encrypt masterKey before storage
+// Zero-knowledge: Encrypt masterKey before storage
         const encryptedMasterKey = CryptoService.encryptJson(masterKeyPlain);
 
         return await prisma.$transaction(async (tx) => {

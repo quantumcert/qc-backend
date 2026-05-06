@@ -1,9 +1,4 @@
-// ═══════════════════════════════════════════════════════════
-// DEVICE ROUTES
-// Architecture: EIP-2535 Faceted Diamond Pattern
-//
-// GOLDEN RULE: 100% AGNOSTIC — Universal terms only.
-// ═══════════════════════════════════════════════════════════
+// Device routes - EIP-2535 Diamond Pattern
 
 import { Router } from 'express';
 import { DeviceController } from '../../controllers/DeviceController';
@@ -27,7 +22,7 @@ const nfcValidateLimiter = rateLimit({
  * @openapi
  * /api/v1/devices:
  *   post:
- *     summary: Registrar um novo dispositivo (NFC/RFID)
+    summary: Register new NFC/RFID device
  *     tags: [Devices]
  *     security:
  *       - ApiKeyAuth: []

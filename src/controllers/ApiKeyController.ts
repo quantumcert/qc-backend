@@ -49,7 +49,7 @@ export class ApiKeyController {
                 success: true,
                 data: {
                     ...result,
-                    warning: '⚠️ Store this key securely. It will NOT be shown again.',
+                    warning: 'Store this key securely. It will not be shown again.',
                 },
                 meta: {
                     timestamp: new Date().toISOString(),
@@ -185,7 +185,7 @@ export class ApiKeyController {
                 success: true,
                 data: {
                     ...result,
-                    warning: '⚠️ Store this new key securely. The old key has been revoked.',
+                    warning: 'Store this new key securely. The old key has been revoked.',
                 },
                 meta: {
                     timestamp: new Date().toISOString(),

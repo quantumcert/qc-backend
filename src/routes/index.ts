@@ -1,17 +1,4 @@
-// ═══════════════════════════════════════════════════════════
-// ROUTE INDEX — Diamond Pattern API Router
-// Architecture: EIP-2535 Faceted Diamond Pattern
-//
-// Centralized route mounting point for all API facets.
-// Mounts all versioned routes under /api/v1/*.
-//
-// Phase 1 Routes:
-//   /api/v1/tenants/*   → Tenant Management (TenantManagementFacet)
-//   /api/v1/api-keys/*  → API Key Lifecycle (ApiKeyManagementFacet)
-//   /api/health         → Health Check
-//
-// GOLDEN RULE: 100% AGNOSTIC — No domain-specific terms.
-// ═══════════════════════════════════════════════════════════
+// Route index — Diamond Pattern API Router\n// EIP-2535 architecture: mounts v1 facets.
 
 import { Router, Request, Response } from 'express';
 import { SDMVerifierService } from '../services/SDMVerifierService';
@@ -76,30 +63,8 @@ router.use('/v1/agent', agentRoutes);
  * @openapi
  * /api/v1/diamond:
  *   post:
- *     summary: Diamond Proxy — roteador universal de Facets
- *     description: |
- *       Ponto de entrada único para todas as operações mutantes autenticadas.
- *       O `selector` mapeia para uma função de Facet registrada no FacetRegistry.
- *       O `secureContext` ({ tenantId, apiKeyId, role }) é injetado pelo middleware
- *       — nunca confie em tenantId vindo do payload.
- *
- *       **Seletores disponíveis:**
- *
- *       | Selector | Descrição | Role mínimo |
- *       |---|---|---|
- *       | `asset.register` | Criar novo ativo | OPERATOR |
- *       | `asset.update` | Atualizar metadata | OPERATOR |
- *       | `lifecycle.transition` | Transicionar estado do ativo | OPERATOR |
- *       | `transfer.initiate` | Iniciar transferência de propriedade | OPERATOR |
- *       | `escrow.lock` | Bloquear ativo em escrow time-lock | OPERATOR |
- *       | `escrow.release` | Liberar escrow MANUAL | OPERATOR |
- *       | `escrow.cancel` | Cancelar escrow | ADMIN |
- *       | `escrow.status` | Consultar status do escrow | READER |
- *       | `agent.register` | Registrar agente M2M/IoT | ADMIN |
- *       | `agent.revoke` | Revogar agente | ADMIN |
- *       | `agent.status` | Consultar status do agente | READER |
- *       | `commissioning.start` | Iniciar comissionamento de tag NFC | OPERATOR |
- *       | `commissioning.finalize` | Finalizar comissionamento | OPERATOR |
+    summary: Diamond Proxy - Universal facet router
+ *     description: Single entry for authenticated mutating operations. Selector maps to registered facet function. Secure context injected by middleware.\n *\n *     Available selectors:\n *     - asset.register (OPERATOR)\n *     - asset.update (OPERATOR)\n *     - lifecycle.transition (OPERATOR)\n *     - transfer.initiate (OPERATOR)\n *     - escrow.lock (OPERATOR)\n *     - escrow.release (OPERATOR)\n *     - escrow.cancel (ADMIN)\n *     - escrow.status (READER)\n *     - agent.register (ADMIN)\n *     - commissioning.start (OPERATOR)
  *     tags: [Diamond]
  *     security:
  *       - ApiKeyAuth: []

@@ -44,13 +44,13 @@ function loadEnv() {
   const parsed = envSchema.safeParse(process.env);
 
   if (!parsed.success) {
-    console.error('❌ Invalid environment variables:');
+console.error('Invalid environment variables:');
     console.error(parsed.error.flatten().fieldErrors);
     // Non-blocking in development: log warnings instead of crashing
     if (process.env.NODE_ENV === 'production') {
       throw new Error('Invalid environment configuration');
     }
-    console.warn('⚠️  Running with partial environment configuration (development mode)');
+console.warn('Running with partial environment configuration (development mode)');
     // Return a partial env with defaults
     return {
       DATABASE_URL: process.env.DATABASE_URL || '',

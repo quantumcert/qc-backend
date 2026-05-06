@@ -13,7 +13,7 @@ const basePrisma = new PrismaClient({
         : ['error'],
 });
 
-// 🔴 ZERO KNOWLEDGE DATA-AT-REST INTERCEPTOR
+// Zero-knowledge data-at-rest interceptor
 const extendedPrisma = basePrisma.$extends({
     query: {
         asset: {

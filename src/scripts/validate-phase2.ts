@@ -13,10 +13,10 @@ let failed = 0;
 
 function assert(condition: boolean, label: string) {
     if (condition) {
-        console.log(`  ✅ ${label}`);
+        console.log(`  PASS ${label}`);
         passed++;
     } else {
-        console.log(`  ❌ ${label}`);
+        console.log(`  FAIL ${label}`);
         failed++;
     }
 }
@@ -103,7 +103,7 @@ console.log(`  RESULTS: ${passed} passed, ${failed} failed`);
 if (failed === 0) {
     console.log('  🏆 PHASE 2 ARCHITECTURE VALIDATED!');
 } else {
-    console.log('  ⚠️  Validation failed. Review logic.');
+    console.log('  Validation failed. Review logic.');
 }
 console.log('═══════════════════════════════════════════════════════════');
 console.log('');
