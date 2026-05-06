@@ -17,8 +17,8 @@ export class AssetRegistryFacet {
      * Create a new agnostic Asset.
      */
     static async createAsset(secureContext: any, payload: any) {
-        // RED TEAM HOTFIX 2 (RBAC Fantasma): Trava ADMIN
-        if (secureContext.role !== 'ADMIN') throw new Error('Forbidden: Insufficient privileges');
+        // Minimum role: OPERATOR (mirrors requireOperator on the route)
+        if (!['ADMIN', 'OPERATOR'].includes(secureContext.role)) throw new Error('Forbidden: Insufficient privileges');
 
         const tenantId = secureContext.tenantId;
         const { externalId, deviceId, metadata, publicDataKeys, owners, ...flags } = payload;
