@@ -1,6 +1,6 @@
 # Quantum Cert - Backend API
 
-Backend da plataforma Quantum Cert para identificação física com registro em blockchain.
+Backend da plataforma Quantum Cert para identificação física com registro em blockchain..
 
 ## 🎯 Sobre o Projeto
 
