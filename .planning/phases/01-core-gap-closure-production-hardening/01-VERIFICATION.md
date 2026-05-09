@@ -1,25 +1,24 @@
 ---
 phase: 01-core-gap-closure-production-hardening
 verified: 2026-05-09T00:00:00Z
-status: human_needed
+status: passed
 score: 12/12 must-haves verified
 overrides_applied: 0
-re_verification: false
-human_verification:
-  - test: "Executar a suite completa de testes com banco de dados real disponível"
-    expected: "Todos os 268+ testes passam, especialmente os de integração (curation-routes, transfer-rest, chain-transaction-tenant)"
-    why_human: "npm test depende do Docker container do PostgreSQL estar rodando; verificação automatizada sem banco não é possível neste contexto"
-  - test: "Verificar REQUIREMENTS.md traceability table (linhas 115-116) para CORE-05 e CORE-06"
-    expected: "Status deve ser atualizado de 'Pending' para 'Done 2026-05-09' para espelhar o estado real"
-    why_human: "Inconsistência de documentação identificada: texto narrativo (linhas 23-24) diz Done, tabela de rastreabilidade (linhas 115-116) ainda diz Pending — requer atualização manual ou novo commit"
+re_verification: true
+human_verification: []
+resolved_human_verification:
+  - test: "Suite completa de testes com banco local disponível"
+    result: "npx vitest run passou com 38 arquivos e 277 testes"
+  - test: "Traceability table em REQUIREMENTS.md para CORE-05 e CORE-06"
+    result: "Ambos estão marcados como Done 2026-05-09"
 ---
 
 # Phase 1: Core Gap Closure + Production Hardening — Verification Report
 
 **Phase Goal:** Close all critical security gaps and core functional gaps in the backend. After this phase, the platform must have real Falcon-512 signature verification (not stubs), atomic distributed queue processing, complete asset lifecycle enforcement, transfer REST route, webhook inbox processor, and a curation layer for non-auditor contributions.
 **Verified:** 2026-05-09
-**Status:** human_needed
-**Re-verification:** No — initial verification
+**Status:** passed
+**Re-verification:** Sim — pendências humanas resolvidas em 2026-05-09
 
 ---
 
@@ -130,7 +129,7 @@ human_verification:
 | CORE-05 | Plan 04 | Curation Layer — não-auditores entram em fila PENDING_APPROVAL | ✓ SATISFIED | CurationFacet.submitContribution linha 82: status PENDING_APPROVAL; rota pública /public/asset/:assetId/contribution |
 | CORE-06 | Plan 04 | Fluxo de aprovação OPERATOR/ADMIN com EventLog + AnchorQueue fire-and-forget | ✓ SATISFIED | CurationFacet.reviewContribution: $transaction cria EventLog + AnchorQueueService.processQueue() fire-and-forget; rota autenticada com requireOperator |
 
-**Nota documental:** A tabela de rastreabilidade em `.planning/REQUIREMENTS.md` (linhas 115-116) ainda lista CORE-05 e CORE-06 como "Pending", mas o texto narrativo (linhas 23-24) e o código confirmam que ambos estão implementados. A tabela precisa ser atualizada — ver Human Verification #2.
+**Nota documental:** A tabela de rastreabilidade em `.planning/REQUIREMENTS.md` (linhas 115-116) está consistente: CORE-05 e CORE-06 estão marcados como "Done 2026-05-09".
 
 ---
 
@@ -145,32 +144,29 @@ human_verification:
 
 ---
 
-## Human Verification Required
+## Human Verification Resolved
 
 ### 1. Suite Completa de Testes
 
-**Test:** Rodar `npm test` com banco de dados PostgreSQL disponível (Docker container `quantumcert-postgres` iniciado)
-**Expected:** 268+ testes passando em 36 arquivos; particularmente `tests/curation-facet.test.ts` (8 testes), `tests/curation-routes.test.ts` (7 testes via supertest), `tests/transfer-rest.test.ts` (5 testes), `tests/chain-transaction-tenant.test.ts` (3 testes), `tests/anchor-queue-skip-locked.test.ts` (4 testes)
-**Why human:** Os testes de integração dependem de PostgreSQL real; verificação automatizada sem o container não é possível no ambiente de verificação atual
+**Test:** Rodar a suite completa com banco local disponível.
+**Resultado:** `npx vitest run` passou com 38 arquivos e 277 testes.
+**Observação:** O projeto carrega `DATABASE_URL` via `.env`; o valor não é exposto neste relatório.
 
-### 2. Atualizar Traceability Table em REQUIREMENTS.md
+### 2. Traceability Table em REQUIREMENTS.md
 
-**Test:** Verificar e atualizar as linhas 115-116 de `.planning/REQUIREMENTS.md`:
-```
-| CORE-05 | Phase 1 | Pending |   →   | CORE-05 | Phase 1 | Done 2026-05-09 |
-| CORE-06 | Phase 1 | Pending |   →   | CORE-06 | Phase 1 | Done 2026-05-09 |
-```
-**Expected:** Tabela consistente com o estado real (Done) e com o texto narrativo acima dela
-**Why human:** Inconsistência de documentação identificada — requer decisão de commit separado ou correção junto ao próximo commit
+**Test:** Verificar as linhas 115-116 de `.planning/REQUIREMENTS.md`.
+**Resultado:** CORE-05 e CORE-06 estão marcados como `Done 2026-05-09`.
 
 ---
 
 ## Gaps Summary
 
-Nenhum gap de implementação encontrado. Todos os 12 must-haves estão VERIFIED com evidência no código. O status `human_needed` deve-se exclusivamente a:
+Nenhum gap de implementação encontrado. Todos os 12 must-haves estão VERIFIED com evidência no código.
 
-1. **Suite de testes** — não executável sem banco de dados ativo; altamente provável que passe dado que o último relatório (01-04-SUMMARY.md) confirma 268 testes passando e o build TypeScript continua verde
-2. **Inconsistência documental** — tabela de rastreabilidade no REQUIREMENTS.md com CORE-05/CORE-06 ainda como "Pending", enquanto código e narrativa confirmam Done
+Pendências humanas anteriores foram resolvidas:
+
+1. **Suite de testes** — `npx vitest run` passou com 38 arquivos e 277 testes.
+2. **Inconsistência documental** — tabela de rastreabilidade no REQUIREMENTS.md já marca CORE-05 e CORE-06 como `Done 2026-05-09`.
 
 ---
 
