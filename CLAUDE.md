@@ -108,3 +108,33 @@ Mutations (POST, PATCH on state-changing routes) require an `X-Idempotency-Key` 
 3. **Pluggable DLT Workers** — additional adapters per chain, tenant `targetChain` config, Omnibus routing
 4. **M2M / Agent Registry** — `AgentRegistryFacet`, `POST /api/v1/agent/event`, Falcon-512 payload signature validation for IoT devices
 5. **EscrowFacet + Time-Lock Oracle** — `LOCKED_IN_ESCROW` state, `unlockTimestamp`, `EscrowReleaseWorker` cron, multi-sig with Quantum Authority
+6. **Specialized Domain Facets** — `ERecycleFacet` (environmental credits), multi-party transfer, biometrics, dynamic contract generation
+
+## GSD Workflow
+
+This project uses [Get Shit Done (GSD)](https://github.com/anthropics/get-shit-done) for structured planning and execution.
+
+**Planning artifacts:** `.planning/` directory (tracked in git)
+- `PROJECT.md` — project context, core value, requirements lifecycle
+- `ROADMAP.md` — 6 phases mapped to GitHub Milestones M#1..M#6
+- `REQUIREMENTS.md` — 41 REQ-IDs across 8 categories
+- `STATE.md` — current position and session continuity
+- `config.json` — YOLO mode, standard granularity, parallel execution
+
+**GitHub integration:**
+- GitHub Project: https://github.com/orgs/quantumcert/projects/1
+- Milestones: M#1 (Phase 1) through M#6 (Phase 6) on quantumcert/qc-backend
+- Branch naming: `{issue-number}-{type}-{description}` (e.g. `7-feat-curation-layer`)
+
+**Current milestone:** Phase 1 — Core Gap Closure + Production Hardening (GitHub M#1)
+- Active branch: `7-feat-camada-de-curadoria...` (issue #7, CORE-05 + CORE-06)
+
+**Workflow commands:**
+```bash
+/gsd-discuss-phase 1    # gather context before planning
+/gsd-plan-phase 1       # decompose phase into executable plans
+/gsd-execute-phase 1    # execute plans with atomic commits
+/gsd-progress           # show current state
+```
+
+**Golden Rule (enforced by GSD):** All Facets must be domain-agnostic. Only universal terms: `Tenant`, `Asset`, `Device`, `Event`, `Owner`, `Metadata`. Never use domain-specific terms in core code.
