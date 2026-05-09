@@ -32,6 +32,98 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+describe('LifecycleFacet — regression: terminal states and invalid transitions', () => {
+  it('🚫 400 — BURNED → ACTIVE é rejeitado com STATE_TRANSITION_FORBIDDEN', async () => {
+    vi.mocked(prisma.asset.findUnique).mockResolvedValue({
+      id: 'asset-burned', tenantId: 'tenant-1', status: 'BURNED',
+    } as any);
+
+    const res = await request(app)
+      .post('/api/v1/diamond')
+      .set('X-API-Key', 'qc_test_key')
+      .send({ selector: 'lifecycle.transition', payload: { assetId: 'asset-burned', targetState: 'ACTIVE' } });
+
+    expect(res.status).toBe(400); // DiamondProxy maps known errors to 400
+    expect(res.body.code).toBe('STATE_TRANSITION_FORBIDDEN');
+  });
+
+  it('🚫 400 — ARCHIVED → ACTIVE é rejeitado com STATE_TRANSITION_FORBIDDEN', async () => {
+    vi.mocked(prisma.asset.findUnique).mockResolvedValue({
+      id: 'asset-archived', tenantId: 'tenant-1', status: 'ARCHIVED',
+    } as any);
+
+    const res = await request(app)
+      .post('/api/v1/diamond')
+      .set('X-API-Key', 'qc_test_key')
+      .send({ selector: 'lifecycle.transition', payload: { assetId: 'asset-archived', targetState: 'ACTIVE' } });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('STATE_TRANSITION_FORBIDDEN');
+  });
+
+  it('🚫 400 — ACTIVE → ACTIVE (no-op) é rejeitado com STATE_TRANSITION_FORBIDDEN', async () => {
+    vi.mocked(prisma.asset.findUnique).mockResolvedValue({
+      id: 'asset-1', tenantId: 'tenant-1', status: 'ACTIVE',
+    } as any);
+
+    const res = await request(app)
+      .post('/api/v1/diamond')
+      .set('X-API-Key', 'qc_test_key')
+      .send({ selector: 'lifecycle.transition', payload: { assetId: 'asset-1', targetState: 'ACTIVE' } });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('STATE_TRANSITION_FORBIDDEN');
+  });
+
+  it('🚫 400 — AWAITING_PAYMENT → ACTIVE é rejeitado (controlado por BillingFacet / PAYMENT_PROCESSING)', async () => {
+    // AWAITING_PAYMENT is absent from TRANSITION_RULES — BillingFacet owns this transition
+    vi.mocked(prisma.asset.findUnique).mockResolvedValue({
+      id: 'asset-1', tenantId: 'tenant-1', status: 'AWAITING_PAYMENT',
+    } as any);
+
+    const res = await request(app)
+      .post('/api/v1/diamond')
+      .set('X-API-Key', 'qc_test_key')
+      .send({ selector: 'lifecycle.transition', payload: { assetId: 'asset-1', targetState: 'ACTIVE' } });
+
+    // LifecycleFacet must reject because AWAITING_PAYMENT has no entry in TRANSITION_RULES.
+    // BillingFacet owns this transition (PAYMENT_PROCESSING/PAYMENT_CONFIRMED path).
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('STATE_TRANSITION_FORBIDDEN');
+  });
+
+  it('🚫 400 — DRAFT → BURNED é rejeitado (BURNED só a partir de ACTIVE)', async () => {
+    vi.mocked(prisma.asset.findUnique).mockResolvedValue({
+      id: 'asset-1', tenantId: 'tenant-1', status: 'DRAFT',
+    } as any);
+
+    const res = await request(app)
+      .post('/api/v1/diamond')
+      .set('X-API-Key', 'qc_test_key')
+      .send({ selector: 'lifecycle.transition', payload: { assetId: 'asset-1', targetState: 'BURNED' } });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('STATE_TRANSITION_FORBIDDEN');
+  });
+
+  it('✅ 200 — DRAFT → ACTIVE com role OPERATOR funciona', async () => {
+    vi.mocked(prisma.asset.findUnique).mockResolvedValue({
+      id: 'asset-1', tenantId: 'tenant-1', status: 'DRAFT',
+    } as any);
+    vi.mocked(prisma.asset.update).mockResolvedValue({} as any);
+    vi.mocked(prisma.eventLog.create).mockResolvedValue({} as any);
+
+    // Note: the mock in this file sets role=ADMIN; OPERATOR is also valid per TRANSITION_RULES
+    const res = await request(app)
+      .post('/api/v1/diamond')
+      .set('X-API-Key', 'qc_test_key')
+      .send({ selector: 'lifecycle.transition', payload: { assetId: 'asset-1', targetState: 'ACTIVE' } });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.currentState).toBe('ACTIVE');
+  });
+});
+
 describe('Diamond lifecycle.transition (pós-migração)', () => {
   it('✅ 200 — DRAFT → ACTIVE via Diamond', async () => {
     vi.mocked(prisma.asset.findUnique).mockResolvedValue({

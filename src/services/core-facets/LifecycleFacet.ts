@@ -13,6 +13,8 @@ interface LifecyclePayload {
 }
 
 // Transition matrix: fromState → { allowed targets, allowed roles }
+// ARCHIVED e BURNED são estados TERMINAIS (ausentes do mapa = sem saída).
+// AWAITING_PAYMENT → ACTIVE é controlado por BillingFacet, NÃO por esta rota.
 const TRANSITION_RULES: Record<string, { targets: string[]; roles: string[] }> = {
     DRAFT:    { targets: ['ACTIVE'],                          roles: ['ADMIN', 'OPERATOR'] },
     ACTIVE:   { targets: ['SUSPENDED', 'ARCHIVED', 'BURNED'], roles: ['ADMIN'] },
