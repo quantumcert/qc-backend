@@ -22,7 +22,7 @@ const nfcValidateLimiter = rateLimit({
  * @openapi
  * /api/v1/devices:
  *   post:
-    summary: Register new NFC/RFID device
+ *     summary: Registrar novo dispositivo NFC/RFID
  *     tags: [Devices]
  *     security:
  *       - ApiKeyAuth: []

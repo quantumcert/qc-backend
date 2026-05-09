@@ -1,4 +1,5 @@
-// Route index — Diamond Pattern API Router\n// EIP-2535 architecture: mounts v1 facets.
+// Route index — Diamond Pattern API Router
+// EIP-2535 architecture: mounts v1 facets.
 
 import { Router, Request, Response } from 'express';
 import { SDMVerifierService } from '../services/SDMVerifierService';
@@ -69,8 +70,23 @@ router.use('/v1/contributions', contributionRoutes);
  * @openapi
  * /api/v1/diamond:
  *   post:
-    summary: Diamond Proxy - Universal facet router
- *     description: Single entry for authenticated mutating operations. Selector maps to registered facet function. Secure context injected by middleware.\n *\n *     Available selectors:\n *     - asset.register (OPERATOR)\n *     - asset.update (OPERATOR)\n *     - lifecycle.transition (OPERATOR)\n *     - transfer.initiate (OPERATOR)\n *     - escrow.lock (OPERATOR)\n *     - escrow.release (OPERATOR)\n *     - escrow.cancel (ADMIN)\n *     - escrow.status (READER)\n *     - agent.register (ADMIN)\n *     - commissioning.start (OPERATOR)
+ *     summary: Diamond Proxy - roteador universal de Facets
+ *     description: |
+ *       Entrada unica para operacoes mutantes autenticadas.
+ *       O selector mapeia para uma funcao registrada de Facet.
+ *       O contexto seguro e injetado pelo middleware.
+ *
+ *       Selectors disponiveis:
+ *       - asset.register (OPERATOR)
+ *       - asset.update (OPERATOR)
+ *       - lifecycle.transition (OPERATOR)
+ *       - transfer.initiate (OPERATOR)
+ *       - escrow.lock (OPERATOR)
+ *       - escrow.release (OPERATOR)
+ *       - escrow.cancel (ADMIN)
+ *       - escrow.status (READER)
+ *       - agent.register (ADMIN)
+ *       - commissioning.start (OPERATOR)
  *     tags: [Diamond]
  *     security:
  *       - ApiKeyAuth: []
