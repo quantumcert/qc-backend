@@ -43,7 +43,9 @@ export class AlgorandAnchorFacet implements IDLTAdapter {
             pqcProofBase64 = options.pqcProof;
         } else {
             const qss = QuantumSignerService.getInstance();
-            const tenantSecret = process.env.QUANTUM_CERT_SECRET || event.tenantId;
+            const tenantSecret = Buffer
+                .from(KMSService.getInstance().getQuantumMasterKey())
+                .toString('hex');
             pqcProofBase64 = await qss.signPayloadRaw(
                 { eventId, hash: eventHash, tenantId: event.tenantId },
                 eventId,

@@ -24,7 +24,7 @@ export class DocumentVerificationFacet {
     static async verifyByHash(hash: string): Promise<VerifyDocumentResponse> {
         // Hash received is SHA3-512 => 128 hex chars.
         if (!/^[a-f0-9]{128}$/i.test(hash)) {
-            return { verified: false, reason: 'Invalid hash format' };
+            return { verified: false };
         }
 
         // Document hash is stored on EventLog.documentHash.
@@ -37,7 +37,7 @@ export class DocumentVerificationFacet {
         });
 
         if (!event) {
-            return { verified: false, reason: 'Document not found in registry' };
+            return { verified: false };
         }
 
         return {

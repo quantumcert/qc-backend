@@ -10,8 +10,20 @@ import { BlindContactController } from '../../controllers/BlindContactController
 import { DocumentVerificationFacet } from '../../services/core-facets/DocumentVerificationFacet';
 import { CurationFacet } from '../../services/core-facets/CurationFacet';
 import { optionalApiKey } from '../../middleware/apiKeyAuth';
+import rateLimit from 'express-rate-limit';
 
 const router = Router();
+
+const publicContributionLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: {
+        success: false,
+        error: 'Too many contribution submissions from this IP. Try again later.',
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
 
 // Phase 3: Context Routing (Authenticated / Public)
 router.get('/asset/:id', optionalApiKey, ContextRouterController.getAsset);
@@ -71,7 +83,7 @@ router.post('/asset/:id/contact', BlindContactController.submitContact);
  */
 // Curation Layer — CORE-05: Public contribution submission (no API key required)
 // POST /api/v1/public/asset/:assetId/contribution
-router.post('/asset/:assetId/contribution', async (req, res, next) => {
+router.post('/asset/:assetId/contribution', publicContributionLimiter, async (req, res, next) => {
     try {
         const { assetId } = req.params;
         const { phone, email, payload } = req.body;
@@ -101,7 +113,7 @@ router.get('/verify/document/:hash', async (req, res, next) => {
         const result = await DocumentVerificationFacet.verifyByHash(hash);
 
         if (!result.verified) {
-            return res.status(404).json({ verified: false, reason: result.reason ?? null });
+            return res.status(404).json({ verified: false });
         }
 
         return res.status(200).json({

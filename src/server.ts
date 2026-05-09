@@ -229,7 +229,7 @@ if (process.env.NODE_ENV !== 'test') {
     'ALGOD_SERVER',
     'ALGORAND_MASTER_MNEMONIC',
     ...(process.env.NODE_ENV === 'production'
-      ? ['QUANTUM_CERT_SECRET', 'MP_WEBHOOK_SECRET', 'CIRCUIT_BREAKER_ADMIN_PUBKEY']
+      ? ['QUANTUM_CERT_SECRET', 'MP_ACCESS_TOKEN', 'MP_WEBHOOK_SECRET', 'CIRCUIT_BREAKER_ADMIN_PUBKEY']
       : []),
   ];
   const missingVars = REQUIRED_ENV_VARS.filter(v => !process.env[v]);
@@ -300,4 +300,3 @@ process.on('SIGINT', async () => {
 });
 
 export { app, prisma };
-

@@ -145,6 +145,30 @@ describe('CurationFacet.submitContribution', () => {
 
         expect(mockAsset.findUnique).not.toHaveBeenCalled();
     });
+
+    it('rejects invalid email before touching storage', async () => {
+        await expect(
+            CurationFacet.submitContribution({
+                assetId: 'asset_001',
+                email: 'invalid-email',
+                payload: {},
+            })
+        ).rejects.toMatchObject({ code: 'INVALID_PAYLOAD', httpStatus: 400 });
+
+        expect(mockAsset.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('rejects oversized payloads before touching storage', async () => {
+        await expect(
+            CurationFacet.submitContribution({
+                assetId: 'asset_001',
+                email: 'user@example.com',
+                payload: { text: 'x'.repeat(10 * 1024 + 1) },
+            })
+        ).rejects.toMatchObject({ code: 'PAYLOAD_TOO_LARGE', httpStatus: 413 });
+
+        expect(mockAsset.findUnique).not.toHaveBeenCalled();
+    });
 });
 
 describe('CurationFacet.reviewContribution', () => {

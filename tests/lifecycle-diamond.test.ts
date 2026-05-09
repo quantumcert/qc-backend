@@ -2,6 +2,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 
+const { mockAsset, mockEventLog, mockTransaction } = vi.hoisted(() => {
+  const mockAsset = { findUnique: vi.fn(), update: vi.fn() };
+  const mockEventLog = { create: vi.fn() };
+  const mockTransaction = vi.fn(async (cb: any) =>
+    cb({
+      asset: mockAsset,
+      eventLog: mockEventLog,
+    })
+  );
+  return { mockAsset, mockEventLog, mockTransaction };
+});
+
 vi.mock('../src/middleware/apiKeyAuth', () => ({
   requireApiKey: (req: any, res: any, next: any) => {
     const apiKey = req.headers['x-api-key'] || req.headers['authorization']?.replace('Bearer ', '');
@@ -19,8 +31,9 @@ vi.mock('../src/middleware/apiKeyAuth', () => ({
 
 vi.mock('../src/config/prisma', () => ({
   default: {
-    asset: { findUnique: vi.fn(), update: vi.fn() },
-    eventLog: { create: vi.fn() },
+    asset: mockAsset,
+    eventLog: mockEventLog,
+    $transaction: mockTransaction,
   },
 }));
 
@@ -30,6 +43,12 @@ import prisma from '../src/config/prisma';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockTransaction.mockImplementation(async (cb: any) =>
+    cb({
+      asset: mockAsset,
+      eventLog: mockEventLog,
+    })
+  );
 });
 
 describe('LifecycleFacet — regression: terminal states and invalid transitions', () => {

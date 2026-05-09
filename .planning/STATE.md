@@ -91,12 +91,12 @@ _Nenhum todo pendente._
 
 ## Session Continuity
 
-**Last session**: 2026-05-09 — Phase 1 aprovada, marcada completa, PR #17 criado. 4/4 plans, 12 requirements (SEC-01..06, CORE-01..06), 268 testes verdes, Nyquist-compliant. Code review: 7 criticals advisory (não bloqueantes).
+**Last session**: 2026-05-09 — Phase 1 aprovada, marcada completa, PR #17 criado e atualizado com code-review fix pass. 4/4 plans, 12 requirements (SEC-01..06, CORE-01..06), Nyquist-compliant. Review-fix: 12/15 findings in-scope corrigidos, incluindo todos os 7 Criticals.
 
-**Next action**: Revisar/aprovar PR #17 → merge em main → `/gsd-discuss-phase 2` para iniciar Phase 2
+**Next action**: Revisar/aprovar PR #17 → merge em main quando CI passar → `/gsd-discuss-phase 2` para iniciar Phase 2
 
 **Context for next session**:
-- Branch: `7-feat-camada-de-curadoria-contribuicoes-de-nao-auditores-vao-para-fila-pendentes-de-aprovacao` — pronta para PR
-- Phase 1 COMPLETA: 22 commits atômicos, Falcon-512 real, SKIP LOCKED, Lifecycle, Transfer REST, Curation Layer
-- Code review criticals em aberto: BillingFacet TOCTOU (CR-02), AlgorandAnchorFacet fallback CUID (CR-05), endpoint público sem rate limit (CR-06), LifecycleFacet.transition sem transação (CR-07) — considerar `/gsd-code-review 1 --fix` antes de Phase 2
+- Branch: `7-feat-camada-de-curadoria-contribuicoes-de-nao-auditores-vao-para-fila-pendentes-de-aprovacao` — PR #17 aberto contra `main`
+- Phase 1 COMPLETA: Falcon-512 real, SKIP LOCKED, Lifecycle, Transfer REST, Curation Layer, review-fix aplicado
+- Code review fix report: `.planning/phases/01-core-gap-closure-production-hardening/01-REVIEW-FIX.md` — status partial; skipped WR-01, WR-06, WR-07 por exigirem mudanças cross-cutting/schema
 - Phase 2: DOC-01/02/03 (verificação pública) + QTAG-01/02 (commissioning NFC) — depende só de Phase 1

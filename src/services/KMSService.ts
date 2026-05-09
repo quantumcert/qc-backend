@@ -66,7 +66,7 @@ export class KMSService {
   /**
    * Retrieves or generates the Quantum Master Key (Falcon-512).
    * In production, this should come from an HSM or secure vault.
-   * In dev, it can be derived from QUANTUM_CERT_SECRET env var.
+   * In dev/prod, it must be derived from QUANTUM_CERT_SECRET env var.
    *
    * SECURITY: This key NEVER leaves this method's scope.
    * It is cached in-memory only (never persisted to disk).
@@ -85,23 +85,20 @@ export class KMSService {
         .update(envSecret)
         .digest();
       this.masterKeyCache = new Uint8Array(derived);
-    } else {
-      // Production: refuse to proceed without a stable secret — an ephemeral key
-      // would make all Falcon-signed data unverifiable after a restart.
-      if (process.env.NODE_ENV === 'production') {
-        throw new Error(
-          'QUANTUM_CERT_SECRET is required in production — refusing to generate ephemeral Falcon master key'
-        );
-      }
-
-      // Dev/test: generate ephemeral key with a visible warning
+    } else if (process.env.NODE_ENV === 'test' || process.env.VITEST) {
+      // Test-only fallback. Runtime environments must provide a stable secret so
+      // Falcon-signed data stays verifiable across restarts.
       console.warn(
         '[KMSService] QUANTUM_CERT_SECRET not configured. ' +
-        'Generating ephemeral master key (DEV ONLY).'
+        'Generating ephemeral master key (TEST ONLY).'
       );
       const falcon = require('falcon-crypto');
       const keys = falcon.keyPair();
       this.masterKeyCache = new Uint8Array(keys.privateKey);
+    } else {
+      throw new Error(
+        'QUANTUM_CERT_SECRET is required — refusing to generate ephemeral Falcon master key'
+      );
     }
 
     return this.masterKeyCache;
@@ -113,9 +110,8 @@ export class KMSService {
    */
   clearMasterKeyCache(): void {
     if (this.masterKeyCache) {
-      // Zeroize the cached key
-      const buf = Buffer.from(this.masterKeyCache);
-      buf.fill(0);
+      // Zeroize the cached Uint8Array in place before dropping the reference.
+      this.masterKeyCache.fill(0);
       this.masterKeyCache = null;
     }
   }
@@ -371,4 +367,3 @@ export class KMSService {
     return process.env[varName];
   }
 }
-

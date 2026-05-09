@@ -69,24 +69,26 @@ export class LifecycleFacet {
             );
         }
 
-        await prisma.asset.update({
-            where: { id: assetId },
-            data: { status: targetState as any },
-        });
+        await prisma.$transaction(async (tx) => {
+            await tx.asset.update({
+                where: { id: assetId },
+                data: { status: targetState as any },
+            });
 
-        await prisma.eventLog.create({
-            data: {
-                assetId,
-                tenantId,
-                origin: apiKeyId,
-                status: 'APPROVED',
-                payload: {
-                    action: 'LIFECYCLE_TRANSITION',
-                    fromState,
-                    toState: targetState,
-                    reason: reason ?? null,
+            await tx.eventLog.create({
+                data: {
+                    assetId,
+                    tenantId,
+                    origin: apiKeyId,
+                    status: 'APPROVED',
+                    payload: {
+                        action: 'LIFECYCLE_TRANSITION',
+                        fromState,
+                        toState: targetState,
+                        reason: reason ?? null,
+                    },
                 },
-            },
+            });
         });
 
         return { assetId, previousState: fromState, currentState: targetState };

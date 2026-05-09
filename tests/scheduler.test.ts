@@ -45,6 +45,10 @@ describe('SchedulerService.start', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         delete process.env.ANCHOR_QUEUE_INTERVAL_SECONDS;
+        delete process.env.RETRY_WORKER_INTERVAL_SECONDS;
+        delete process.env.BLOCKCHAIN_OBSERVER_INTERVAL_SECONDS;
+        delete process.env.ESCROW_RELEASE_INTERVAL_SECONDS;
+        delete process.env.WEBHOOK_INBOX_INTERVAL_SECONDS;
     });
 
     it('✅ Registers a cron job with default 30s interval', () => {
@@ -53,9 +57,18 @@ describe('SchedulerService.start', () => {
     });
 
     it('✅ Respects ANCHOR_QUEUE_INTERVAL_SECONDS env var', () => {
-        process.env.ANCHOR_QUEUE_INTERVAL_SECONDS = '60';
+        process.env.ANCHOR_QUEUE_INTERVAL_SECONDS = '45';
         SchedulerService.start();
-        expect(mockCronSchedule).toHaveBeenCalledWith('*/60 * * * * *', expect.any(Function));
+        expect(mockCronSchedule).toHaveBeenCalledWith('*/45 * * * * *', expect.any(Function));
+    });
+
+    it('🚫 Rejects invalid cron intervals before registering jobs', () => {
+        process.env.ANCHOR_QUEUE_INTERVAL_SECONDS = '0';
+
+        expect(() => SchedulerService.start()).toThrow(
+            'ANCHOR_QUEUE_INTERVAL_SECONDS must be an integer between 5 and 59 seconds'
+        );
+        expect(mockCronSchedule).not.toHaveBeenCalled();
     });
 
     it('✅ Calls AnchorQueueService.processQueue when cron fires', async () => {
@@ -112,11 +125,11 @@ describe('SchedulerService.start', () => {
     });
 
     it('✅ Respects WEBHOOK_INBOX_INTERVAL_SECONDS env var', () => {
-        process.env.WEBHOOK_INBOX_INTERVAL_SECONDS = '60';
+        process.env.WEBHOOK_INBOX_INTERVAL_SECONDS = '45';
         SchedulerService.start();
 
         const patterns = mockCronSchedule.mock.calls.map((call: any[]) => call[0] as string);
-        expect(patterns).toContain('*/60 * * * * *');
+        expect(patterns).toContain('*/45 * * * * *');
 
         delete process.env.WEBHOOK_INBOX_INTERVAL_SECONDS;
     });

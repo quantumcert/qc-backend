@@ -7,6 +7,17 @@ import { SecurityWatchdogService } from './SecurityWatchdogService';
 import { EscrowReleaseWorker } from './EscrowReleaseWorker';
 import { BillingFacet } from './core-facets/BillingFacet';
 
+function readCronIntervalSeconds(envName: string, defaultValue: number): number {
+    const raw = process.env[envName] ?? String(defaultValue);
+    const parsed = Number.parseInt(raw, 10);
+
+    if (!Number.isInteger(parsed) || parsed < 5 || parsed > 59) {
+        throw new Error(`${envName} must be an integer between 5 and 59 seconds`);
+    }
+
+    return parsed;
+}
+
 export class SchedulerService {
     /**
      * Registers all cron jobs. Called once after server startup.
@@ -14,7 +25,7 @@ export class SchedulerService {
      * Blockchain resolution happens inside AnchorQueueService per-event.
      */
     static start(): void {
-        const intervalSeconds = parseInt(process.env.ANCHOR_QUEUE_INTERVAL_SECONDS ?? '30', 10);
+        const intervalSeconds = readCronIntervalSeconds('ANCHOR_QUEUE_INTERVAL_SECONDS', 30);
         const cronPattern = `*/${intervalSeconds} * * * * *`;
 
         let isRunning = false;
@@ -39,7 +50,7 @@ export class SchedulerService {
         // ─── Retry Worker Cron ──────────────────────────────
         // Runs every 15 seconds to process failed DLT transactions
         let retryRunning = false;
-        const retryInterval = 15;
+        const retryInterval = readCronIntervalSeconds('RETRY_WORKER_INTERVAL_SECONDS', 15);
         const retryPattern = `*/${retryInterval} * * * * *`;
 
         cron.schedule(retryPattern, async () => {
@@ -65,10 +76,7 @@ export class SchedulerService {
         // ─── Blockchain Observer Cron ───────────────────────
         // Scans chains for incoming stablecoin deposits
         let observerRunning = false;
-        const observerInterval = parseInt(
-            process.env.BLOCKCHAIN_OBSERVER_INTERVAL_SECONDS ?? '30',
-            10
-        );
+        const observerInterval = readCronIntervalSeconds('BLOCKCHAIN_OBSERVER_INTERVAL_SECONDS', 30);
         const observerPattern = `*/${observerInterval} * * * * *`;
 
         cron.schedule(observerPattern, async () => {
@@ -130,7 +138,7 @@ export class SchedulerService {
 
         // ─── Escrow Release Worker Cron ─────────────────────
         let escrowRunning = false;
-        const escrowInterval = parseInt(process.env.ESCROW_RELEASE_INTERVAL_SECONDS ?? '60', 10);
+        const escrowInterval = readCronIntervalSeconds('ESCROW_RELEASE_INTERVAL_SECONDS', 30);
         const escrowPattern = `*/${escrowInterval} * * * * *`;
 
         cron.schedule(escrowPattern, async () => {
@@ -159,7 +167,7 @@ export class SchedulerService {
         // Processes PENDING MercadoPago webhook inbox records.
         // T-03-04 mitigation: prevents unbounded growth of WebhookInbox table.
         let webhookInboxRunning = false;
-        const webhookInboxInterval = parseInt(process.env.WEBHOOK_INBOX_INTERVAL_SECONDS ?? '30', 10);
+        const webhookInboxInterval = readCronIntervalSeconds('WEBHOOK_INBOX_INTERVAL_SECONDS', 30);
         const webhookInboxPattern = `*/${webhookInboxInterval} * * * * *`;
 
         cron.schedule(webhookInboxPattern, async () => {

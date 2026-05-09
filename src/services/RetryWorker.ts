@@ -89,14 +89,23 @@ export class RetryWorker {
         const result = await RetryWorker.executeTransaction(tx);
 
         if (result.success) {
-          await prisma.pendingTransaction.update({
-            where: { id: tx.id },
-            data: {
-              status: 'SUCCESS',
-              chainTxId: result.txId,
-              confirmedAt: new Date(),
-              attemptCount: tx.attemptCount + 1,
-            },
+          await prisma.$transaction(async (db) => {
+            await db.pendingTransaction.update({
+              where: { id: tx.id },
+              data: {
+                status: 'SUCCESS',
+                chainTxId: result.txId,
+                confirmedAt: new Date(),
+                attemptCount: tx.attemptCount + 1,
+              },
+            });
+
+            if (tx.txType === 'ANCHOR' && result.txId) {
+              await db.eventLog.update({
+                where: { id: tx.txRef },
+                data: { dltTxId: result.txId },
+              });
+            }
           });
 
           await WebhookDispatcher.dispatch(tx.tenantId, 'RETRY_SUCCESS', {
@@ -288,4 +297,3 @@ export class RetryWorker {
     console.log(`[RetryWorker] Enqueued ${params.txType} tx ${params.txRef} for chain ${params.chain}`);
   }
 }
-

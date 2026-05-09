@@ -6,8 +6,11 @@ const WEBHOOK_INBOX_BATCH_SIZE = 10;
 export class BillingFacet {
     static getClient() {
         // Master Admin configuration for MercadoPago integration
-        const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || 'TEST-123';
-        return new MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN });
+        const accessToken = process.env.MP_ACCESS_TOKEN;
+        if (!accessToken) {
+            throw new Error('MP_ACCESS_TOKEN is required for MercadoPago integration');
+        }
+        return new MercadoPagoConfig({ accessToken });
     }
 
     /**
@@ -31,6 +34,9 @@ export class BillingFacet {
                     email: ownerEmail
                 },
                 external_reference: assetId, // Map back to asset securely
+                metadata: {
+                    tenantId: secureContext?.tenantId,
+                },
                 back_urls: {
                     success: 'https://qc-frontend.vercel.app/success',
                     failure: 'https://qc-frontend.vercel.app/failure',
@@ -59,9 +65,17 @@ export class BillingFacet {
 
         if (payment.status === 'approved') {
             const assetId = payment.external_reference;
+            const paymentMetadata = (payment as any).metadata ?? {};
+            const expectedTenantId = paymentMetadata.tenantId ?? paymentMetadata.tenant_id ?? secureContext?.tenantId;
+
+            if (!expectedTenantId) {
+                return { success: false, error: 'Missing tenant context in payment metadata' };
+            }
 
             // Trigger transfer conclusion or activation based on asset state
-            const asset = await prisma.asset.findUnique({ where: { id: assetId! } });
+            const asset = await prisma.asset.findFirst({
+                where: { id: assetId!, tenantId: expectedTenantId },
+            });
 
             if (asset && asset.status === 'AWAITING_PAYMENT') {
                 // Lock the update cleanly
@@ -99,22 +113,33 @@ export class BillingFacet {
      * T-03-04 mitigation: prevents unbounded growth of the WebhookInbox table.
      */
     static async processWebhookInbox(): Promise<{ processed: number; succeeded: number; failed: number }> {
-        const pending = await prisma.webhookInbox.findMany({
-            where: { status: 'PENDING' },
-            orderBy: { receivedAt: 'asc' },
-            take: WEBHOOK_INBOX_BATCH_SIZE,
+        const pending = await prisma.$transaction(async (tx) => {
+            const rows = await tx.$queryRaw<Array<{ id: string; rawPayload: unknown }>>`
+                SELECT id, "rawPayload"
+                FROM "WebhookInbox"
+                WHERE status = 'PENDING'
+                ORDER BY "receivedAt" ASC
+                LIMIT ${WEBHOOK_INBOX_BATCH_SIZE}
+                FOR UPDATE SKIP LOCKED
+            `;
+
+            if (rows.length > 0) {
+                await tx.webhookInbox.updateMany({
+                    where: {
+                        id: { in: rows.map(row => row.id) },
+                        status: 'PENDING',
+                    },
+                    data: { status: 'PROCESSING' },
+                });
+            }
+
+            return rows;
         });
 
         let succeeded = 0;
         let failed = 0;
 
         for (const inbox of pending) {
-            // Mark as PROCESSING to prevent concurrent picks by parallel scheduler ticks
-            await prisma.webhookInbox.update({
-                where: { id: inbox.id },
-                data: { status: 'PROCESSING' },
-            });
-
             try {
                 const payload = inbox.rawPayload as any;
                 const paymentId = payload?.data?.id || payload?.id;

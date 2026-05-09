@@ -26,7 +26,7 @@ export class AnchorQueueService {
                 SELECT id, "assetId", "tenantId", "signatureHash"
                 FROM "EventLog"
                 WHERE status IN ('APPROVED', 'PENDING_FUNDS')
-                  AND "dltTxId" IS NULL
+                  AND ("dltTxId" IS NULL OR "dltTxId" = 'RETRY_QUEUED')
                   AND "signatureHash" IS NOT NULL
                 ORDER BY id ASC
                 LIMIT 10
@@ -39,7 +39,10 @@ export class AnchorQueueService {
             // where SKIP LOCKED would not be sufficient alone.
             if (events.length > 0) {
                 await tx.eventLog.updateMany({
-                    where: { id: { in: events.map(e => e.id) }, dltTxId: null },
+                    where: {
+                        id: { in: events.map(e => e.id) },
+                        OR: [{ dltTxId: null }, { dltTxId: 'RETRY_QUEUED' }],
+                    },
                     data: { dltTxId: 'PROCESSING' },
                 });
             }
