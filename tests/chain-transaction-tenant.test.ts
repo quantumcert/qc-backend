@@ -37,6 +37,7 @@ vi.mock('../src/services/KMSService', () => ({
                 if (type === 'ALGORAND' && field === 'rpcUrl') return 'http://localhost:4001';
                 return '';
             }),
+            getQuantumMasterKey: vi.fn(() => new Uint8Array(32).fill(7)),
         })),
     },
 }));

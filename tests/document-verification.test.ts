@@ -37,6 +37,7 @@ vi.mock('../src/utils/WebhookDispatcher', () => ({
 
 import { DocumentVerificationFacet } from '../src/services/core-facets/DocumentVerificationFacet';
 import { EventLogFacet } from '../src/services/core-facets/EventLogFacet';
+import { FacetRegistry } from '../src/diamond/FacetRegistry';
 
 const VALID_HASH = 'a'.repeat(128);
 
@@ -91,6 +92,18 @@ describe('DocumentVerificationFacet.verifyByHash', () => {
             anchoredAt: now,
             eventId: 'evt_001',
             issuerId: 'qc_key_abc',
+        });
+    });
+
+    it('is reachable through the document.verify Diamond selector', async () => {
+        mockEventLog.findFirst.mockResolvedValue(null);
+
+        const result = await FacetRegistry['document.verify']({}, { hash: VALID_HASH });
+
+        expect(result).toEqual({ verified: false });
+        expect(mockEventLog.findFirst).toHaveBeenCalledWith({
+            where: { documentHash: VALID_HASH },
+            include: { asset: { select: { status: true } } },
         });
     });
 
