@@ -37,6 +37,7 @@ vi.mock('../src/utils/WebhookDispatcher', () => ({
 
 import { DocumentVerificationFacet } from '../src/services/core-facets/DocumentVerificationFacet';
 import { EventLogFacet } from '../src/services/core-facets/EventLogFacet';
+import { FacetRegistry } from '../src/diamond/FacetRegistry';
 
 const VALID_HASH = 'a'.repeat(128);
 
@@ -49,14 +50,14 @@ describe('DocumentVerificationFacet.verifyByHash', () => {
     it('returns verified:false when hash is too short', async () => {
         const result = await DocumentVerificationFacet.verifyByHash('abc123');
         expect(result.verified).toBe(false);
-        expect(result.reason).toBe('Invalid hash format');
+        expect(result.reason).toBeUndefined();
         expect(mockEventLog.findFirst).not.toHaveBeenCalled();
     });
 
     it('returns verified:false when hash contains non-hex characters', async () => {
         const result = await DocumentVerificationFacet.verifyByHash('z'.repeat(128));
         expect(result.verified).toBe(false);
-        expect(result.reason).toBe('Invalid hash format');
+        expect(result.reason).toBeUndefined();
     });
 
     it('returns verified:false when document not found', async () => {
@@ -64,7 +65,7 @@ describe('DocumentVerificationFacet.verifyByHash', () => {
 
         const result = await DocumentVerificationFacet.verifyByHash(VALID_HASH);
         expect(result.verified).toBe(false);
-        expect(result.reason).toBe('Document not found in registry');
+        expect(result.reason).toBeUndefined();
         expect(mockEventLog.findFirst).toHaveBeenCalledWith({
             where: { documentHash: VALID_HASH },
             include: { asset: { select: { status: true } } },
@@ -94,10 +95,22 @@ describe('DocumentVerificationFacet.verifyByHash', () => {
         });
     });
 
+    it('is reachable through the document.verify Diamond selector', async () => {
+        mockEventLog.findFirst.mockResolvedValue(null);
+
+        const result = await FacetRegistry['document.verify']({}, { hash: VALID_HASH });
+
+        expect(result).toEqual({ verified: false });
+        expect(mockEventLog.findFirst).toHaveBeenCalledWith({
+            where: { documentHash: VALID_HASH },
+            include: { asset: { select: { status: true } } },
+        });
+    });
+
     it('accepts uppercase hex hashes', async () => {
         mockEventLog.findFirst.mockResolvedValue(null);
         const result = await DocumentVerificationFacet.verifyByHash('A'.repeat(128));
-        expect(result.reason).toBe('Document not found in registry');
+        expect(result.reason).toBeUndefined();
     });
 });
 

@@ -44,18 +44,20 @@ model Tenant {
   updatedAt DateTime @updatedAt
 
   // --- Relations ----------------------------------------
-  apiKeys           ApiKey[]
-  rateLimitCounters RateLimitCounter[]
-  assets            Asset[] // Phase 2
-  eventLogs         EventLog[] // Phase 4
-  blindContactLogs  BlindContactLog[] // Phase 5
-  webhooks          TenantWebhook[] // Phase 6: B2B Notifications
-  escrows           Escrow[] // Multi-Chain Escrow
-  chainTransactions ChainTransaction[] // Multi-Chain Tx Logging
-  pendingTransactions PendingTransaction[] // Retry Worker Queue
-  userWallets       UserWallet[] // Custodial deposit addresses
-  deposits          Deposit[] // Incoming stablecoin deposits
-  agents            Agent[] // M2M / IoT Agent identities
+  apiKeys              ApiKey[]
+  rateLimitCounters    RateLimitCounter[]
+  assets               Asset[] // Phase 2
+  eventLogs            EventLog[] // Phase 4
+  blindContactLogs     BlindContactLog[] // Phase 5
+  webhooks             TenantWebhook[] // Phase 6: B2B Notifications
+  escrows              Escrow[] // Multi-Chain Escrow
+  chainTransactions    ChainTransaction[] // Multi-Chain Tx Logging
+  pendingTransactions  PendingTransaction[] // Retry Worker Queue
+  userWallets          UserWallet[] // Custodial deposit addresses
+  deposits             Deposit[] // Incoming stablecoin deposits
+  agents               Agent[] // M2M / IoT Agent identities
+  contributors         Contributor[] // Curation Layer — CORE-05
+  pendingContributions PendingContribution[] // Curation Layer — CORE-06
 
   @@index([slug])
   @@index([planTier])
@@ -282,8 +284,8 @@ model Owner {
   ownerRef String
 
   // Document-based identification (CPF/CNPJ for legal chain of custody)
-  document     String?  // digits only, no mask (e.g. "12345678909")
-  documentType String?  // 'CPF' | 'CNPJ'
+  document     String? // digits only, no mask (e.g. "12345678909")
+  documentType String? // 'CPF' | 'CNPJ'
 
   // --- Optional Display / Contact -----------------------
   label String? // Human-readable label (e.g., "Primary Owner")
@@ -332,12 +334,12 @@ model Device {
   lastTapAt DateTime? // Timestamp of last valid NFC tap
   totalTaps Int       @default(0) // Lifetime tap count
   lastTapIp String? // IP of last reader (audit)
-  lastLat     Float?    // Last tap latitude (for Haversine)
-  lastLon     Float?    // Last tap longitude (for Haversine)
+  lastLat   Float? // Last tap latitude (for Haversine)
+  lastLon   Float? // Last tap longitude (for Haversine)
 
   // --- SDM Key References (wrapped ciphertext, never plaintext) ----
-  sdmMacKeyId String?   // KMS-wrapped AES-128 for tap CMAC validation
-  sdmEncKeyId String?   // KMS-wrapped AES-128 for picc_data decryption
+  sdmMacKeyId String? // KMS-wrapped AES-128 for tap CMAC validation
+  sdmEncKeyId String? // KMS-wrapped AES-128 for picc_data decryption
 
   // --- Device State -------------------------------------
   isActive     Boolean  @default(true)
@@ -428,7 +430,7 @@ model EventLog {
   dltTxId       String?
 
   // Sub-sistema 3: SHA3-512 of the physical document (PDF, report, contract)
-  documentHash  String?
+  documentHash String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -681,12 +683,12 @@ model Escrow {
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   // --- Correlation --------------------------------------
-  escrowId String @unique // Off-chain unique identifier
+  escrowId String  @unique // Off-chain unique identifier
   assetId  String? // Optional link to Asset
 
   // --- Chain Identification -----------------------------
-  chain      String // 'ETHEREUM' | 'SOLANA' | 'STELLAR' | 'ALGORAND'
-  chainTxId  String? // On-chain transaction ID
+  chain     String // 'ETHEREUM' | 'SOLANA' | 'STELLAR' | 'ALGORAND'
+  chainTxId String? // On-chain transaction ID
 
   // --- Parties ------------------------------------------
   sender   String // Wallet address (chain-native format)
@@ -705,8 +707,8 @@ model Escrow {
   status EscrowStatus @default(PENDING)
 
   // --- Release Control ----------------------------------
-  releaseMode        String    @default("AUTO")  // 'AUTO' | 'MANUAL'
-  releaseConfirmedAt DateTime?                   // audit timestamp for manual releases
+  releaseMode        String    @default("AUTO") // 'AUTO' | 'MANUAL'
+  releaseConfirmedAt DateTime? // audit timestamp for manual releases
 
   // --- Audit --------------------------------------------
   metadata Json? // Chain-specific metadata
@@ -721,7 +723,7 @@ model Escrow {
 enum EscrowStatus {
   PENDING
   ACTIVE
-  PROCESSING  // atomic lock used by EscrowReleaseWorker
+  PROCESSING // atomic lock used by EscrowReleaseWorker
   RELEASED
   CANCELLED
   EXPIRED
@@ -743,13 +745,13 @@ model ChainTransaction {
   direction String // 'SEND' | 'RECEIVE' | 'ESCROW_CREATE' | 'ESCROW_RELEASE' | 'ESCROW_CANCEL' | 'ANCHOR'
 
   // --- On-Chain Data ------------------------------------
-  fromAddress String?
-  toAddress   String?
-  amount      String?
+  fromAddress  String?
+  toAddress    String?
+  amount       String?
   assetAddress String? // Token contract address
-  chainTxId   String?
-  blockNumber String?
-  confirmedAt DateTime?
+  chainTxId    String?
+  blockNumber  String?
+  confirmedAt  DateTime?
 
   // --- Status -------------------------------------------
   status String @default("PENDING") // PENDING | CONFIRMED | FAILED
@@ -796,19 +798,19 @@ model PendingTransaction {
   payload Json
 
   // --- Retry Management ---------------------------------
-  status      PendingTxStatus @default(PENDING)
-  attemptCount Int            @default(0)
-  maxAttempts Int             @default(5)
-  nextRetryAt DateTime?       // Scheduled time for next attempt
-  lastError   String?         // Last error message
+  status       PendingTxStatus @default(PENDING)
+  attemptCount Int             @default(0)
+  maxAttempts  Int             @default(5)
+  nextRetryAt  DateTime? // Scheduled time for next attempt
+  lastError    String? // Last error message
 
   // --- DLQ (Dead Letter Queue) --------------------------
   isDlq     Boolean   @default(false)
-  dlqReason String?   // Reason for moving to DLQ
+  dlqReason String? // Reason for moving to DLQ
   dlqAt     DateTime?
 
   // --- Success Tracking ---------------------------------
-  chainTxId   String?   // On-chain tx hash after success
+  chainTxId   String? // On-chain tx hash after success
   confirmedAt DateTime?
 
   // --- Audit --------------------------------------------
@@ -825,11 +827,11 @@ model PendingTransaction {
 }
 
 enum PendingTxStatus {
-  PENDING    // Waiting for first attempt
+  PENDING // Waiting for first attempt
   PROCESSING // Currently being processed
-  FAILED     // Failed, will retry
-  SUCCESS    // Completed successfully
-  DLQ        // Max retries exceeded
+  FAILED // Failed, will retry
+  SUCCESS // Completed successfully
+  DLQ // Max retries exceeded
 }
 
 enum PendingTxType {
@@ -879,16 +881,58 @@ model TenantWebhook {
 // Persisted before 200 OK to guarantee no lost payments on crash.
 // ===========================================================
 model WebhookInbox {
-  id           String    @id @default(cuid())
-  provider     String    // 'MERCADOPAGO'
-  rawPayload   Json      // raw payload received, never modified
-  status       String    @default("PENDING") // PENDING | PROCESSING | DONE | FAILED
-  retryCount   Int       @default(0)
-  lastError    String?
-  receivedAt   DateTime  @default(now())
-  processedAt  DateTime?
+  id          String    @id @default(cuid())
+  provider    String // 'MERCADOPAGO'
+  rawPayload  Json // raw payload received, never modified
+  status      String    @default("PENDING") // PENDING | PROCESSING | DONE | FAILED
+  retryCount  Int       @default(0)
+  lastError   String?
+  receivedAt  DateTime  @default(now())
+  processedAt DateTime?
 
   @@index([status, receivedAt])
+}
+
+// ===========================================================
+// CURATION LAYER — CORE-05 + CORE-06
+// Contributors submit contributions to assets.
+// Auditors (isAuditor=true) bypass the queue; others go to PENDING_APPROVAL.
+// ===========================================================
+
+// --- CONTRIBUTOR — Trusted submitter per tenant ----------
+model Contributor {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ownerRef  String // phone, email, ou identifier
+  isAuditor Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@unique([tenantId, ownerRef])
+  @@index([tenantId])
+}
+
+// --- PENDING CONTRIBUTION — Queue for non-auditor submissions
+model PendingContribution {
+  id         String                    @id @default(cuid())
+  tenantId   String
+  tenant     Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ownerId    String
+  assetId    String?
+  payload    Json
+  status     PendingContributionStatus @default(PENDING_APPROVAL)
+  reviewedBy String?
+  reviewedAt DateTime?
+  createdAt  DateTime                  @default(now())
+
+  @@index([tenantId, status])
+  @@index([createdAt])
+}
+
+enum PendingContributionStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
 }
 
 // ===========================================================

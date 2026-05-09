@@ -1,20 +1,27 @@
 // tests/lifecycle.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockAsset, mockEventLog } = vi.hoisted(() => ({
-    mockAsset: {
+const { mockAsset, mockEventLog, mockTransaction } = vi.hoisted(() => {
+    const mockAsset = {
         findUnique: vi.fn(),
         update: vi.fn(),
-    },
-    mockEventLog: {
+    };
+    const mockEventLog = {
         create: vi.fn(),
-    },
-}));
+    };
+    const mockTransaction = vi.fn(async (cb: any) => cb({
+        asset: mockAsset,
+        eventLog: mockEventLog,
+    }));
+
+    return { mockAsset, mockEventLog, mockTransaction };
+});
 
 vi.mock('../src/config/prisma', () => ({
     default: {
         asset: mockAsset,
         eventLog: mockEventLog,
+        $transaction: mockTransaction,
     }
 }));
 
@@ -30,7 +37,13 @@ const ESCROW_ASSET    = { ...DRAFT_ASSET, status: 'LOCKED_IN_ESCROW' };
 const AWAITING_ASSET  = { ...DRAFT_ASSET, status: 'AWAITING_PAYMENT' };
 
 describe('LifecycleFacet.transition', () => {
-    beforeEach(() => { vi.clearAllMocks(); });
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockTransaction.mockImplementation(async (cb: any) => cb({
+            asset: mockAsset,
+            eventLog: mockEventLog,
+        }));
+    });
 
     it('✅ DRAFT → ACTIVE (OPERATOR allowed)', async () => {
         mockAsset.findUnique.mockResolvedValue(DRAFT_ASSET);

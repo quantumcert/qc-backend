@@ -8,9 +8,22 @@ import { Router } from 'express';
 import { ContextRouterController } from '../../controllers/ContextRouterController';
 import { BlindContactController } from '../../controllers/BlindContactController';
 import { DocumentVerificationFacet } from '../../services/core-facets/DocumentVerificationFacet';
+import { CurationFacet } from '../../services/core-facets/CurationFacet';
 import { optionalApiKey } from '../../middleware/apiKeyAuth';
+import rateLimit from 'express-rate-limit';
 
 const router = Router();
+
+const publicContributionLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: {
+        success: false,
+        error: 'Too many contribution submissions from this IP. Try again later.',
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
 
 // Phase 3: Context Routing (Authenticated / Public)
 router.get('/asset/:id', optionalApiKey, ContextRouterController.getAsset);
@@ -68,17 +81,50 @@ router.post('/asset/:id/contact', BlindContactController.submitContact);
  *       404:
  *         description: Nenhum documento encontrado com este hash
  */
+// Curation Layer — CORE-05: Public contribution submission (no API key required)
+// POST /api/v1/public/asset/:assetId/contribution
+router.post('/asset/:assetId/contribution', publicContributionLimiter, async (req, res, next) => {
+    try {
+        const { assetId } = req.params;
+        const { phone, email, payload } = req.body;
+        const result = await CurationFacet.submitContribution({
+            assetId,
+            phone,
+            email,
+            payload: payload ?? {},
+        });
+        return res.status(201).json({ success: true, data: result });
+    } catch (err: any) {
+        if (err.httpStatus) {
+            return res.status(err.httpStatus).json({
+                success: false,
+                error: err.message,
+                code: err.code,
+            });
+        }
+        next(err);
+    }
+});
+
 // Sub-sistema 3: Zero-Knowledge Document Verification
 router.get('/verify/document/:hash', async (req, res, next) => {
     try {
         const hash = req.params.hash;
         const result = await DocumentVerificationFacet.verifyByHash(hash);
 
-        if (!result.valid) {
-            return res.status(404).json({ valid: false, asset: null });
+        if (!result.verified) {
+            return res.status(404).json({ verified: false });
         }
 
-        return res.status(200).json({ valid: true, asset: result.asset });
+        return res.status(200).json({
+            verified: true,
+            assetId: result.assetId,
+            assetStatus: result.assetStatus,
+            dltTxId: result.dltTxId,
+            anchoredAt: result.anchoredAt,
+            eventId: result.eventId,
+            issuerId: result.issuerId,
+        });
     } catch (err) {
         next(err);
     }

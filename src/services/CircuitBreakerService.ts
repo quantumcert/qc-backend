@@ -135,12 +135,9 @@ export class CircuitBreakerService {
     const results: CircuitBreakerStatus[] = [];
     const chains: SupportedChain[] = ['ALGORAND', 'ETHEREUM', 'POLYGON', 'SOLANA', 'STELLAR'];
 
-    // Generate admin signature internally (service-to-service auth)
-    const adminSignature = await this.generateInternalSignature('PAUSE_ALL');
-
     for (const chain of chains) {
       try {
-        const status = await this.pauseChain(chain, adminSignature);
+        const status = await this.pauseChainInternal(chain, triggeredBy, reason);
         results.push(status);
       } catch (err) {
         console.error(`[CircuitBreaker] Failed to pause ${chain}:`, err);
@@ -219,6 +216,9 @@ export class CircuitBreakerService {
 
     const tx = await contract.togglePause();
     const receipt = await tx.wait();
+    if (!receipt || receipt.status !== 1) {
+      throw new Error(`${chain} circuit breaker pause transaction failed`);
+    }
 
     return {
       chain,
@@ -258,6 +258,9 @@ export class CircuitBreakerService {
 
     const tx = await contract.togglePause();
     const receipt = await tx.wait();
+    if (!receipt || receipt.status !== 1) {
+      throw new Error(`${chain} circuit breaker resume transaction failed`);
+    }
 
     return {
       chain,
@@ -272,29 +275,56 @@ export class CircuitBreakerService {
   // ============================================================
 
   private async verifyAdminSignature(action: string, chain: string, signature: string): Promise<boolean> {
-    try {
-      // In production, verify against a known admin Falcon-512 public key
-      // For now, accept any non-empty signature as valid (dev mode)
-      if (!signature || signature.length < 10) {
-        return false;
+    if (!signature || signature.trim().length === 0) return false;
+
+    const adminPubKey = process.env.CIRCUIT_BREAKER_ADMIN_PUBKEY;
+    if (!adminPubKey) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('CIRCUIT_BREAKER_ADMIN_PUBKEY not configured in production');
       }
-
-      // TODO: Implement proper Falcon-512 signature verification
-      // const adminPubKey = process.env.CIRCUIT_BREAKER_ADMIN_PUBKEY;
-      // return await this.quantumSigner.verify(action + chain, signature, adminPubKey);
-
-      return true;
-    } catch {
+      console.warn('[CircuitBreaker] CIRCUIT_BREAKER_ADMIN_PUBKEY not set — rejecting signature in fail-secure mode');
       return false;
     }
+
+    return this.quantumSigner.verifySignature({ action, chain }, signature, adminPubKey);
   }
 
-  private async generateInternalSignature(action: string): Promise<string> {
-    // Generate a self-signed Falcon-512 signature for service-to-service auth
-    const masterKey = this.kms.getQuantumMasterKey();
-    const payload = { action, timestamp: Date.now(), nonce: crypto.randomUUID() };
-    // Use the master key to sign (dev simplification)
-    return Buffer.from(JSON.stringify(payload)).toString('base64');
+  /**
+   * Internal emergency path used only by SecurityWatchdog-triggered global halts.
+   * External callers still go through pauseChain() and must provide a valid
+   * Falcon-512 admin signature.
+   */
+  private async pauseChainInternal(
+    chain: SupportedChain,
+    triggeredBy: string,
+    reason: string
+  ): Promise<CircuitBreakerStatus> {
+    if (chain === 'ETHEREUM' || chain === 'POLYGON') {
+      const status = await this.pauseEVMChain(chain, 'INTERNAL_EMERGENCY_HALT');
+      this.chainStates.set(chain, 'PAUSED');
+      return status;
+    }
+
+    this.chainStates.set(chain, 'PAUSED');
+
+    await prisma.panicLog.create({
+      data: {
+        reason: `Circuit breaker INTERNAL PAUSE triggered for ${chain}: ${reason}`,
+        triggeredBy,
+        chainScope: chain,
+        isResolved: false,
+        metadata: {
+          internalEmergencyHalt: true,
+          adminSignatureBypassed: true,
+        },
+      },
+    });
+
+    return {
+      chain,
+      state: 'PAUSED',
+      pausedAt: new Date(),
+    };
   }
 
   private hashSignature(signature: string): string {
@@ -302,4 +332,3 @@ export class CircuitBreakerService {
     return crypto.createHash('sha3-256').update(signature).digest('hex');
   }
 }
-

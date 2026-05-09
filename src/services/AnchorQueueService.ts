@@ -11,14 +11,43 @@ export class AnchorQueueService {
      * On failure, inserts into PendingTransaction for RetryWorker to handle.
      */
     static async processQueue() {
-        const pendingEvents = await prisma.eventLog.findMany({
-            where: {
-                status: { in: ['APPROVED', 'PENDING_FUNDS'] },
-                dltTxId: null,
-                signatureHash: { not: null },
-            },
-            orderBy: { id: 'asc' }, // FIFO
-            take: 10,
+        // SELECT FOR UPDATE SKIP LOCKED inside $transaction — prevents double-processing
+        // across rolling deploys and parallel workers.
+        // The updateMany (dltTxId: 'PROCESSING') runs inside the SAME transaction as the
+        // SELECT, converting the pessimistic lock into a persistent state marker before
+        // the transaction commits (defense in depth).
+        const pendingEvents = await prisma.$transaction(async (tx) => {
+            const events = await tx.$queryRaw<Array<{
+                id: string;
+                assetId: string;
+                tenantId: string;
+                signatureHash: string;
+            }>>`
+                SELECT id, "assetId", "tenantId", "signatureHash"
+                FROM "EventLog"
+                WHERE status IN ('APPROVED', 'PENDING_FUNDS')
+                  AND ("dltTxId" IS NULL OR "dltTxId" = 'RETRY_QUEUED')
+                  AND "signatureHash" IS NOT NULL
+                ORDER BY id ASC
+                LIMIT 10
+                FOR UPDATE SKIP LOCKED
+            `;
+
+            // Mark immediately as PROCESSING within the SAME transaction.
+            // This ensures the pessimistic lock is converted to a persistent state
+            // before the transaction commits — defense in depth against edge cases
+            // where SKIP LOCKED would not be sufficient alone.
+            if (events.length > 0) {
+                await tx.eventLog.updateMany({
+                    where: {
+                        id: { in: events.map(e => e.id) },
+                        OR: [{ dltTxId: null }, { dltTxId: 'RETRY_QUEUED' }],
+                    },
+                    data: { dltTxId: 'PROCESSING' },
+                });
+            }
+
+            return events;
         });
 
         if (pendingEvents.length === 0) {
@@ -26,20 +55,7 @@ export class AnchorQueueService {
             return { processed: 0, items: [] };
         }
 
-        // Atomic row lock — prevents double-spend across workers
-        const lockedEvents: typeof pendingEvents = [];
-        for (const event of pendingEvents) {
-            const lockResult = await prisma.eventLog.updateMany({
-                where: { id: event.id, dltTxId: null },
-                data: { dltTxId: 'PROCESSING' },
-            });
-            if (lockResult.count > 0) lockedEvents.push(event);
-        }
-
-        if (lockedEvents.length === 0) {
-            console.log('[AnchorQueue] All candidate events were locked by another worker.');
-            return { processed: 0, items: [] };
-        }
+        const lockedEvents = pendingEvents;
 
         console.log(`[AnchorQueue] Locked ${lockedEvents.length} events for anchoring.`);
 

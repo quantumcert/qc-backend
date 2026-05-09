@@ -5,6 +5,18 @@ import { RetryWorker } from './RetryWorker';
 import { BlockchainObserverService } from './BlockchainObserverService';
 import { SecurityWatchdogService } from './SecurityWatchdogService';
 import { EscrowReleaseWorker } from './EscrowReleaseWorker';
+import { BillingFacet } from './core-facets/BillingFacet';
+
+function readCronIntervalSeconds(envName: string, defaultValue: number): number {
+    const raw = process.env[envName] ?? String(defaultValue);
+    const parsed = Number.parseInt(raw, 10);
+
+    if (!Number.isInteger(parsed) || parsed < 5 || parsed > 59) {
+        throw new Error(`${envName} must be an integer between 5 and 59 seconds`);
+    }
+
+    return parsed;
+}
 
 export class SchedulerService {
     /**
@@ -13,7 +25,7 @@ export class SchedulerService {
      * Blockchain resolution happens inside AnchorQueueService per-event.
      */
     static start(): void {
-        const intervalSeconds = parseInt(process.env.ANCHOR_QUEUE_INTERVAL_SECONDS ?? '30', 10);
+        const intervalSeconds = readCronIntervalSeconds('ANCHOR_QUEUE_INTERVAL_SECONDS', 30);
         const cronPattern = `*/${intervalSeconds} * * * * *`;
 
         let isRunning = false;
@@ -38,7 +50,7 @@ export class SchedulerService {
         // ─── Retry Worker Cron ──────────────────────────────
         // Runs every 15 seconds to process failed DLT transactions
         let retryRunning = false;
-        const retryInterval = 15;
+        const retryInterval = readCronIntervalSeconds('RETRY_WORKER_INTERVAL_SECONDS', 15);
         const retryPattern = `*/${retryInterval} * * * * *`;
 
         cron.schedule(retryPattern, async () => {
@@ -64,10 +76,7 @@ export class SchedulerService {
         // ─── Blockchain Observer Cron ───────────────────────
         // Scans chains for incoming stablecoin deposits
         let observerRunning = false;
-        const observerInterval = parseInt(
-            process.env.BLOCKCHAIN_OBSERVER_INTERVAL_SECONDS ?? '30',
-            10
-        );
+        const observerInterval = readCronIntervalSeconds('BLOCKCHAIN_OBSERVER_INTERVAL_SECONDS', 30);
         const observerPattern = `*/${observerInterval} * * * * *`;
 
         cron.schedule(observerPattern, async () => {
@@ -129,7 +138,7 @@ export class SchedulerService {
 
         // ─── Escrow Release Worker Cron ─────────────────────
         let escrowRunning = false;
-        const escrowInterval = parseInt(process.env.ESCROW_RELEASE_INTERVAL_SECONDS ?? '60', 10);
+        const escrowInterval = readCronIntervalSeconds('ESCROW_RELEASE_INTERVAL_SECONDS', 30);
         const escrowPattern = `*/${escrowInterval} * * * * *`;
 
         cron.schedule(escrowPattern, async () => {
@@ -153,5 +162,36 @@ export class SchedulerService {
         });
 
         console.log(`[Scheduler] EscrowRelease cron started — interval: ${escrowInterval}s (pattern: ${escrowPattern})`);
+
+        // ─── WebhookInbox Processor Cron ────────────────────
+        // Processes PENDING MercadoPago webhook inbox records.
+        // T-03-04 mitigation: prevents unbounded growth of WebhookInbox table.
+        let webhookInboxRunning = false;
+        const webhookInboxInterval = readCronIntervalSeconds('WEBHOOK_INBOX_INTERVAL_SECONDS', 30);
+        const webhookInboxPattern = `*/${webhookInboxInterval} * * * * *`;
+
+        cron.schedule(webhookInboxPattern, async () => {
+            if (webhookInboxRunning) {
+                // TODO(OPS-03): substituir console.log por logger estruturado (Phase 4)
+                console.log('[Scheduler] WebhookInbox already running, skipping this cycle.');
+                return;
+            }
+            webhookInboxRunning = true;
+            try {
+                const result = await BillingFacet.processWebhookInbox();
+                if (result.processed > 0) {
+                    console.log(
+                        `[Scheduler] WebhookInbox: ${result.succeeded} succeeded, ${result.failed} failed out of ${result.processed} processed.`
+                    );
+                }
+            } catch (err) {
+                // TODO(OPS-03): substituir console.error por logger estruturado (Phase 4)
+                console.error('[Scheduler] WebhookInbox error:', err);
+            } finally {
+                webhookInboxRunning = false;
+            }
+        });
+
+        console.log(`[Scheduler] WebhookInbox cron started — interval: ${webhookInboxInterval}s (pattern: ${webhookInboxPattern})`);
     }
 }
