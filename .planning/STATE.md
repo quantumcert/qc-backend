@@ -17,12 +17,12 @@ _Initialized: 2026-05-08_
 |-------|-------|
 | Milestone | 1 |
 | Phase | 1 — Core Gap Closure + Production Hardening |
-| Plan | Plan 03 complete — Plan 04 next |
+| Plan | Phase 1 COMPLETE — All 4 plans done |
 | Status | In Progress |
 
 **Progress**:
 ```
-Phase 1 [█████████ ] 90% (Plan 01: SEC-01/02/03 | Plan 02: SEC-04/05/06 | Plan 03: CORE-01/02/03/04)
+Phase 1 [██████████] 100% (Plan 01: SEC-01/02/03 | Plan 02: SEC-04/05/06 | Plan 03: CORE-01/02/03/04 | Plan 04: CORE-05/06)
 Phase 2 [          ] 0%
 Phase 3 [          ] 0%
 Phase 4 [          ] 0%
@@ -48,7 +48,7 @@ Phase 6 [          ] 0%
 | Requirements total (v1) | 41 (36 original + 5 FACET) |
 | Requirements mapped | 41/41 |
 | Plans written | 4 |
-| Plans complete | 3 |
+| Plans complete | 4 |
 
 ---
 
@@ -69,6 +69,8 @@ Phase 6 [          ] 0%
 | DLT-02 (Solana) mantido em v1 | Solana foi deferido para v2 no REQUIREMENTS.md mas o REQUIREMENTS.md v1 lista DLT-02 explicitamente — mantido em Phase 3 | 3 |
 | TransferController payload usa buyerDocument+documentType | Plano mencionava toOwner+reason mas a assinatura real do TransferRegistryFacet é buyerDocument+documentType; controller adaptado sem alterar Facet | 1 |
 | WebhookInbox status DONE/FAILED per schema | Plano mencionava PROCESSED/APPROVED mas o schema define PENDING/PROCESSING/DONE/FAILED; implementação segue o schema | 1 |
+| CurationFacet não adicionado ao FacetRegistry | Rota pública direta (não via Diamond) — conforme spec 2026-05-08; decisão arquitetural intencional | 1 |
+| Tenant isolation via findFirst com {id, tenantId} | Cross-tenant retorna 404 (NOT_FOUND) em vez de 403 — evita information leakage sobre existência de recursos de outros tenants | 1 |
 
 ### Research Flags
 
@@ -89,13 +91,13 @@ _Nenhum todo pendente._
 
 ## Session Continuity
 
-**Last session**: 2026-05-09 — Plan 01-03 executado: CORE-01/02/03/04 fechados (4 commits, 28 testes novos)
+**Last session**: 2026-05-09 — Plan 01-04 executado: CORE-05/06 fechados (3 commits, 15 testes novos). Phase 1 COMPLETA.
 
-**Next action**: Executar Plan 01-04 (Wave 2 — Curation Layer CORE-05/06)
+**Next action**: Abrir PR para branch `7-feat-camada-de-curadoria-...` → merge em main → iniciar Phase 2 planning
 
 **Context for next session**:
-- Branch atual: `7-feat-camada-de-curadoria-contribuicoes-de-nao-auditores-vao-para-fila-pendentes-de-aprovacao`
-- CORE-05 e CORE-06 (Curation Layer) estão em desenvolvimento nessa branch — issue #7
-- Spec de design em `docs/` (commit `9a07037`)
-- Phase 1 é pré-requisito absoluto; não avançar para Phase 2 ou 3 sem Phase 1 completa
-- Plan 01-03 deliverables: TransferController, LifecycleFacet regression suite, WebhookInbox processor
+- Branch: `7-feat-camada-de-curadoria-contribuicoes-de-nao-auditores-vao-para-fila-pendentes-de-aprovacao`
+- Phase 1 COMPLETA: 4/4 plans, 12 requirements fechados (SEC-01..06, CORE-01..06)
+- Plan 01-04 deliverables: CurationFacet, ContributionController, publicRoutes, contributionRoutes, 2 test files
+- DB sincronizado: tabelas Contributor + PendingContribution criadas
+- Próxima fase: Phase 2 — Document Verification + QTAG Production

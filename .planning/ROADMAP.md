@@ -23,7 +23,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 ## Phases
 
-- [ ] **Phase 1: Core Gap Closure + Production Hardening** _(Plan 03/04 complete)_ — Fechar falhas de segurança críticas e conectar features inacessíveis antes de qualquer expansão
+- [x] **Phase 1: Core Gap Closure + Production Hardening** _(4/4 plans complete)_ — Fechar falhas de segurança críticas e conectar features inacessíveis antes de qualquer expansão
 - [ ] **Phase 2: Document Verification + QTAG Production** — Verificação pública de documentos e NFC commissioning funcionando em produção
 - [ ] **Phase 3: Pluggable DLT Workers — Stellar/Soroban Priority** — Adapter Stellar para hackathon + infraestrutura multi-chain
 - [ ] **Phase 4: Scale + Observability Infrastructure** — Redis, Pino, Sentry, BullMQ — plataforma multi-instância pronta para carga real
@@ -55,7 +55,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
   - [x] 01-03-PLAN.md — Core Gaps: CORE-01 (Lifecycle regression), CORE-02 (PATCH /transfer), CORE-03 (Scheduler), CORE-04 (MP webhook + Inbox) — DONE 2026-05-09
 
 **Wave 2** *(bloqueado pela Wave 1 completa)*
-  - [ ] 01-04-PLAN.md — Curation Layer: CORE-05 (PendingContribution) + CORE-06 (review flow) + `[BLOCKING] npx prisma db push`
+  - [x] 01-04-PLAN.md — Curation Layer: CORE-05 (PendingContribution) + CORE-06 (review flow) + `[BLOCKING] npx prisma db push` — DONE 2026-05-09
 
 **Cross-cutting constraints:**
   - `tenantId` NUNCA do request body — extraído de `secureContext` via `requireApiKey` (todos os planos)

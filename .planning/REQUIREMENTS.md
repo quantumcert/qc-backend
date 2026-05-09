@@ -7,9 +7,9 @@ _Generated: 2026-05-08 | v1 scope: backend completo production-ready (6 sub-sist
 
 ### SEC — Security & Production Hardening
 
-- [ ] **SEC-01**: Chave Falcon-512 persistida em KMS/secret vault — não gerada como env var efêmera a cada restart
-- [ ] **SEC-02**: `QuantumSignerService.verifySignature()` implementa verificação criptográfica real (remove stub `return true`)
-- [ ] **SEC-03**: CircuitBreaker com RBAC correto — somente roles autorizadas podem acionar pausa global
+- [x] **SEC-01**: Chave Falcon-512 persistida em KMS/secret vault — não gerada como env var efêmera a cada restart _(done: KMSService.getOrCreateFalconKeyPair persiste no DB — 2026-05-08)_
+- [x] **SEC-02**: `QuantumSignerService.verifySignature()` implementa verificação criptográfica real (remove stub `return true`) _(done: verifySignatureFalcon512 real via falcon-crypto — 2026-05-08)_
+- [x] **SEC-03**: CircuitBreaker com RBAC correto — somente roles autorizadas podem acionar pausa global _(done: Falcon-512 signature validation + CIRCUIT_BREAKER_ADMIN_PUBKEY — 2026-05-08)_
 - [x] **SEC-04**: `AnchorQueueService` usa distributed lock (`pg_advisory_lock` ou UUID por worker) para evitar duplo-processamento do mesmo `EventLog` _(done: SELECT FOR UPDATE SKIP LOCKED em $transaction — 2026-05-08)_
 - [x] **SEC-05**: `DocumentVerificationFacet` registrado no `FacetRegistry` (atualmente implementado mas unreachable via Diamond) _(done: selector document.verify registrado + interface harmonizada — 2026-05-08)_
 - [x] **SEC-06**: `tenantId` persistido em `ChainTransaction` para queries cross-chain e billing por tenant _(done: AlgorandAnchorFacet.anchorEvent() cria ChainTransaction com tenantId do EventLog — 2026-05-08)_
@@ -20,8 +20,8 @@ _Generated: 2026-05-08 | v1 scope: backend completo production-ready (6 sub-sist
 - [x] **CORE-02**: `TransferRegistryFacet` — `PATCH /api/v1/assets/:assetId/transfer` REST wrapper criado com middleware chain completo — DONE 2026-05-09
 - [x] **CORE-03**: `SchedulerService` — node-cron trigger ativo no server.ts startup + WebhookInbox cron job adicionado — DONE 2026-05-09
 - [x] **CORE-04**: MercadoPago webhook — HMAC validado + WebhookInbox processor + `MP_WEBHOOK_SECRET` obrigatório em produção — DONE 2026-05-09
-- [ ] **CORE-05**: Curation Layer — contribuições submetidas por não-auditores entram em fila pendente de aprovação (`PENDING_REVIEW` status)
-- [ ] **CORE-06**: Fluxo de aprovação — auditors com role `OPERATOR` ou `ADMIN` podem aprovar/rejeitar contribuições pendentes, com registro em `EventLog`
+- [x] **CORE-05**: Curation Layer — contribuições submetidas por não-auditores entram em fila pendente de aprovação (`PENDING_APPROVAL` status) — DONE 2026-05-09
+- [x] **CORE-06**: Fluxo de aprovação — OPERATOR/ADMIN aprovam/rejeitam contribuições pendentes com registro em `EventLog` + AnchorQueue fire-and-forget — DONE 2026-05-09
 
 ### DOC — Document Verification (Público)
 
