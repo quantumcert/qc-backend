@@ -11,8 +11,8 @@ function readCronIntervalSeconds(envName: string, defaultValue: number): number 
     const raw = process.env[envName] ?? String(defaultValue);
     const parsed = Number.parseInt(raw, 10);
 
-    if (!Number.isInteger(parsed) || parsed < 5 || parsed > 59) {
-        throw new Error(`${envName} must be an integer between 5 and 59 seconds`);
+    if (!Number.isInteger(parsed) || parsed < 5 || parsed > 60) {
+        throw new Error(`${envName} must be an integer between 5 and 60 seconds`);
     }
 
     return parsed;

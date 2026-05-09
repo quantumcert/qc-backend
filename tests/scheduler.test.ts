@@ -62,11 +62,19 @@ describe('SchedulerService.start', () => {
         expect(mockCronSchedule).toHaveBeenCalledWith('*/45 * * * * *', expect.any(Function));
     });
 
+    it('✅ Allows 60s worker intervals for once-per-minute jobs', () => {
+        process.env.ESCROW_RELEASE_INTERVAL_SECONDS = '60';
+        SchedulerService.start();
+
+        const patterns = mockCronSchedule.mock.calls.map((call: any[]) => call[0] as string);
+        expect(patterns).toContain('*/60 * * * * *');
+    });
+
     it('🚫 Rejects invalid cron intervals before registering jobs', () => {
         process.env.ANCHOR_QUEUE_INTERVAL_SECONDS = '0';
 
         expect(() => SchedulerService.start()).toThrow(
-            'ANCHOR_QUEUE_INTERVAL_SECONDS must be an integer between 5 and 59 seconds'
+            'ANCHOR_QUEUE_INTERVAL_SECONDS must be an integer between 5 and 60 seconds'
         );
         expect(mockCronSchedule).not.toHaveBeenCalled();
     });
