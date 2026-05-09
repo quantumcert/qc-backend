@@ -90,44 +90,44 @@ _Generated: 2026-05-08 | v1 scope: backend completo production-ready (6 sub-sist
 
 ## Traceability
 
-_Preenchido pelo roadmapper ao criar ROADMAP.md_
+_Updated: 2026-05-08 — ROADMAP.md created (gsd-new-project, brownfield)_
 
-| REQ-ID | Phase | Plan |
-|--------|-------|------|
-| SEC-01 | — | — |
-| SEC-02 | — | — |
-| SEC-03 | — | — |
-| SEC-04 | — | — |
-| SEC-05 | — | — |
-| SEC-06 | — | — |
-| CORE-01 | — | — |
-| CORE-02 | — | — |
-| CORE-03 | — | — |
-| CORE-04 | — | — |
-| CORE-05 | — | — |
-| CORE-06 | — | — |
-| DOC-01 | — | — |
-| DOC-02 | — | — |
-| DOC-03 | — | — |
-| QTAG-01 | — | — |
-| QTAG-02 | — | — |
-| DLT-01 | — | — |
-| DLT-02 | — | — |
-| DLT-03 | — | — |
-| DLT-04 | — | — |
-| DLT-05 | — | — |
-| OPS-01 | — | — |
-| OPS-02 | — | — |
-| OPS-03 | — | — |
-| OPS-04 | — | — |
-| OPS-05 | — | — |
-| OPS-06 | — | — |
-| OPS-07 | — | — |
-| ESC-01 | — | — |
-| ESC-02 | — | — |
-| ESC-03 | — | — |
-| ESC-04 | — | — |
-| ESC-05 | — | — |
-| M2M-01 | — | — |
-| M2M-02 | — | — |
-| M2M-03 | — | — |
+| REQ-ID | Phase | Status |
+|--------|-------|--------|
+| SEC-01 | Phase 1 | Pending |
+| SEC-02 | Phase 1 | Pending |
+| SEC-03 | Phase 1 | Pending |
+| SEC-04 | Phase 1 | Pending |
+| SEC-05 | Phase 1 | Pending |
+| SEC-06 | Phase 1 | Pending |
+| CORE-01 | Phase 1 | Pending |
+| CORE-02 | Phase 1 | Pending |
+| CORE-03 | Phase 1 | Pending |
+| CORE-04 | Phase 1 | Pending |
+| CORE-05 | Phase 1 | Pending |
+| CORE-06 | Phase 1 | Pending |
+| DOC-01 | Phase 2 | Pending |
+| DOC-02 | Phase 2 | Pending |
+| DOC-03 | Phase 2 | Pending |
+| QTAG-01 | Phase 2 | Pending |
+| QTAG-02 | Phase 2 | Pending |
+| DLT-01 | Phase 3 | Pending |
+| DLT-02 | Phase 3 | Pending |
+| DLT-03 | Phase 3 | Pending |
+| DLT-04 | Phase 3 | Pending |
+| DLT-05 | Phase 3 | Pending |
+| OPS-01 | Phase 4 | Pending |
+| OPS-02 | Phase 4 | Pending |
+| OPS-03 | Phase 4 | Pending |
+| OPS-04 | Phase 4 | Pending |
+| OPS-05 | Phase 4 | Pending |
+| OPS-06 | Phase 4 | Pending |
+| OPS-07 | Phase 4 | Pending |
+| ESC-01 | Phase 5 | Pending |
+| ESC-02 | Phase 5 | Pending |
+| ESC-03 | Phase 5 | Pending |
+| ESC-04 | Phase 5 | Pending |
+| ESC-05 | Phase 5 | Pending |
+| M2M-01 | Phase 5 | Pending |
+| M2M-02 | Phase 5 | Pending |
+| M2M-03 | Phase 5 | Pending |
