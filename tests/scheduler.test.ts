@@ -18,6 +18,27 @@ vi.mock('../src/services/AnchorQueueService', () => ({
     AnchorQueueService: { processQueue: mockProcessQueue }
 }));
 
+// Mock BillingFacet (WebhookInbox processor — added in Plan 01-03 CORE-04)
+vi.mock('../src/services/core-facets/BillingFacet', () => ({
+    BillingFacet: {
+        processWebhookInbox: vi.fn().mockResolvedValue({ processed: 0, succeeded: 0, failed: 0 }),
+    },
+}));
+
+// Mock remaining services to avoid real imports
+vi.mock('../src/services/RetryWorker', () => ({
+    RetryWorker: { processRetries: vi.fn().mockResolvedValue({ processed: 0, succeeded: 0, failed: 0, dlq: 0 }) },
+}));
+vi.mock('../src/services/BlockchainObserverService', () => ({
+    BlockchainObserverService: { getInstance: vi.fn().mockReturnValue({ scanAllChains: vi.fn().mockResolvedValue({ totalNewDeposits: 0, totalConfirmed: 0, errors: [] }) }) },
+}));
+vi.mock('../src/services/SecurityWatchdogService', () => ({
+    SecurityWatchdogService: { getInstance: vi.fn().mockReturnValue({ checkAnomalies: vi.fn().mockResolvedValue([]) }) },
+}));
+vi.mock('../src/services/EscrowReleaseWorker', () => ({
+    EscrowReleaseWorker: { processReleases: vi.fn().mockResolvedValue({ released: 0, failed: 0 }) },
+}));
+
 import { SchedulerService } from '../src/services/SchedulerService';
 
 describe('SchedulerService.start', () => {
@@ -76,5 +97,27 @@ describe('SchedulerService.start', () => {
         await cronCallback(); // must run (lock was released)
 
         expect(mockProcessQueue).toHaveBeenCalledTimes(2);
+    });
+
+    it('✅ Registers a WebhookInbox cron job (CORE-04)', () => {
+        SchedulerService.start();
+
+        // SchedulerService registers multiple cron jobs; check that at least one
+        // is registered with the default WebhookInbox pattern (*/30 * * * * *)
+        const patterns = mockCronSchedule.mock.calls.map((call: any[]) => call[0] as string);
+        // Default: WEBHOOK_INBOX_INTERVAL_SECONDS not set → 30s
+        expect(patterns).toContain('*/30 * * * * *');
+        // Verify multiple jobs are registered (AnchorQueue + WebhookInbox + others)
+        expect(mockCronSchedule.mock.calls.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('✅ Respects WEBHOOK_INBOX_INTERVAL_SECONDS env var', () => {
+        process.env.WEBHOOK_INBOX_INTERVAL_SECONDS = '60';
+        SchedulerService.start();
+
+        const patterns = mockCronSchedule.mock.calls.map((call: any[]) => call[0] as string);
+        expect(patterns).toContain('*/60 * * * * *');
+
+        delete process.env.WEBHOOK_INBOX_INTERVAL_SECONDS;
     });
 });

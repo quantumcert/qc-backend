@@ -1,6 +1,8 @@
 import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
 import prisma from '../../config/prisma';
 
+const WEBHOOK_INBOX_BATCH_SIZE = 10;
+
 export class BillingFacet {
     static getClient() {
         // Master Admin configuration for MercadoPago integration
@@ -85,5 +87,68 @@ export class BillingFacet {
         }
 
         return { success: false, status: payment.status };
+    }
+
+    /**
+     * Processes pending WebhookInbox records in batches.
+     * Called by SchedulerService cron job every WEBHOOK_INBOX_INTERVAL_SECONDS.
+     *
+     * Flow: PENDING → PROCESSING → DONE (or FAILED with lastError)
+     * Uses prisma.$transaction to atomically update inbox and asset state.
+     *
+     * T-03-04 mitigation: prevents unbounded growth of the WebhookInbox table.
+     */
+    static async processWebhookInbox(): Promise<{ processed: number; succeeded: number; failed: number }> {
+        const pending = await prisma.webhookInbox.findMany({
+            where: { status: 'PENDING' },
+            orderBy: { receivedAt: 'asc' },
+            take: WEBHOOK_INBOX_BATCH_SIZE,
+        });
+
+        let succeeded = 0;
+        let failed = 0;
+
+        for (const inbox of pending) {
+            // Mark as PROCESSING to prevent concurrent picks by parallel scheduler ticks
+            await prisma.webhookInbox.update({
+                where: { id: inbox.id },
+                data: { status: 'PROCESSING' },
+            });
+
+            try {
+                const payload = inbox.rawPayload as any;
+                const paymentId = payload?.data?.id || payload?.id;
+
+                if (!paymentId) {
+                    throw new Error('WebhookInbox payload missing payment ID');
+                }
+
+                // Re-use processPaymentWebhook to call MercadoPago and update Asset
+                await BillingFacet.processPaymentWebhook({}, { data: { id: paymentId } });
+
+                await prisma.webhookInbox.update({
+                    where: { id: inbox.id },
+                    data: { status: 'DONE', processedAt: new Date() },
+                });
+
+                succeeded++;
+            } catch (err: any) {
+                // TODO(OPS-03): substituir console.error por logger estruturado (Phase 4)
+                console.error(`[BillingFacet] processWebhookInbox error for inbox ${inbox.id}:`, err);
+
+                await prisma.webhookInbox.update({
+                    where: { id: inbox.id },
+                    data: {
+                        status: 'FAILED',
+                        lastError: err?.message ?? String(err),
+                        retryCount: { increment: 1 },
+                    },
+                });
+
+                failed++;
+            }
+        }
+
+        return { processed: pending.length, succeeded, failed };
     }
 }

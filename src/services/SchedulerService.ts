@@ -5,6 +5,7 @@ import { RetryWorker } from './RetryWorker';
 import { BlockchainObserverService } from './BlockchainObserverService';
 import { SecurityWatchdogService } from './SecurityWatchdogService';
 import { EscrowReleaseWorker } from './EscrowReleaseWorker';
+import { BillingFacet } from './core-facets/BillingFacet';
 
 export class SchedulerService {
     /**
@@ -153,5 +154,36 @@ export class SchedulerService {
         });
 
         console.log(`[Scheduler] EscrowRelease cron started — interval: ${escrowInterval}s (pattern: ${escrowPattern})`);
+
+        // ─── WebhookInbox Processor Cron ────────────────────
+        // Processes PENDING MercadoPago webhook inbox records.
+        // T-03-04 mitigation: prevents unbounded growth of WebhookInbox table.
+        let webhookInboxRunning = false;
+        const webhookInboxInterval = parseInt(process.env.WEBHOOK_INBOX_INTERVAL_SECONDS ?? '30', 10);
+        const webhookInboxPattern = `*/${webhookInboxInterval} * * * * *`;
+
+        cron.schedule(webhookInboxPattern, async () => {
+            if (webhookInboxRunning) {
+                // TODO(OPS-03): substituir console.log por logger estruturado (Phase 4)
+                console.log('[Scheduler] WebhookInbox already running, skipping this cycle.');
+                return;
+            }
+            webhookInboxRunning = true;
+            try {
+                const result = await BillingFacet.processWebhookInbox();
+                if (result.processed > 0) {
+                    console.log(
+                        `[Scheduler] WebhookInbox: ${result.succeeded} succeeded, ${result.failed} failed out of ${result.processed} processed.`
+                    );
+                }
+            } catch (err) {
+                // TODO(OPS-03): substituir console.error por logger estruturado (Phase 4)
+                console.error('[Scheduler] WebhookInbox error:', err);
+            } finally {
+                webhookInboxRunning = false;
+            }
+        });
+
+        console.log(`[Scheduler] WebhookInbox cron started — interval: ${webhookInboxInterval}s (pattern: ${webhookInboxPattern})`);
     }
 }
