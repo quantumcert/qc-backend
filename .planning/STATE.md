@@ -17,12 +17,12 @@ _Initialized: 2026-05-08_
 |-------|-------|
 | Milestone | 1 |
 | Phase | 1 — Core Gap Closure + Production Hardening |
-| Plan | None (not started) |
-| Status | Not started |
+| Plan | 4 plans (2 waves) — Ready to execute |
+| Status | Planned |
 
 **Progress**:
 ```
-Phase 1 [          ] 0%
+Phase 1 [██        ] 20% (planned, not started)
 Phase 2 [          ] 0%
 Phase 3 [          ] 0%
 Phase 4 [          ] 0%
@@ -47,7 +47,7 @@ Phase 6 [          ] 0%
 | Phases total | 6 |
 | Requirements total (v1) | 41 (36 original + 5 FACET) |
 | Requirements mapped | 41/41 |
-| Plans written | 0 |
+| Plans written | 4 |
 | Plans complete | 0 |
 
 ---
@@ -82,9 +82,9 @@ _Nenhum todo pendente._
 
 ## Session Continuity
 
-**Last session**: 2026-05-08 — Roadmap ajustado: Phase 6 adicionada, 6 GitHub Milestones criados, issues atribuídas
+**Last session**: 2026-05-08 — Phase 1 planejada: 4 PLAN.md files criados, verification passed, pronta para execução
 
-**Next action**: `/gsd-plan-phase 1` — decompor Phase 1 em planos executáveis
+**Next action**: `/gsd-execute-phase 1` — executar Phase 1 (Wave 1: Plans 01-03 paralelos; Wave 2: Plan 04)
 
 **Context for next session**:
 - Branch atual: `7-feat-camada-de-curadoria-contribuicoes-de-nao-auditores-vao-para-fila-pendentes-de-aprovacao`

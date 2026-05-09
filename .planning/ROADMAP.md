@@ -47,7 +47,20 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
   3. Dois workers executando `AnchorQueueService` simultaneamente não processam o mesmo `EventLog` — distributed lock garante exclusão mútua
   4. Um request `POST /api/v1/diamond` com selector `document.verify` retorna resultado (não 404) — `DocumentVerificationFacet` está registrado no `FacetRegistry`
   5. Uma transição de estado inválida (ex: `BURNED → ACTIVE`) é rejeitada com 422 — `LifecycleFacet` enforce as regras de estado; contribuições de não-auditores entram em fila `PENDING_REVIEW` e são visíveis para aprovação
-**Plans**: TBD
+**Plans**: 4 plans, 2 waves
+
+**Wave 1** *(paralelos — sem dependências entre si)*
+  - [ ] 01-01-PLAN.md — PQC Security fixes: SEC-01 (KMS fail-fast), SEC-02 (verifySignature real), SEC-03 (CircuitBreaker Falcon-512)
+  - [ ] 01-02-PLAN.md — AnchorQueue + Registry: SEC-04 (SKIP LOCKED), SEC-05 (document.verify selector), SEC-06 (tenantId em ChainTransaction)
+  - [ ] 01-03-PLAN.md — Core Gaps: CORE-01 (Lifecycle regression), CORE-02 (PATCH /transfer), CORE-03 (Scheduler), CORE-04 (MP webhook + Inbox)
+
+**Wave 2** *(bloqueado pela Wave 1 completa)*
+  - [ ] 01-04-PLAN.md — Curation Layer: CORE-05 (PendingContribution) + CORE-06 (review flow) + `[BLOCKING] npx prisma db push`
+
+**Cross-cutting constraints:**
+  - `tenantId` NUNCA do request body — extraído de `secureContext` via `requireApiKey` (todos os planos)
+  - Golden Rule: zero termos de domínio no core (especialmente Plan 04 — CurationFacet)
+  - `[BLOCKING]` Prisma schema push + generate obrigatório antes da verification (Plan 04 Task 4)
 
 ### Phase 2: Document Verification + QTAG Production
 **Goal**: Qualquer pessoa pode verificar a autenticidade de um documento via hash público, e NFC commissioning funciona em produção com KMS real

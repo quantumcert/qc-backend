@@ -110,11 +110,12 @@ HTTP Request (public contribution)
       ├── [isAuditor: true]  → EventLog (APPROVED) → AnchorQueueService (fire-and-forget)
       └── [isAuditor: false] → PendingContribution (PENDING_APPROVAL)
 
-HTTP Request (approval)
-  → POST /api/v1/diamond { selector: "contribution.review" }
-  → requireApiKey (OPERATOR/ADMIN) → DiamondProxy → CurationFacet.reviewContribution()
-      ├── [APPROVED] → EventLog (APPROVED) → AnchorQueueService
-      └── [REJECTED] → PendingContribution.status = REJECTED
+HTTP Request (approval) [Decisão arquitetural: rota REST dedicada, não Diamond — ver Open Question 3]
+  → POST /api/v1/contributions/:id/review { decision, reason? }
+  → requireApiKey + tenantRateLimiter + requireOperator (OPERATOR/ADMIN)
+  → ContributionController.review → CurationFacet.reviewContribution()
+      ├── [APPROVED] → PendingContribution.status = APPROVED + EventLog (APPROVED) → AnchorQueueService (fire-and-forget)
+      └── [REJECTED] → PendingContribution.status = REJECTED + reviewedBy/reviewedAt
 
 HTTP Request (circuit breaker pause)
   → POST /api/v1/circuit-breaker/pause
