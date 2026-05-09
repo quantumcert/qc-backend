@@ -10,9 +10,9 @@ _Generated: 2026-05-08 | v1 scope: backend completo production-ready (6 sub-sist
 - [ ] **SEC-01**: Chave Falcon-512 persistida em KMS/secret vault — não gerada como env var efêmera a cada restart
 - [ ] **SEC-02**: `QuantumSignerService.verifySignature()` implementa verificação criptográfica real (remove stub `return true`)
 - [ ] **SEC-03**: CircuitBreaker com RBAC correto — somente roles autorizadas podem acionar pausa global
-- [ ] **SEC-04**: `AnchorQueueService` usa distributed lock (`pg_advisory_lock` ou UUID por worker) para evitar duplo-processamento do mesmo `EventLog`
-- [ ] **SEC-05**: `DocumentVerificationFacet` registrado no `FacetRegistry` (atualmente implementado mas unreachable via Diamond)
-- [ ] **SEC-06**: `tenantId` persistido em `ChainTransaction` para queries cross-chain e billing por tenant
+- [x] **SEC-04**: `AnchorQueueService` usa distributed lock (`pg_advisory_lock` ou UUID por worker) para evitar duplo-processamento do mesmo `EventLog` _(done: SELECT FOR UPDATE SKIP LOCKED em $transaction — 2026-05-08)_
+- [x] **SEC-05**: `DocumentVerificationFacet` registrado no `FacetRegistry` (atualmente implementado mas unreachable via Diamond) _(done: selector document.verify registrado + interface harmonizada — 2026-05-08)_
+- [x] **SEC-06**: `tenantId` persistido em `ChainTransaction` para queries cross-chain e billing por tenant _(done: AlgorandAnchorFacet.anchorEvent() cria ChainTransaction com tenantId do EventLog — 2026-05-08)_
 
 ### CORE — Core Gap Closure
 
@@ -102,12 +102,12 @@ _Updated: 2026-05-08 — ROADMAP.md created (gsd-new-project, brownfield)_
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| SEC-01 | Phase 1 | Pending |
-| SEC-02 | Phase 1 | Pending |
-| SEC-03 | Phase 1 | Pending |
-| SEC-04 | Phase 1 | Pending |
-| SEC-05 | Phase 1 | Pending |
-| SEC-06 | Phase 1 | Pending |
+| SEC-01 | Phase 1 | Done 2026-05-08 |
+| SEC-02 | Phase 1 | Done 2026-05-08 |
+| SEC-03 | Phase 1 | Done 2026-05-08 |
+| SEC-04 | Phase 1 | Done 2026-05-08 |
+| SEC-05 | Phase 1 | Done 2026-05-08 |
+| SEC-06 | Phase 1 | Done 2026-05-08 |
 | CORE-01 | Phase 1 | Pending |
 | CORE-02 | Phase 1 | Pending |
 | CORE-03 | Phase 1 | Pending |

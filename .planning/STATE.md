@@ -17,12 +17,12 @@ _Initialized: 2026-05-08_
 |-------|-------|
 | Milestone | 1 |
 | Phase | 1 — Core Gap Closure + Production Hardening |
-| Plan | Plan 01 complete — Plan 02 next |
+| Plan | Plan 02 complete — Plan 03 next |
 | Status | In Progress |
 
 **Progress**:
 ```
-Phase 1 [████      ] 40% (Plan 01 complete: SEC-01, SEC-02, SEC-03)
+Phase 1 [████████  ] 80% (Plan 01 complete: SEC-01, SEC-02, SEC-03 | Plan 02 complete: SEC-04, SEC-05, SEC-06)
 Phase 2 [          ] 0%
 Phase 3 [          ] 0%
 Phase 4 [          ] 0%
@@ -48,7 +48,7 @@ Phase 6 [          ] 0%
 | Requirements total (v1) | 41 (36 original + 5 FACET) |
 | Requirements mapped | 41/41 |
 | Plans written | 4 |
-| Plans complete | 1 |
+| Plans complete | 2 |
 
 ---
 
@@ -61,6 +61,9 @@ Phase 6 [          ] 0%
 | Phase 1 before everything | SEC-01 e SEC-02 são blockers catastróficos — chave Falcon efêmera e verifySignature stub podem destruir dados de produção | 1 |
 | publicKeyHex→base64 para PostQuantumCrypto | verifySignatureFalcon512 aceita base64; QuantumSignerService aceita hex; conversão feita no método verifySignature | 1 |
 | REQUIRED_ENV_VARS gateado por NODE_ENV=production | Evita quebrar dev flow; produção exige QUANTUM_CERT_SECRET, MP_WEBHOOK_SECRET, CIRCUIT_BREAKER_ADMIN_PUBKEY | 1 |
+| SKIP LOCKED tests em arquivo separado | vi.mock() hoisting do Vitest conflita quando dois mocks do mesmo módulo existem no mesmo arquivo; solução: anchor-queue-skip-locked.test.ts separado | 1 |
+| DocumentVerificationFacet response shape slim | Testes existentes esperam { verified, assetId, assetStatus, dltTxId, anchoredAt, eventId, issuerId } sem PublicAssetPanel — reescrita alinhada com testes | 1 |
+| ChainTransaction logging não-bloqueante em anchorEvent() | Log de ChainTransaction dentro de try/catch: falha de DB write não pode abortar uma txn Algorand já submetida | 1 |
 | Phase 3 depende só de Phase 1 | DLT Workers não dependem de DOC/QTAG — podem rodar em paralelo com Phase 2 se necessário | 3 |
 | Phase 5 depende de Phase 3 + Phase 4 | EscrowFacet usa BullMQ (OPS-05) e TEAL on-chain requer Soroban research concluído | 5 |
 | DLT-02 (Solana) mantido em v1 | Solana foi deferido para v2 no REQUIREMENTS.md mas o REQUIREMENTS.md v1 lista DLT-02 explicitamente — mantido em Phase 3 | 3 |
@@ -84,9 +87,9 @@ _Nenhum todo pendente._
 
 ## Session Continuity
 
-**Last session**: 2026-05-08 — Plan 01-01 executado: SEC-01, SEC-02, SEC-03 eliminados (5 commits, 13 testes novos)
+**Last session**: 2026-05-08 — Plan 01-02 executado: SEC-04, SEC-05, SEC-06 eliminados (5 commits, 11 testes novos)
 
-**Next action**: Executar Plan 01-02 (Wave 1 continua)
+**Next action**: Executar Plan 01-03 (Wave 2)
 
 **Context for next session**:
 - Branch atual: `7-feat-camada-de-curadoria-contribuicoes-de-nao-auditores-vao-para-fila-pendentes-de-aprovacao`
