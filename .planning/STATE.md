@@ -91,9 +91,9 @@ _Nenhum todo pendente._
 
 ## Session Continuity
 
-**Last session**: 2026-05-09 — Phase 1 aprovada e marcada completa. 4/4 plans, 12 requirements (SEC-01..06, CORE-01..06), 268 testes verdes, Nyquist-compliant. Code review: 7 criticals advisory (não bloqueantes). ROADMAP e STATE atualizados.
+**Last session**: 2026-05-09 — Phase 1 aprovada, marcada completa, PR #17 criado. 4/4 plans, 12 requirements (SEC-01..06, CORE-01..06), 268 testes verdes, Nyquist-compliant. Code review: 7 criticals advisory (não bloqueantes).
 
-**Next action**: Abrir PR da branch `7-feat-camada-de-curadoria-...` → merge em main → `/gsd-discuss-phase 2` para iniciar Phase 2
+**Next action**: Revisar/aprovar PR #17 → merge em main → `/gsd-discuss-phase 2` para iniciar Phase 2
 
 **Context for next session**:
 - Branch: `7-feat-camada-de-curadoria-contribuicoes-de-nao-auditores-vao-para-fila-pendentes-de-aprovacao` — pronta para PR
