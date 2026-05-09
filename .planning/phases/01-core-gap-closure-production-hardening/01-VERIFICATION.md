@@ -5,6 +5,8 @@ status: passed
 score: 12/12 must-haves verified
 overrides_applied: 0
 re_verification: true
+closure_validated: 2026-05-09T04:41:19Z
+closure_status: ready_to_close
 human_verification: []
 resolved_human_verification:
   - test: "Suite completa de testes com banco local disponível"
@@ -107,8 +109,9 @@ resolved_human_verification:
 | document.verify no FacetRegistry | grep -c "'document.verify'" src/diamond/FacetRegistry.ts | 1 ocorrência | ✓ PASS |
 | Cron jobs ativos no SchedulerService | grep -c "cron.schedule" src/services/SchedulerService.ts | 6 ocorrências | ✓ PASS |
 | Todos os arquivos chave existem | ls controllers, routes, facets criados | 16/16 arquivos confirmados | ✓ PASS |
+| Suíte automática completa | npx vitest run | 38 arquivos, 277 testes passando | ✓ PASS |
 
-**Step 7b: Testes automáticos** — SKIP (requerem banco PostgreSQL rodando; não disponível neste contexto de verificação)
+**Step 7b: Testes automáticos** — PASS (`npx vitest run` passou com 38 arquivos e 277 testes em 2026-05-09).
 
 ---
 

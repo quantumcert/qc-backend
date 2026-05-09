@@ -39,7 +39,11 @@ findings:
   warning: 8
   info: 4
   total: 19
-status: issues_found
+status: resolved_by_review_fix
+resolution_status: complete_with_non_blocking_deferred_items
+resolved_by: .planning/phases/01-core-gap-closure-production-hardening/01-REVIEW-FIX.md
+critical_remaining: 0
+blocking_remaining: 0
 ---
 
 # Phase 01: Code Review Report
@@ -47,7 +51,11 @@ status: issues_found
 **Reviewed:** 2026-05-09T00:00:00Z
 **Depth:** standard
 **Files Reviewed:** 30
-**Status:** issues_found
+**Status:** resolved by `.planning/phases/01-core-gap-closure-production-hardening/01-REVIEW-FIX.md`
+
+## Status de Resolução
+
+A revisão original encontrou 19 achados. O ciclo de correção posterior resolveu todos os 7 críticos e 5 dos 8 avisos em escopo. Os 3 avisos restantes foram documentados como dívida técnica não bloqueante em `01-REVIEW-FIX.md` porque exigem mudança de contrato, logger estruturado ou decisão de schema/migration.
 
 ## Summary
 
