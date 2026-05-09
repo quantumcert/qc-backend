@@ -147,12 +147,14 @@ describe('Diamond transfer.initiate (pós-migração)', () => {
     expect(res.status).toBe(401);
   });
 
-  it('🚫 404 — rota REST antiga PATCH /api/v1/assets/:id/transfer não existe mais', async () => {
+  it('✅ 400 — rota REST PATCH /api/v1/assets/:id/transfer existe e exige X-Idempotency-Key', async () => {
+    // Route now exists (created in Plan 01-03 CORE-02).
+    // Without X-Idempotency-Key the idempotency guard returns 400 — proves route is reachable.
     const res = await request(app)
       .patch('/api/v1/assets/asset-1/transfer')
       .set('X-API-Key', 'qc_test_key')
       .send({ buyerDocument: '12345678901', documentType: 'CPF' });
 
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(400); // idempotency guard fires — route exists
   });
 });
