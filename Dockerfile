@@ -44,6 +44,11 @@ RUN npx prisma generate
 # Copy the compiled output from the builder stage
 COPY --from=builder /app/dist ./dist/
 
+# Dokploy/pre-start hooks may run `prisma db push`, which invokes generate unless
+# --skip-generate is used. Keep Prisma output writable by the runtime user so
+# that hook cannot fail on root-owned Prisma client files.
+RUN chown -R node:node /app/node_modules/.prisma /app/node_modules/@prisma /app/prisma
+
 # Security: Run as non-root user 'node'
 USER node
 
