@@ -74,11 +74,19 @@ router.get('/verify/document/:hash', async (req, res, next) => {
         const hash = req.params.hash;
         const result = await DocumentVerificationFacet.verifyByHash(hash);
 
-        if (!result.valid) {
-            return res.status(404).json({ valid: false, asset: null });
+        if (!result.verified) {
+            return res.status(404).json({ verified: false, reason: result.reason ?? null });
         }
 
-        return res.status(200).json({ valid: true, asset: result.asset });
+        return res.status(200).json({
+            verified: true,
+            assetId: result.assetId,
+            assetStatus: result.assetStatus,
+            dltTxId: result.dltTxId,
+            anchoredAt: result.anchoredAt,
+            eventId: result.eventId,
+            issuerId: result.issuerId,
+        });
     } catch (err) {
         next(err);
     }

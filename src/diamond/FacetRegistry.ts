@@ -16,6 +16,7 @@ import { TransferRegistryFacet } from '../services/core-facets/TransferRegistryF
 import { CommissioningFacet } from '../services/core-facets/CommissioningFacet';
 import { AgentRegistryFacet } from '../services/core-facets/AgentRegistryFacet';
 import { EscrowFacet } from '../services/core-facets/EscrowFacet';
+import { DocumentVerificationFacet } from '../services/core-facets/DocumentVerificationFacet';
 
 export type FacetFunction = (...args: any[]) => Promise<any> | any;
 
@@ -65,4 +66,7 @@ export const FacetRegistry: Record<string, FacetFunction> = {
     'escrow.release': (ctx: any, payload: any) => EscrowFacet.release(ctx, payload),
     'escrow.cancel':  (ctx: any, payload: any) => EscrowFacet.cancel(ctx, payload),
     'escrow.status':  (ctx: any, payload: any) => EscrowFacet.getStatus(ctx, payload),
+
+    // DOCUMENT VERIFICATION (public — ctx is ignored, only payload.hash is used)
+    'document.verify': (_ctx: any, payload: any) => DocumentVerificationFacet.verifyByHash(payload.hash),
 };
