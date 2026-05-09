@@ -7,7 +7,7 @@ _Initialized: 2026-05-08_
 
 **Core Value**: Tríade indivisível: ancoragem DLT com assinatura pós-quântica + ciclo de vida completo de ativos rastreável + plataforma white-label multi-tenant.
 
-**Current Focus**: Phase 1 — Core Gap Closure + Production Hardening
+**Current Focus**: Phase 2 — Document Verification + QTAG Production
 
 ---
 
@@ -16,9 +16,9 @@ _Initialized: 2026-05-08_
 | Field | Value |
 |-------|-------|
 | Milestone | 1 |
-| Phase | 1 — Core Gap Closure + Production Hardening |
+| Phase | 1 — Core Gap Closure + Production Hardening ✓ → next: Phase 2 |
 | Plan | Phase 1 COMPLETE — All 4 plans done |
-| Status | In Progress |
+| Status | Complete |
 
 **Progress**:
 ```
@@ -91,13 +91,12 @@ _Nenhum todo pendente._
 
 ## Session Continuity
 
-**Last session**: 2026-05-09 — Plan 01-04 executado: CORE-05/06 fechados (3 commits, 15 testes novos). Phase 1 COMPLETA.
+**Last session**: 2026-05-09 — Phase 1 aprovada e marcada completa. 4/4 plans, 12 requirements (SEC-01..06, CORE-01..06), 268 testes verdes, Nyquist-compliant. Code review: 7 criticals advisory (não bloqueantes). ROADMAP e STATE atualizados.
 
-**Next action**: Abrir PR para branch `7-feat-camada-de-curadoria-...` → merge em main → iniciar Phase 2 planning
+**Next action**: Abrir PR da branch `7-feat-camada-de-curadoria-...` → merge em main → `/gsd-discuss-phase 2` para iniciar Phase 2
 
 **Context for next session**:
-- Branch: `7-feat-camada-de-curadoria-contribuicoes-de-nao-auditores-vao-para-fila-pendentes-de-aprovacao`
-- Phase 1 COMPLETA: 4/4 plans, 12 requirements fechados (SEC-01..06, CORE-01..06)
-- Plan 01-04 deliverables: CurationFacet, ContributionController, publicRoutes, contributionRoutes, 2 test files
-- DB sincronizado: tabelas Contributor + PendingContribution criadas
-- Próxima fase: Phase 2 — Document Verification + QTAG Production
+- Branch: `7-feat-camada-de-curadoria-contribuicoes-de-nao-auditores-vao-para-fila-pendentes-de-aprovacao` — pronta para PR
+- Phase 1 COMPLETA: 22 commits atômicos, Falcon-512 real, SKIP LOCKED, Lifecycle, Transfer REST, Curation Layer
+- Code review criticals em aberto: BillingFacet TOCTOU (CR-02), AlgorandAnchorFacet fallback CUID (CR-05), endpoint público sem rate limit (CR-06), LifecycleFacet.transition sem transação (CR-07) — considerar `/gsd-code-review 1 --fix` antes de Phase 2
+- Phase 2: DOC-01/02/03 (verificação pública) + QTAG-01/02 (commissioning NFC) — depende só de Phase 1

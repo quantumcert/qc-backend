@@ -142,7 +142,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 | Phase | GitHub Milestone | Issues | Plans Complete | Status | Completed |
 |-------|-----------------|--------|----------------|--------|-----------|
-| 1. Core Gap Closure + Production Hardening | [M#1](https://github.com/quantumcert/qc-backend/milestone/1) | #5, #7, #8 | 0/? | Not started | - |
+| 1. Core Gap Closure + Production Hardening | [M#1](https://github.com/quantumcert/qc-backend/milestone/1) | #5, #7, #8 | 4/4 | Complete | 2026-05-09 |
 | 2. Document Verification + QTAG Production | [M#2](https://github.com/quantumcert/qc-backend/milestone/2) | #12, #2 | 0/? | Not started | - |
 | 3. Pluggable DLT Workers — Stellar/Soroban Priority | [M#3](https://github.com/quantumcert/qc-backend/milestone/3) | #11 | 0/? | Not started | - |
 | 4. Scale + Observability Infrastructure | [M#4](https://github.com/quantumcert/qc-backend/milestone/4) | #13 | 0/? | Not started | - |
