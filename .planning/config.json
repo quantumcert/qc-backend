@@ -4,6 +4,13 @@
   "parallelization": true,
   "commit_docs": true,
   "model_profile": "balanced",
+  "preferences": {
+    "language": "pt-BR",
+    "chat_language": "pt-BR",
+    "artifact_language": "pt-BR",
+    "allow_codex_coauthorship": false,
+    "commit_footer_policy": "no_codex_coauthor"
+  },
   "workflow": {
     "research": true,
     "plan_check": true,
