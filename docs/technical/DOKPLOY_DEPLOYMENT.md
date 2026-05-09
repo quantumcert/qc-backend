@@ -54,3 +54,13 @@ openssl rand -hex 64
 ## Observação
 
 O Dockerfile também ajusta a posse de `/app` para o usuário `node`. Isso evita o `EACCES` se algum hook legado ainda executar `prisma generate`, mas o caminho recomendado continua sendo `--skip-generate` em runtime.
+
+## Workers
+
+Os intervalos de workers aceitam valores entre `5` e `60` segundos. Para um ciclo de um minuto no Dokploy, use:
+
+```env
+ESCROW_RELEASE_INTERVAL_SECONDS=60
+```
+
+Se o container reiniciar logo depois de iniciar `SecurityWatchdog`, confira primeiro os intervalos dos workers no painel `Environment`.
