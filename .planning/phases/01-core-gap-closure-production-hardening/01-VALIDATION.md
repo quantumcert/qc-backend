@@ -1,10 +1,11 @@
 ---
 phase: 1
 slug: core-gap-closure-production-hardening
-status: draft
+status: reviewed
 nyquist_compliant: true
 wave_0_complete: true
 created: 2026-05-08
+audited: 2026-05-09
 ---
 
 # Phase 1 — Validation Strategy
@@ -38,18 +39,18 @@ created: 2026-05-08
 
 | Task ID | Plan | Wave | Requirement | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------------|-----------|-------------------|-------------|--------|
-| - | 01 | 1 | SEC-01 | KMS deriva chave determinística de QUANTUM_CERT_SECRET | unit | `npm test -- tests/post-quantum-crypto.test.ts` | ✅ | ⬜ pending |
-| - | 01 | 1 | SEC-02 | verifySignature() retorna false para sig inválida | unit | `npm test -- tests/post-quantum-crypto.test.ts` | ✅ | ⬜ pending |
-| - | 01 | 1 | SEC-03 | CircuitBreaker rejeita signature vazia/inválida | unit | `npm test -- tests/security-regression.test.ts` | ✅ | ⬜ pending |
-| - | 01 | 1 | SEC-04 | Dois workers não processam mesmo EventLog | unit | `npm test -- tests/scheduler.test.ts` | ✅ | ⬜ pending |
-| - | 01 | 1 | SEC-05 | `document.verify` selector retorna resultado (não 404) | unit | `npm test -- tests/document-verification.test.ts` | ✅ | ⬜ pending |
-| - | 02 | 1 | SEC-06 | ChainTransaction criada com tenantId preenchido | unit | `npm test -- tests/chain-transaction-tenant.test.ts` | ✅ inline (Plan 02 Task 3, TDD) | ⬜ pending |
-| - | 02 | 1 | CORE-01 | `BURNED → ACTIVE` é rejeitado com 422 | unit | `npm test -- tests/lifecycle-diamond.test.ts` | ✅ | ⬜ pending |
-| - | 02 | 1 | CORE-02 | `PATCH /assets/:id/lifecycle` retorna 200 | unit | `npm test -- tests/transfer-diamond.test.ts` | ✅ (adaptar) | ⬜ pending |
-| - | 02 | 1 | CORE-03 | AnchorQueue é triggerado pelo cron | unit | `npm test -- tests/scheduler.test.ts` | ✅ | ⬜ pending |
-| - | 02 | 1 | CORE-04 | Webhook com HMAC inválido retorna 401 | unit | `npm test -- tests/webhook.test.ts` | ✅ | ⬜ pending |
-| - | 04 | 2 | CORE-05 | Contribuição de não-auditor cria PendingContribution | unit | `npm test -- tests/curation-facet.test.ts` | ✅ inline (Plan 04 Task 2, TDD) | ⬜ pending |
-| - | 04 | 2 | CORE-06 | OPERATOR aprova PendingContribution → EventLog criado | unit | `npm test -- tests/curation-facet.test.ts` | ✅ inline (Plan 04 Task 2, TDD) | ⬜ pending |
+| - | 01 | 1 | SEC-01 | KMS deriva chave determinística de QUANTUM_CERT_SECRET | unit | `npm test -- tests/post-quantum-crypto.test.ts` | ✅ | ✅ green |
+| - | 01 | 1 | SEC-02 | verifySignature() retorna false para sig inválida | unit | `npm test -- tests/quantum-signer-verify.test.ts` | ✅ | ✅ green |
+| - | 01 | 1 | SEC-03 | CircuitBreaker rejeita signature vazia/inválida | unit | `npm test -- tests/circuit-breaker-security.test.ts` | ✅ | ✅ green |
+| - | 01 | 1 | SEC-04 | Dois workers não processam mesmo EventLog | unit | `npm test -- tests/anchor-queue-skip-locked.test.ts` | ✅ | ✅ green |
+| - | 01 | 1 | SEC-05 | `document.verify` selector retorna resultado (não 404) | unit | `npm test -- tests/document-verification.test.ts` | ✅ | ✅ green |
+| - | 02 | 1 | SEC-06 | ChainTransaction criada com tenantId preenchido | unit | `npm test -- tests/chain-transaction-tenant.test.ts` | ✅ inline (Plan 02 Task 3, TDD) | ✅ green |
+| - | 02 | 1 | CORE-01 | `BURNED → ACTIVE` é rejeitado com 422 | unit | `npm test -- tests/lifecycle-diamond.test.ts` | ✅ | ✅ green |
+| - | 02 | 1 | CORE-02 | `PATCH /assets/:id/lifecycle` retorna 200 | unit | `npm test -- tests/transfer-rest.test.ts` | ✅ | ✅ green |
+| - | 02 | 1 | CORE-03 | AnchorQueue é triggerado pelo cron | unit | `npm test -- tests/scheduler.test.ts` | ✅ | ✅ green |
+| - | 02 | 1 | CORE-04 | Webhook com HMAC inválido retorna 401 | unit | `npm test -- tests/webhook.test.ts` | ✅ | ✅ green |
+| - | 04 | 2 | CORE-05 | Contribuição de não-auditor cria PendingContribution | unit | `npm test -- tests/curation-facet.test.ts` | ✅ inline (Plan 04 Task 2, TDD) | ✅ green |
+| - | 04 | 2 | CORE-06 | OPERATOR aprova PendingContribution → EventLog criado | unit | `npm test -- tests/curation-facet.test.ts` | ✅ inline (Plan 04 Task 2, TDD) | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -87,3 +88,26 @@ created: 2026-05-08
 - [x] `nyquist_compliant: true` set in frontmatter
 
 **Approval:** approved
+
+---
+
+## Validation Audit — 2026-05-09
+
+**Auditor:** gsd-nyquist-auditor
+**Stance:** adversarial (assume unmet until proven)
+**Suite run:** `npx vitest run` — 268 passed (36 files)
+
+### Test Reference Corrections
+
+| Requirement | Old Reference | New Reference | Reason |
+|-------------|---------------|---------------|--------|
+| SEC-02 | `tests/post-quantum-crypto.test.ts` | `tests/quantum-signer-verify.test.ts` | Plan 01-01 SUMMARY confirma arquivo criado em TDD RED/GREEN para SEC-02 especificamente |
+| SEC-03 | `tests/security-regression.test.ts` | `tests/circuit-breaker-security.test.ts` | Plan 01-01 SUMMARY confirma arquivo criado em TDD RED/GREEN para CircuitBreaker (Task 2) |
+| SEC-04 | `tests/scheduler.test.ts` | `tests/anchor-queue-skip-locked.test.ts` | Plan 01-02 SUMMARY documenta separação intencional por conflito de vi.mock hoisting |
+| CORE-02 | `tests/transfer-diamond.test.ts` | `tests/transfer-rest.test.ts` | Plan 01-03 SUMMARY confirma criação de transfer-rest.test.ts (5 testes REST) como arquivo primário para CORE-02 |
+
+### Finding Classification
+
+All 12 requirements: **FILLED** — tests exist, all pass, behavior verified.
+
+No BLOCKERs. No WARNINGs. No SKIPs.
