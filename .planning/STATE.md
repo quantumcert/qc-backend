@@ -91,14 +91,16 @@ _Nenhum todo pendente._
 
 ## Session Continuity
 
-**Last session**: 2026-05-09 — Phase 1 aprovada, marcada completa, PR #17 criado e atualizado com code-review fix pass. 4/4 plans, 12 requirements (SEC-01..06, CORE-01..06), Nyquist-compliant. Review-fix: 12/15 findings in-scope corrigidos, incluindo todos os 7 Criticals; os 3 avisos restantes foram classificados como dívida técnica não bloqueante, sem impedir o encerramento da fase.
+**Last session**: 2026-05-09 — Phase 1 aprovada, marcada completa, PR #17 mergeado em `main`. 4/4 plans, 12 requirements (SEC-01..06, CORE-01..06), Nyquist-compliant. Review-fix: 12/15 findings in-scope corrigidos, incluindo todos os 7 Criticals; os 3 avisos restantes foram classificados como dívida técnica não bloqueante, sem impedir o encerramento da fase.
 
 **Phase 1 closure validation**: 2026-05-09 — sem blockers ativos, sem todos pendentes, sem verificação humana pendente. `01-VERIFICATION.md` está `status: passed`, `human_verification: []`; `01-HUMAN-UAT.md` está `status: passed`, `pending: 0`, `blocked: 0`; `01-REVIEW-FIX.md` está `complete_with_non_blocking_deferred_items`, `critical_remaining: 0`, `blocking_remaining: 0`.
 
-**Next action**: Revisar/aprovar PR #17 → merge em main quando CI passar → `/gsd-discuss-phase 2` para iniciar Phase 2
+**Phase 1 merge**: PR #17 mergeado em `main` em 2026-05-09T04:43:15Z, merge commit `62a12252ca921893641ec7b8c47a9205a5e40306`. Branch remota removida e branch local de trabalho apagada após sincronização.
+
+**Next action**: `/gsd-discuss-phase 2` para iniciar Phase 2
 
 **Context for next session**:
-- Branch: `7-feat-camada-de-curadoria-contribuicoes-de-nao-auditores-vao-para-fila-pendentes-de-aprovacao` — PR #17 aberto contra `main`
+- Branch: `main` atualizada com PR #17 mergeado
 - Phase 1 COMPLETA: Falcon-512 real, SKIP LOCKED, Lifecycle, Transfer REST, Curation Layer, review-fix aplicado
 - Code review fix report: `.planning/phases/01-core-gap-closure-production-hardening/01-REVIEW-FIX.md` — encerrado sem blocker; WR-01, WR-06, WR-07 postergados como dívida técnica não bloqueante por exigirem mudança cross-cutting/schema
 - Phase 2: DOC-01/02/03 (verificação pública) + QTAG-01/02 (commissioning NFC) — depende só de Phase 1
