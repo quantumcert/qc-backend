@@ -272,21 +272,18 @@ export class CircuitBreakerService {
   // ============================================================
 
   private async verifyAdminSignature(action: string, chain: string, signature: string): Promise<boolean> {
-    try {
-      // In production, verify against a known admin Falcon-512 public key
-      // For now, accept any non-empty signature as valid (dev mode)
-      if (!signature || signature.length < 10) {
-        return false;
+    if (!signature || signature.trim().length === 0) return false;
+
+    const adminPubKey = process.env.CIRCUIT_BREAKER_ADMIN_PUBKEY;
+    if (!adminPubKey) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('CIRCUIT_BREAKER_ADMIN_PUBKEY not configured in production');
       }
-
-      // TODO: Implement proper Falcon-512 signature verification
-      // const adminPubKey = process.env.CIRCUIT_BREAKER_ADMIN_PUBKEY;
-      // return await this.quantumSigner.verify(action + chain, signature, adminPubKey);
-
-      return true;
-    } catch {
+      console.warn('[CircuitBreaker] CIRCUIT_BREAKER_ADMIN_PUBKEY not set — rejecting signature in fail-secure mode');
       return false;
     }
+
+    return this.quantumSigner.verifySignature({ action, chain }, signature, adminPubKey);
   }
 
   private async generateInternalSignature(action: string): Promise<string> {
