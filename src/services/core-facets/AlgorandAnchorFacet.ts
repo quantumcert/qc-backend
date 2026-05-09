@@ -93,6 +93,32 @@ export class AlgorandAnchorFacet implements IDLTAdapter {
         const sendResponse = await this.algodClient.sendRawTransaction(signedTxn).do();
         const txId = (sendResponse as any).txId || sendResponse.txid;
 
+        // SEC-06: Record anchor transaction in ChainTransaction with tenantId always populated.
+        // tenantId comes from the EventLog — it is NEVER provided by the caller (prevents cross-tenant drift).
+        try {
+            await prisma.chainTransaction.create({
+                data: {
+                    tenantId: event.tenantId,
+                    txRef: eventId,
+                    chain: 'ALGORAND',
+                    direction: 'ANCHOR',
+                    chainTxId: txId,
+                    fromAddress: this.masterAccount.addr.toString(),
+                    toAddress: this.masterAccount.addr.toString(),
+                    amount: '0',
+                    status: 'CONFIRMED',
+                    metadata: {
+                        eventId,
+                        eventHash,
+                        pqcProofLength: pqcProofBase64.length,
+                    },
+                },
+            });
+        } catch (logErr: any) {
+            // Logging failure must not abort the anchor operation — log and continue.
+            console.error('[AlgorandAnchorFacet] Failed to log ChainTransaction:', logErr.message);
+        }
+
         return txId;
     }
 
