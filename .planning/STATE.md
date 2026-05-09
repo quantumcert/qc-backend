@@ -17,12 +17,12 @@ _Initialized: 2026-05-08_
 |-------|-------|
 | Milestone | 1 |
 | Phase | 1 — Core Gap Closure + Production Hardening |
-| Plan | Plan 02 complete — Plan 03 next |
+| Plan | Plan 03 complete — Plan 04 next |
 | Status | In Progress |
 
 **Progress**:
 ```
-Phase 1 [████████  ] 80% (Plan 01 complete: SEC-01, SEC-02, SEC-03 | Plan 02 complete: SEC-04, SEC-05, SEC-06)
+Phase 1 [█████████ ] 90% (Plan 01: SEC-01/02/03 | Plan 02: SEC-04/05/06 | Plan 03: CORE-01/02/03/04)
 Phase 2 [          ] 0%
 Phase 3 [          ] 0%
 Phase 4 [          ] 0%
@@ -48,7 +48,7 @@ Phase 6 [          ] 0%
 | Requirements total (v1) | 41 (36 original + 5 FACET) |
 | Requirements mapped | 41/41 |
 | Plans written | 4 |
-| Plans complete | 2 |
+| Plans complete | 3 |
 
 ---
 
@@ -67,6 +67,8 @@ Phase 6 [          ] 0%
 | Phase 3 depende só de Phase 1 | DLT Workers não dependem de DOC/QTAG — podem rodar em paralelo com Phase 2 se necessário | 3 |
 | Phase 5 depende de Phase 3 + Phase 4 | EscrowFacet usa BullMQ (OPS-05) e TEAL on-chain requer Soroban research concluído | 5 |
 | DLT-02 (Solana) mantido em v1 | Solana foi deferido para v2 no REQUIREMENTS.md mas o REQUIREMENTS.md v1 lista DLT-02 explicitamente — mantido em Phase 3 | 3 |
+| TransferController payload usa buyerDocument+documentType | Plano mencionava toOwner+reason mas a assinatura real do TransferRegistryFacet é buyerDocument+documentType; controller adaptado sem alterar Facet | 1 |
+| WebhookInbox status DONE/FAILED per schema | Plano mencionava PROCESSED/APPROVED mas o schema define PENDING/PROCESSING/DONE/FAILED; implementação segue o schema | 1 |
 
 ### Research Flags
 
@@ -87,12 +89,13 @@ _Nenhum todo pendente._
 
 ## Session Continuity
 
-**Last session**: 2026-05-08 — Plan 01-02 executado: SEC-04, SEC-05, SEC-06 eliminados (5 commits, 11 testes novos)
+**Last session**: 2026-05-09 — Plan 01-03 executado: CORE-01/02/03/04 fechados (4 commits, 28 testes novos)
 
-**Next action**: Executar Plan 01-03 (Wave 2)
+**Next action**: Executar Plan 01-04 (Wave 2 — Curation Layer CORE-05/06)
 
 **Context for next session**:
 - Branch atual: `7-feat-camada-de-curadoria-contribuicoes-de-nao-auditores-vao-para-fila-pendentes-de-aprovacao`
 - CORE-05 e CORE-06 (Curation Layer) estão em desenvolvimento nessa branch — issue #7
 - Spec de design em `docs/` (commit `9a07037`)
 - Phase 1 é pré-requisito absoluto; não avançar para Phase 2 ou 3 sem Phase 1 completa
+- Plan 01-03 deliverables: TransferController, LifecycleFacet regression suite, WebhookInbox processor

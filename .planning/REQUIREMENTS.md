@@ -16,10 +16,10 @@ _Generated: 2026-05-08 | v1 scope: backend completo production-ready (6 sub-sist
 
 ### CORE — Core Gap Closure
 
-- [ ] **CORE-01**: `LifecycleFacet` — enforce state transitions: `DRAFT → ACTIVE → SUSPENDED → ARCHIVED`, `ACTIVE → BURNED`, `ACTIVE → AWAITING_PAYMENT`, `AWAITING_PAYMENT → ACTIVE`
-- [ ] **CORE-02**: `TransferRegistryFacet` — `PATCH /api/v1/assets/:id/lifecycle` REST semântico para mudanças de estado
-- [ ] **CORE-03**: `SchedulerService` — node-cron trigger para `AnchorQueueService` (hoje só roda se chamado manualmente)
-- [ ] **CORE-04**: MercadoPago webhook — `POST /api/v1/webhooks/mercadopago` com validação de assinatura própria, sem `apiKeyAuth`
+- [x] **CORE-01**: `LifecycleFacet` — enforce state transitions: `DRAFT → ACTIVE → SUSPENDED → ARCHIVED`, `ACTIVE → BURNED`, `ACTIVE → AWAITING_PAYMENT`, `AWAITING_PAYMENT → ACTIVE` — DONE 2026-05-09
+- [x] **CORE-02**: `TransferRegistryFacet` — `PATCH /api/v1/assets/:assetId/transfer` REST wrapper criado com middleware chain completo — DONE 2026-05-09
+- [x] **CORE-03**: `SchedulerService` — node-cron trigger ativo no server.ts startup + WebhookInbox cron job adicionado — DONE 2026-05-09
+- [x] **CORE-04**: MercadoPago webhook — HMAC validado + WebhookInbox processor + `MP_WEBHOOK_SECRET` obrigatório em produção — DONE 2026-05-09
 - [ ] **CORE-05**: Curation Layer — contribuições submetidas por não-auditores entram em fila pendente de aprovação (`PENDING_REVIEW` status)
 - [ ] **CORE-06**: Fluxo de aprovação — auditors com role `OPERATOR` ou `ADMIN` podem aprovar/rejeitar contribuições pendentes, com registro em `EventLog`
 
@@ -108,10 +108,10 @@ _Updated: 2026-05-08 — ROADMAP.md created (gsd-new-project, brownfield)_
 | SEC-04 | Phase 1 | Done 2026-05-08 |
 | SEC-05 | Phase 1 | Done 2026-05-08 |
 | SEC-06 | Phase 1 | Done 2026-05-08 |
-| CORE-01 | Phase 1 | Pending |
-| CORE-02 | Phase 1 | Pending |
-| CORE-03 | Phase 1 | Pending |
-| CORE-04 | Phase 1 | Pending |
+| CORE-01 | Phase 1 | Done 2026-05-09 |
+| CORE-02 | Phase 1 | Done 2026-05-09 |
+| CORE-03 | Phase 1 | Done 2026-05-09 |
+| CORE-04 | Phase 1 | Done 2026-05-09 |
 | CORE-05 | Phase 1 | Pending |
 | CORE-06 | Phase 1 | Pending |
 | DOC-01 | Phase 2 | Pending |

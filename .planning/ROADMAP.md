@@ -23,7 +23,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 ## Phases
 
-- [ ] **Phase 1: Core Gap Closure + Production Hardening** _(Plan 02/04 complete)_ — Fechar falhas de segurança críticas e conectar features inacessíveis antes de qualquer expansão
+- [ ] **Phase 1: Core Gap Closure + Production Hardening** _(Plan 03/04 complete)_ — Fechar falhas de segurança críticas e conectar features inacessíveis antes de qualquer expansão
 - [ ] **Phase 2: Document Verification + QTAG Production** — Verificação pública de documentos e NFC commissioning funcionando em produção
 - [ ] **Phase 3: Pluggable DLT Workers — Stellar/Soroban Priority** — Adapter Stellar para hackathon + infraestrutura multi-chain
 - [ ] **Phase 4: Scale + Observability Infrastructure** — Redis, Pino, Sentry, BullMQ — plataforma multi-instância pronta para carga real
@@ -52,7 +52,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 **Wave 1** *(paralelos — sem dependências entre si)*
   - [x] 01-01-PLAN.md — PQC Security fixes: SEC-01 (KMS fail-fast), SEC-02 (verifySignature real), SEC-03 (CircuitBreaker Falcon-512) — DONE 2026-05-08
   - [x] 01-02-PLAN.md — AnchorQueue + Registry: SEC-04 (SKIP LOCKED), SEC-05 (document.verify selector), SEC-06 (tenantId em ChainTransaction) — DONE 2026-05-08
-  - [ ] 01-03-PLAN.md — Core Gaps: CORE-01 (Lifecycle regression), CORE-02 (PATCH /transfer), CORE-03 (Scheduler), CORE-04 (MP webhook + Inbox)
+  - [x] 01-03-PLAN.md — Core Gaps: CORE-01 (Lifecycle regression), CORE-02 (PATCH /transfer), CORE-03 (Scheduler), CORE-04 (MP webhook + Inbox) — DONE 2026-05-09
 
 **Wave 2** *(bloqueado pela Wave 1 completa)*
   - [ ] 01-04-PLAN.md — Curation Layer: CORE-05 (PendingContribution) + CORE-06 (review flow) + `[BLOCKING] npx prisma db push`
