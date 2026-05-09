@@ -86,8 +86,15 @@ export class KMSService {
         .digest();
       this.masterKeyCache = new Uint8Array(derived);
     } else {
-      // Generate a fresh Falcon-512 keypair and use the private key as master
-      // This is dev-only behavior; production MUST provide QUANTUM_CERT_SECRET
+      // Production: refuse to proceed without a stable secret — an ephemeral key
+      // would make all Falcon-signed data unverifiable after a restart.
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error(
+          'QUANTUM_CERT_SECRET is required in production — refusing to generate ephemeral Falcon master key'
+        );
+      }
+
+      // Dev/test: generate ephemeral key with a visible warning
       console.warn(
         '[KMSService] QUANTUM_CERT_SECRET not configured. ' +
         'Generating ephemeral master key (DEV ONLY).'

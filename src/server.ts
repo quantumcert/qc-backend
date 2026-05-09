@@ -224,7 +224,14 @@ app.use(errorHandler);
 // SERVER STARTUP (skipped when imported by test suite)
 // -----------------------------------------------------------
 if (process.env.NODE_ENV !== 'test') {
-  const REQUIRED_ENV_VARS = ['DATABASE_URL', 'ALGOD_SERVER', 'ALGORAND_MASTER_MNEMONIC'];
+  const REQUIRED_ENV_VARS = [
+    'DATABASE_URL',
+    'ALGOD_SERVER',
+    'ALGORAND_MASTER_MNEMONIC',
+    ...(process.env.NODE_ENV === 'production'
+      ? ['QUANTUM_CERT_SECRET', 'MP_WEBHOOK_SECRET', 'CIRCUIT_BREAKER_ADMIN_PUBKEY']
+      : []),
+  ];
   const missingVars = REQUIRED_ENV_VARS.filter(v => !process.env[v]);
 
   if (missingVars.length > 0) {
