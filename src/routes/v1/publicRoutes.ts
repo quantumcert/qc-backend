@@ -8,6 +8,7 @@ import { Router } from 'express';
 import { ContextRouterController } from '../../controllers/ContextRouterController';
 import { BlindContactController } from '../../controllers/BlindContactController';
 import { DocumentVerificationFacet } from '../../services/core-facets/DocumentVerificationFacet';
+import { CurationFacet } from '../../services/core-facets/CurationFacet';
 import { optionalApiKey } from '../../middleware/apiKeyAuth';
 
 const router = Router();
@@ -68,6 +69,31 @@ router.post('/asset/:id/contact', BlindContactController.submitContact);
  *       404:
  *         description: Nenhum documento encontrado com este hash
  */
+// Curation Layer — CORE-05: Public contribution submission (no API key required)
+// POST /api/v1/public/asset/:assetId/contribution
+router.post('/asset/:assetId/contribution', async (req, res, next) => {
+    try {
+        const { assetId } = req.params;
+        const { phone, email, payload } = req.body;
+        const result = await CurationFacet.submitContribution({
+            assetId,
+            phone,
+            email,
+            payload: payload ?? {},
+        });
+        return res.status(201).json({ success: true, data: result });
+    } catch (err: any) {
+        if (err.httpStatus) {
+            return res.status(err.httpStatus).json({
+                success: false,
+                error: err.message,
+                code: err.code,
+            });
+        }
+        next(err);
+    }
+});
+
 // Sub-sistema 3: Zero-Knowledge Document Verification
 router.get('/verify/document/:hash', async (req, res, next) => {
     try {
