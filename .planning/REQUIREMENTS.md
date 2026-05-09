@@ -112,8 +112,8 @@ _Updated: 2026-05-08 — ROADMAP.md created (gsd-new-project, brownfield)_
 | CORE-02 | Phase 1 | Done 2026-05-09 |
 | CORE-03 | Phase 1 | Done 2026-05-09 |
 | CORE-04 | Phase 1 | Done 2026-05-09 |
-| CORE-05 | Phase 1 | Pending |
-| CORE-06 | Phase 1 | Pending |
+| CORE-05 | Phase 1 | Done 2026-05-09 |
+| CORE-06 | Phase 1 | Done 2026-05-09 |
 | DOC-01 | Phase 2 | Pending |
 | DOC-02 | Phase 2 | Pending |
 | DOC-03 | Phase 2 | Pending |
