@@ -27,7 +27,16 @@ Phase 2 [          ] 0%
 Phase 3 [          ] 0%
 Phase 4 [          ] 0%
 Phase 5 [          ] 0%
+Phase 6 [          ] 0%
 ```
+
+---
+
+## GitHub Project
+
+**Org Project**: https://github.com/orgs/quantumcert/projects/1
+**Milestones**: M#1..M#6 criados em quantumcert/qc-backend
+**Issue assignment**: #5→M1, #7→M1, #8→M1, #12→M2, #2→M2, #11→M3, #13→M4, #3→M5, #10→M6, #15→M6
 
 ---
 
@@ -35,9 +44,9 @@ Phase 5 [          ] 0%
 
 | Metric | Value |
 |--------|-------|
-| Phases total | 5 |
-| Requirements total (v1) | 36 |
-| Requirements mapped | 36/36 |
+| Phases total | 6 |
+| Requirements total (v1) | 41 (36 original + 5 FACET) |
+| Requirements mapped | 41/41 |
 | Plans written | 0 |
 | Plans complete | 0 |
 
@@ -73,7 +82,7 @@ _Nenhum todo pendente._
 
 ## Session Continuity
 
-**Last session**: 2026-05-08 — Roadmap criado via `gsd-new-project` (brownfield initialization)
+**Last session**: 2026-05-08 — Roadmap ajustado: Phase 6 adicionada, 6 GitHub Milestones criados, issues atribuídas
 
 **Next action**: `/gsd-plan-phase 1` — decompor Phase 1 em planos executáveis
 

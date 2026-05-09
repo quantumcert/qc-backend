@@ -66,6 +66,14 @@ _Generated: 2026-05-08 | v1 scope: backend completo production-ready (6 sub-sist
 - [ ] **M2M-02**: `POST /api/v1/agent/event` — endpoint dedicado para ingestão de eventos de dispositivos M2M
 - [ ] **M2M-03**: Validação de assinatura Falcon-512 no payload do agente — garante autenticidade do dispositivo
 
+### FACET — Specialized Domain Facets (Phase 6)
+
+- [ ] **FACET-01**: `ERecycleFacet` — registro de resíduos e emissão de créditos ambientais ancorables em blockchain ([#10](https://github.com/quantumcert/qc-backend/issues/10))
+- [ ] **FACET-02**: Transferência Multi-Party — N assinaturas configuráveis obrigatórias antes de processar transferência de ownership ([#15](https://github.com/quantumcert/qc-backend/issues/15))
+- [ ] **FACET-03**: Validação biométrica — match biométrico do owner bloqueia transferência não autorizada ([#15](https://github.com/quantumcert/qc-backend/issues/15))
+- [ ] **FACET-04**: Geração de Contrato Dinâmico — contrato gerado automaticamente no evento de transferência com dados do asset e das partes ([#15](https://github.com/quantumcert/qc-backend/issues/15))
+- [ ] **FACET-05**: Todos os Facets da Fase 6 seguem a Golden Rule — zero termos de domínio no core, payload 100% opaco
+
 ---
 
 ## v2 Requirements (Deferred)
@@ -131,3 +139,8 @@ _Updated: 2026-05-08 — ROADMAP.md created (gsd-new-project, brownfield)_
 | M2M-01 | Phase 5 | Pending |
 | M2M-02 | Phase 5 | Pending |
 | M2M-03 | Phase 5 | Pending |
+| FACET-01 | Phase 6 | Pending |
+| FACET-02 | Phase 6 | Pending |
+| FACET-03 | Phase 6 | Pending |
+| FACET-04 | Phase 6 | Pending |
+| FACET-05 | Phase 6 | Pending |

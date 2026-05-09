@@ -1,6 +1,23 @@
 # ROADMAP — Quantum Cert Backend
 _Generated: 2026-05-08 | Granularity: standard | Mode: mvp_
-_Coverage: 36/36 v1 requirements mapped_
+_Coverage: 36/36 v1 requirements mapped + Phase 6 (domain facets)_
+_GitHub Project: https://github.com/orgs/quantumcert/projects/1_
+
+---
+
+## GitHub Milestone Mapping
+
+| GSD Phase | GitHub Milestone | Issues |
+|-----------|-----------------|--------|
+| Phase 1 | Milestone #1 | #5, #7, #8 |
+| Phase 2 | Milestone #2 | #12, #2 |
+| Phase 3 | Milestone #3 | #11 |
+| Phase 4 | Milestone #4 | #13 |
+| Phase 5 | Milestone #5 | #3 |
+| Phase 6 | Milestone #6 | #10, #15 |
+
+> Each GSD plan within a phase maps to a GitHub Issue (existing or new).
+> Branch naming: `{issue-number}-{type}-{description}`
 
 ---
 
@@ -11,6 +28,7 @@ _Coverage: 36/36 v1 requirements mapped_
 - [ ] **Phase 3: Pluggable DLT Workers — Stellar/Soroban Priority** — Adapter Stellar para hackathon + infraestrutura multi-chain
 - [ ] **Phase 4: Scale + Observability Infrastructure** — Redis, Pino, Sentry, BullMQ — plataforma multi-instância pronta para carga real
 - [ ] **Phase 5: EscrowFacet + Time-Lock Oracle + M2M** — Escrow on-chain com time-lock e registro de agentes IoT
+- [ ] **Phase 6: Specialized Domain Facets** — ERecycleFacet, transferência Multi-Party, biometria, contratos dinâmicos
 
 ---
 
@@ -19,6 +37,8 @@ _Coverage: 36/36 v1 requirements mapped_
 ### Phase 1: Core Gap Closure + Production Hardening
 **Goal**: A plataforma opera sem riscos catastróficos — chaves Falcon persistidas, verificação real implementada, circuit breaker seguro, e todas as features existentes alcançáveis via Diamond
 **Mode:** mvp
+**GitHub Milestone**: [#1](https://github.com/quantumcert/qc-backend/milestone/1)
+**GitHub Issues**: [#5](https://github.com/quantumcert/qc-backend/issues/5) (Criptografia centralizada), [#7](https://github.com/quantumcert/qc-backend/issues/7) (Curation Layer — **branch atual**), [#8](https://github.com/quantumcert/qc-backend/issues/8) (Bloqueio transferência + Emancipação)
 **Depends on**: Nothing (first phase)
 **Requirements**: SEC-01, SEC-02, SEC-03, SEC-04, SEC-05, SEC-06, CORE-01, CORE-02, CORE-03, CORE-04, CORE-05, CORE-06
 **Success Criteria** (what must be TRUE):
@@ -32,6 +52,8 @@ _Coverage: 36/36 v1 requirements mapped_
 ### Phase 2: Document Verification + QTAG Production
 **Goal**: Qualquer pessoa pode verificar a autenticidade de um documento via hash público, e NFC commissioning funciona em produção com KMS real
 **Mode:** mvp
+**GitHub Milestone**: [#2](https://github.com/quantumcert/qc-backend/milestone/2)
+**GitHub Issues**: [#12](https://github.com/quantumcert/qc-backend/issues/12) (Validador público), [#2](https://github.com/quantumcert/qc-backend/issues/2) (Bridge qc-record-module → Diamond)
 **Depends on**: Phase 1
 **Requirements**: DOC-01, DOC-02, DOC-03, QTAG-01, QTAG-02
 **Success Criteria** (what must be TRUE):
@@ -45,6 +67,8 @@ _Coverage: 36/36 v1 requirements mapped_
 ### Phase 3: Pluggable DLT Workers — Stellar/Soroban Priority
 **Goal**: Tenants podem ancorar eventos em Stellar (hackathon) e a infraestrutura multi-chain está pronta para adicionar novas chains sem tocar no core
 **Mode:** mvp
+**GitHub Milestone**: [#3](https://github.com/quantumcert/qc-backend/milestone/3)
+**GitHub Issues**: [#11](https://github.com/quantumcert/qc-backend/issues/11) (TikinEscrowFacet — Soroban/Stellar adapter)
 **Depends on**: Phase 1
 **Requirements**: DLT-01, DLT-02, DLT-03, DLT-04, DLT-05
 **Success Criteria** (what must be TRUE):
@@ -57,6 +81,8 @@ _Coverage: 36/36 v1 requirements mapped_
 ### Phase 4: Scale + Observability Infrastructure
 **Goal**: A plataforma opera corretamente em múltiplas instâncias simultâneas com observabilidade de produção completa
 **Mode:** mvp
+**GitHub Milestone**: [#4](https://github.com/quantumcert/qc-backend/milestone/4)
+**GitHub Issues**: [#13](https://github.com/quantumcert/qc-backend/issues/13) (Revisar mensagens de erro/docs)
 **Depends on**: Phase 1
 **Requirements**: OPS-01, OPS-02, OPS-03, OPS-04, OPS-05, OPS-06, OPS-07
 **Success Criteria** (what must be TRUE):
@@ -70,6 +96,8 @@ _Coverage: 36/36 v1 requirements mapped_
 ### Phase 5: EscrowFacet + Time-Lock Oracle + M2M
 **Goal**: Assets podem ser travados em escrow on-chain com liberação automática por tempo, e dispositivos IoT autenticados podem injetar eventos com assinatura Falcon
 **Mode:** mvp
+**GitHub Milestone**: [#5](https://github.com/quantumcert/qc-backend/milestone/5)
+**GitHub Issues**: [#3](https://github.com/quantumcert/qc-backend/issues/3) (AgentRegistryFacet + qc-universal-gateway)
 **Depends on**: Phase 3, Phase 4
 **Requirements**: ESC-01, ESC-02, ESC-03, ESC-04, ESC-05, M2M-01, M2M-02, M2M-03
 **Success Criteria** (what must be TRUE):
@@ -80,14 +108,30 @@ _Coverage: 36/36 v1 requirements mapped_
   5. Um agente não registrado para o tenant não consegue injetar eventos — `AgentRegistryFacet` valida pertencimento antes de processar
 **Plans**: TBD
 
+### Phase 6: Specialized Domain Facets
+**Goal**: Facets de domínio especializado ampliam a plataforma para casos de uso avançados: créditos ambientais, transferência com múltiplas assinaturas, validação biométrica e geração automática de contratos
+**Mode:** mvp
+**GitHub Milestone**: [#6](https://github.com/quantumcert/qc-backend/milestone/6)
+**GitHub Issues**: [#10](https://github.com/quantumcert/qc-backend/issues/10) (ERecycleFacet — resíduos + créditos ambientais), [#15](https://github.com/quantumcert/qc-backend/issues/15) (Transferência Multi-Party, Biometria, Contrato Dinâmico)
+**Depends on**: Phase 5
+**Requirements**: FACET-01, FACET-02, FACET-03, FACET-04, FACET-05
+**Success Criteria** (what must be TRUE):
+  1. Um tenant pode registrar resíduos via `ERecycleFacet` e receber créditos ambientais ancorables em blockchain
+  2. Uma transferência de ownership exige N assinaturas configuráveis antes de ser processada — multi-party enforced pelo Facet
+  3. Validação biométrica bloqueia transferência sem match do owner cadastrado
+  4. Um contrato dinâmico é gerado automaticamente no evento de transferência com os dados do asset e das partes
+  5. Todos os novos Facets seguem a Golden Rule — zero termos de domínio específico no core, payload opaco
+**Plans**: TBD
+
 ---
 
 ## Progress Table
 
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Core Gap Closure + Production Hardening | 0/? | Not started | - |
-| 2. Document Verification + QTAG Production | 0/? | Not started | - |
-| 3. Pluggable DLT Workers — Stellar/Soroban Priority | 0/? | Not started | - |
-| 4. Scale + Observability Infrastructure | 0/? | Not started | - |
-| 5. EscrowFacet + Time-Lock Oracle + M2M | 0/? | Not started | - |
+| Phase | GitHub Milestone | Issues | Plans Complete | Status | Completed |
+|-------|-----------------|--------|----------------|--------|-----------|
+| 1. Core Gap Closure + Production Hardening | [M#1](https://github.com/quantumcert/qc-backend/milestone/1) | #5, #7, #8 | 0/? | Not started | - |
+| 2. Document Verification + QTAG Production | [M#2](https://github.com/quantumcert/qc-backend/milestone/2) | #12, #2 | 0/? | Not started | - |
+| 3. Pluggable DLT Workers — Stellar/Soroban Priority | [M#3](https://github.com/quantumcert/qc-backend/milestone/3) | #11 | 0/? | Not started | - |
+| 4. Scale + Observability Infrastructure | [M#4](https://github.com/quantumcert/qc-backend/milestone/4) | #13 | 0/? | Not started | - |
+| 5. EscrowFacet + Time-Lock Oracle + M2M | [M#5](https://github.com/quantumcert/qc-backend/milestone/5) | #3 | 0/? | Not started | - |
+| 6. Specialized Domain Facets | [M#6](https://github.com/quantumcert/qc-backend/milestone/6) | #10, #15 | 0/? | Not started | - |
