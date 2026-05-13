@@ -17,6 +17,8 @@ import { CommissioningFacet } from '../services/core-facets/CommissioningFacet';
 import { AgentRegistryFacet } from '../services/core-facets/AgentRegistryFacet';
 import { EscrowFacet } from '../services/core-facets/EscrowFacet';
 import { DocumentVerificationFacet } from '../services/core-facets/DocumentVerificationFacet';
+import { ERecycleFacet } from '../services/core-facets/ERecycleFacet';
+
 
 export type FacetFunction = (...args: any[]) => Promise<any> | any;
 
@@ -69,4 +71,9 @@ export const FacetRegistry: Record<string, FacetFunction> = {
 
     // DOCUMENT VERIFICATION (public — ctx is ignored, only payload.hash is used)
     'document.verify': (_ctx: any, payload: any) => DocumentVerificationFacet.verifyByHash(payload.hash),
+
+    // ERE CYCLE (ERecycleFacet)
+    'erecycle.recordWaste': (ctx: any, payload: any) => ERecycleFacet.recordWaste(ctx, payload),
+    'erecycle.issueCredit': (ctx: any, payload: any) => ERecycleFacet.issueCredit(ctx, payload),
 };
+
