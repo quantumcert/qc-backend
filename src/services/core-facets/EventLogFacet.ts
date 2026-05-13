@@ -50,6 +50,16 @@ export class EventLogFacet {
             }
         }
 
+        if (documentHash) {
+            const existing = await prisma.eventLog.findFirst({
+                where: { tenantId: asset.tenantId, documentHash },
+            });
+
+            if (existing) {
+                return existing;
+            }
+        }
+
         // Generate SHA3-512 Hash for Phase 6 DLT Anchor (Quantum Resistant)
         const signatureHash = crypto.createHash('sha3-512').update(JSON.stringify(payload)).digest('hex');
 

@@ -440,6 +440,7 @@ model EventLog {
   @@index([status])
   @@index([createdAt])
   @@index([documentHash])
+  @@unique([tenantId, documentHash])
   @@index([status, dltTxId]) // RED TEAM HOTFIX 5: Anti-OOM Full Table Scan Lock
 }
 

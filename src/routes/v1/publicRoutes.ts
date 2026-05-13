@@ -66,20 +66,58 @@ router.post('/asset/:id/contact', BlindContactController.submitContact);
  *                   example: true
  *                 assetId:
  *                   type: string
+ *                 assetStatus:
+ *                   type: string
+ *                 publicUrl:
+ *                   type: string
+ *                   nullable: true
  *                 eventId:
  *                   type: string
  *                 dltTxId:
  *                   type: string
+ *                   nullable: true
  *                 anchoredAt:
  *                   type: string
  *                   format: date-time
  *                 chain:
  *                   type: string
  *                   example: ALGORAND
+ *                 issuerId:
+ *                   type: string
+ *                   nullable: true
+ *                 confirmationStatus:
+ *                   type: string
+ *                   example: CONFIRMED
  *       400:
  *         description: Formato de hash inválido (não é SHA3-512 hex de 128 chars)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                 code:
+ *                   type: string
+ *                   example: INVALID_DOCUMENT_HASH
  *       404:
  *         description: Nenhum documento encontrado com este hash
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                 code:
+ *                   type: string
+ *                   example: DOCUMENT_NOT_FOUND
  */
 // Curation Layer — CORE-05: Public contribution submission (no API key required)
 // POST /api/v1/public/asset/:assetId/contribution
@@ -113,17 +151,32 @@ router.get('/verify/document/:hash', async (req, res, next) => {
         const result = await DocumentVerificationFacet.verifyByHash(hash);
 
         if (!result.verified) {
-            return res.status(404).json({ verified: false });
+            if (result.reason === 'INVALID_DOCUMENT_HASH') {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Invalid document hash: must be a 128-character SHA3-512 hex string.',
+                    code: 'INVALID_DOCUMENT_HASH',
+                });
+            }
+
+            return res.status(404).json({
+                success: false,
+                error: 'Document not found.',
+                code: 'DOCUMENT_NOT_FOUND',
+            });
         }
 
         return res.status(200).json({
             verified: true,
             assetId: result.assetId,
             assetStatus: result.assetStatus,
+            publicUrl: result.publicUrl,
             dltTxId: result.dltTxId,
+            chain: result.chain,
             anchoredAt: result.anchoredAt,
             eventId: result.eventId,
             issuerId: result.issuerId,
+            confirmationStatus: result.confirmationStatus,
         });
     } catch (err) {
         next(err);
