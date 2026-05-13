@@ -54,6 +54,7 @@ model Tenant {
   chainTransactions    ChainTransaction[] // Multi-Chain Tx Logging
   pendingTransactions  PendingTransaction[] // Retry Worker Queue
   userWallets          UserWallet[] // Custodial deposit addresses
+  tenantSecrets        TenantSecret[] // KMS-wrapped tenant-scoped secrets
   deposits             Deposit[] // Incoming stablecoin deposits
   agents               Agent[] // M2M / IoT Agent identities
   contributors         Contributor[] // Curation Layer — CORE-05
@@ -637,6 +638,28 @@ model MasterKey {
   metadata Json?
 
   @@index([keyType])
+  @@index([isActive])
+}
+
+model TenantSecret {
+  id String @id @default(cuid())
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  purpose String
+  keyType String @default("FALCON-512")
+  encryptedSecret String
+  publicKeyB64 String?
+  keyWrapVersion Int @default(1)
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  rotatedAt DateTime?
+
+  @@unique([tenantId, purpose])
+  @@index([tenantId])
+  @@index([purpose])
   @@index([isActive])
 }
 

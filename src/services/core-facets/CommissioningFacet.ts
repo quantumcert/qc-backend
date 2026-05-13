@@ -44,11 +44,7 @@ export class CommissioningFacet {
     const kms = KMSService.getInstance();
     const signer = QuantumSignerService.getInstance();
     const metadataJson = JSON.stringify(metadata);
-    // TODO: replace with tenant-scoped key from KMS (e.g. KMSService.getInstance().getTenantSecret(ctx.tenantId))
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('[CommissioningFacet] tenantSecretHex must be configured via KMS in production');
-    }
-    const tenantSecretHex = Buffer.alloc(64, 0).toString('hex');
+    const tenantSecretHex = await kms.getTenantSecretHex(ctx.tenantId, 'qtag-commissioning');
 
     // Step 1-2: Falcon-512 sign metadata
     const hybrid = await signer.signPayload(
@@ -117,7 +113,7 @@ export class CommissioningFacet {
       pages,
       sdmMacKey: sdmMacKeyPlain,
       writeKey: writeKeyPlain,
-      lockAfterWrite: false,
+      lockAfterWrite: process.env.NODE_ENV === 'production',
     };
   }
 
