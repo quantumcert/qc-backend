@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import crypto from 'node:crypto';
+import express from 'express';
+import request from 'supertest';
 
 vi.mock('../src/config/prisma', () => ({
   default: {
@@ -21,6 +23,7 @@ vi.mock('../src/services/KMSService', () => ({
 import { SDMVerifierService } from '../src/services/SDMVerifierService';
 import { QTagCryptoService } from '../src/services/QTagCryptoService';
 import prisma from '../src/config/prisma';
+import apiRouter from '../src/routes/index';
 
 const mockDevice = prisma.device as any;
 const mockDeviceTapLog = prisma.deviceTapLog as any;
@@ -30,6 +33,12 @@ const mockTransaction = (prisma as any).$transaction as ReturnType<typeof vi.fn>
 const ENC_KEY = '00'.repeat(16);
 const MAC_KEY = '00'.repeat(16);
 const UID = '04aabbccddee00';
+
+const createApiApp = () => {
+  const app = express();
+  app.use('/api', apiRouter);
+  return app;
+};
 
 function buildPiccData(uid: string, ctr: number, encKeyHex: string): string {
   const plain = Buffer.alloc(16, 0);
@@ -105,6 +114,16 @@ describe('SDMVerifierService.verifyTap', () => {
 
     expect(result.status).toBe('DENIED');
     expect(result.reason).toBe('MAC_INVALID');
+    expect(mockDeviceTapLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        deviceId: 'dev-1',
+        counterValue: 5,
+        cmacReceived: 'deadbeefdeadbeef',
+        cmacValid: false,
+        verdict: 'CMAC_INVALID',
+        ipAddress: '127.0.0.1',
+      }),
+    });
   });
 
   it('returns DENIED/REPLAY_ATTACK when ctr <= lastCounter', async () => {
@@ -124,6 +143,16 @@ describe('SDMVerifierService.verifyTap', () => {
 
     expect(result.status).toBe('DENIED');
     expect(result.reason).toBe('REPLAY_ATTACK');
+    expect(mockDeviceTapLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        deviceId: 'dev-1',
+        counterValue: 3,
+        cmacReceived: cmac,
+        cmacValid: true,
+        verdict: 'REPLAY_BLOCKED',
+        ipAddress: '127.0.0.1',
+      }),
+    });
   });
 
   it('returns DENIED/DEVICE_NOT_FOUND when device is null', async () => {
@@ -143,6 +172,7 @@ describe('SDMVerifierService.verifyTap', () => {
 
     expect(result.status).toBe('DENIED');
     expect(result.reason).toBe('DEVICE_NOT_FOUND');
+    expect(mockDeviceTapLog.create).not.toHaveBeenCalled();
   });
 
   it('returns DENIED/DEVICE_INACTIVE for inactive device', async () => {
@@ -162,6 +192,16 @@ describe('SDMVerifierService.verifyTap', () => {
 
     expect(result.status).toBe('DENIED');
     expect(result.reason).toBe('DEVICE_INACTIVE');
+    expect(mockDeviceTapLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        deviceId: 'dev-1',
+        counterValue: 0,
+        cmacReceived: cmac,
+        cmacValid: false,
+        verdict: 'DEVICE_INACTIVE',
+        ipAddress: '127.0.0.1',
+      }),
+    });
   });
 
   it('throws INVALID_INPUT for malformed picc_data', async () => {
@@ -198,6 +238,16 @@ describe('SDMVerifierService.verifyTap', () => {
 
     expect(result.status).toBe('DENIED');
     expect(result.reason).toBe('RELAY_ATTACK');
+    expect(mockDeviceTapLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        deviceId: 'dev-1',
+        counterValue: 5,
+        cmacReceived: cmac,
+        cmacValid: true,
+        verdict: 'RELAY_ATTACK',
+        ipAddress: '127.0.0.1',
+      }),
+    });
   });
 
   it('filters metadata to only publicDataKeys', async () => {
@@ -226,5 +276,60 @@ describe('SDMVerifierService.verifyTap', () => {
 
     expect(result.status).toBe('APPROVED');
     expect(result.asset!.metadata).toEqual({ brand: 'QC' });
+  });
+});
+
+describe('GET /api/v1/scan', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('returns 400 when p or m is missing', async () => {
+    const response = await request(createApiApp()).get('/api/v1/scan?p=abcd');
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: 'Missing required parameters: p, m' });
+  });
+
+  it('returns 403 and preserves DENIED body from SDMVerifierService', async () => {
+    const verifyTapSpy = vi.spyOn(SDMVerifierService, 'verifyTap').mockResolvedValue({
+      status: 'DENIED',
+      reason: 'MAC_INVALID',
+      message: 'Assinatura inválida.',
+    });
+
+    const response = await request(createApiApp()).get(`/api/v1/scan?p=${'0'.repeat(32)}&m=${'0'.repeat(16)}`);
+
+    expect(response.status).toBe(403);
+    expect(response.body).toEqual({
+      status: 'DENIED',
+      reason: 'MAC_INVALID',
+      message: 'Assinatura inválida.',
+    });
+    verifyTapSpy.mockRestore();
+  });
+
+  it('returns 400 when verifier rejects malformed NFC parameters', async () => {
+    const verifyTapSpy = vi.spyOn(SDMVerifierService, 'verifyTap').mockRejectedValue(new Error('INVALID_INPUT'));
+
+    const response = await request(createApiApp()).get(`/api/v1/scan?p=${'0'.repeat(32)}&m=${'0'.repeat(16)}`);
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: 'Invalid NFC parameters.' });
+    verifyTapSpy.mockRestore();
+  });
+
+  it('returns 200 when verifier approves a tap', async () => {
+    const verifyTapSpy = vi.spyOn(SDMVerifierService, 'verifyTap').mockResolvedValue({
+      status: 'APPROVED',
+      counter: 5,
+    });
+
+    const response = await request(createApiApp()).get(`/api/v1/scan?p=${'0'.repeat(32)}&m=${'0'.repeat(16)}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      status: 'APPROVED',
+      counter: 5,
+    });
+    verifyTapSpy.mockRestore();
   });
 });

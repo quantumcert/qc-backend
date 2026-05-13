@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import prisma from '../config/prisma';
 import { KMSService } from './KMSService';
 import { QTagCryptoService } from './QTagCryptoService';
+import { TapVerdict } from '../types';
 
 export interface VerifyTapInput {
   piccDataHex: string;
@@ -62,6 +63,12 @@ export class SDMVerifierService {
     }
 
     if (!device.isActive) {
+      await SDMVerifierService.logDeniedTap({
+        device,
+        input,
+        reason: 'DEVICE_INACTIVE',
+        cmacValid: false,
+      });
       return SDMVerifierService.denied('DEVICE_INACTIVE');
     }
 
@@ -90,11 +97,25 @@ export class SDMVerifierService {
     const receivedBuf = Buffer.from(cmacHex.toLowerCase(), 'hex');
 
     if (expectedBuf.length !== receivedBuf.length || !crypto.timingSafeEqual(expectedBuf, receivedBuf)) {
+      await SDMVerifierService.logDeniedTap({
+        device,
+        input,
+        reason: 'MAC_INVALID',
+        ctr,
+        cmacValid: false,
+      });
       return SDMVerifierService.denied('MAC_INVALID');
     }
 
     // ── Layer 3: Monotonic counter check ──────────────────────────
     if (ctr <= device.lastCounter) {
+      await SDMVerifierService.logDeniedTap({
+        device,
+        input,
+        reason: 'REPLAY_ATTACK',
+        ctr,
+        cmacValid: true,
+      });
       return SDMVerifierService.denied('REPLAY_ATTACK');
     }
 
@@ -108,6 +129,13 @@ export class SDMVerifierService {
     });
 
     if (!geoCheck.ok) {
+      await SDMVerifierService.logDeniedTap({
+        device,
+        input,
+        reason: 'RELAY_ATTACK',
+        ctr,
+        cmacValid: true,
+      });
       return SDMVerifierService.denied('RELAY_ATTACK');
     }
 
@@ -177,5 +205,38 @@ export class SDMVerifierService {
 
   private static denied(reason: DeniedReason): TapResult {
     return { status: 'DENIED', reason, message: DENY_MESSAGES[reason] };
+  }
+
+  private static async logDeniedTap(params: {
+    device: { id: string };
+    input: VerifyTapInput;
+    reason: DeniedReason;
+    ctr?: number;
+    cmacValid: boolean;
+  }): Promise<void> {
+    const verdictByReason: Record<DeniedReason, TapVerdict | null> = {
+      MAC_INVALID: TapVerdict.CMAC_INVALID,
+      REPLAY_ATTACK: TapVerdict.REPLAY_BLOCKED,
+      RELAY_ATTACK: TapVerdict.RELAY_ATTACK,
+      DEVICE_INACTIVE: TapVerdict.DEVICE_INACTIVE,
+      DEVICE_NOT_FOUND: null,
+    };
+    const verdict = verdictByReason[params.reason];
+
+    if (!verdict) {
+      return;
+    }
+
+    await (prisma as any).deviceTapLog.create({
+      data: {
+        deviceId: params.device.id,
+        counterValue: params.ctr ?? 0,
+        cmacReceived: params.input.cmacHex.toLowerCase(),
+        cmacValid: params.cmacValid,
+        verdict,
+        ipAddress: params.input.ip,
+        timestamp: new Date(),
+      },
+    });
   }
 }
