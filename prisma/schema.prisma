@@ -408,6 +408,8 @@ enum TapVerdict {
 model EventLog {
   id String @id @default(cuid())
 
+  wasteLogs WasteLog[]
+
   assetId String
   asset   Asset  @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
@@ -946,10 +948,64 @@ enum EncodingStatus {
   FAILED
 }
 
+// ===========================================================
+// ERE CYCLE (Sustainability & Credits)
+// ===========================================================
+
+enum AnchorStatus {
+  PENDING
+  ANCHORED
+}
+
+model WasteLog {
+  id               String   @id @default(cuid())
+  containerId      String
+  wasteType        String
+  weightKg         Float
+  locationMetadata Json
+  timestamp        DateTime
+
+  eventLogId String?
+  eventLog   EventLog? @relation(fields: [eventLogId], references: [id])
+
+  tenantId String
+
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  EnvironmentalCredit EnvironmentalCredit[]
+
+  @@index([containerId])
+  @@index([tenantId])
+  @@index([timestamp])
+}
+
+model EnvironmentalCredit {
+  id String @id @default(cuid())
+
+  wasteLogId String
+  wasteLog   WasteLog @relation(fields: [wasteLogId], references: [id])
+
+  tenantId String
+
+  creditAmount     Float
+  recipientOwnerId String
+  metadata         Json
+  anchorStatus     AnchorStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([wasteLogId])
+  @@index([tenantId])
+  @@index([anchorStatus])
+}
+
 model EncodingSession {
-  id          String         @id @default(cuid())
-  tenantId    String
-  assetId     String         @unique
+  id       String @id @default(cuid())
+  tenantId String
+
+  assetId String @unique
+
   ntagUID     String
   status      EncodingStatus @default(PENDING)
   layoutB64   String
