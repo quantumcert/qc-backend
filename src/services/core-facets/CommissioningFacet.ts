@@ -68,9 +68,9 @@ export class CommissioningFacet {
       data: {
         tenantId: ctx.tenantId,
         assetId,
-        eventType: 'COMMISSIONING',
-        payload: JSON.stringify({ falconHash: truncatedFalconHash, ntagUID: uid, dat: truncatedDAT }),
-        hash: hybrid.payloadHash,
+        origin: 'COMMISSIONING',
+        payload: { falconHash: truncatedFalconHash, ntagUID: uid, dat: truncatedDAT },
+        signatureHash: hybrid.payloadHash,
         dltTxId: null,
         status: 'PENDING',
       },

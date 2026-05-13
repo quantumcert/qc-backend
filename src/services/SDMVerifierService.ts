@@ -170,7 +170,7 @@ export class SDMVerifierService {
     const asset = await (prisma as any).asset.findFirst({
       where: { deviceId: device.id },
       include: {
-        eventLog: {
+        events: {
           where: { dltTxId: { not: null } },
           orderBy: { createdAt: 'desc' },
           take: 1,
@@ -195,8 +195,8 @@ export class SDMVerifierService {
             id: asset.id,
             publicUrl: `https://qc.io/a/${asset.id}`,
             metadata: publicMetadata,
-            anchorTxId: asset.eventLog?.[0]?.dltTxId ?? undefined,
-            blockHeight: asset.eventLog?.[0]?.blockHeight ?? undefined,
+            anchorTxId: asset.events?.[0]?.dltTxId ?? undefined,
+            blockHeight: asset.events?.[0]?.blockHeight ?? undefined,
             status: asset.status,
           }
         : undefined,

@@ -86,6 +86,17 @@ describe('CommissioningFacet.start', () => {
     expect(mockKmsGetTenantSecretHex).toHaveBeenCalledWith('tenant-1', 'qtag-commissioning');
     expect(mockEncodingSession.create).toHaveBeenCalledOnce();
     expect(mockEventLog.create).toHaveBeenCalledOnce();
+    expect(mockEventLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        tenantId: 'tenant-1',
+        assetId: 'asset-1',
+        origin: 'COMMISSIONING',
+        signatureHash: 'a'.repeat(128),
+        status: 'PENDING',
+      }),
+    });
+    expect(mockEventLog.create.mock.calls[0][0].data).not.toHaveProperty('eventType');
+    expect(mockEventLog.create.mock.calls[0][0].data).not.toHaveProperty('hash');
   });
 
   it('does not persist plaintext one-time SDM or write keys', async () => {

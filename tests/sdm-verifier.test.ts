@@ -78,7 +78,7 @@ describe('SDMVerifierService.verifyTap', () => {
       publicDataKeys: ['type'],
       metadata: { type: 'ring', secret: 'hidden' },
       status: 'ACTIVE',
-      eventLog: [{ dltTxId: 'ALGO_TX_123', blockHeight: 1000 }],
+      events: [{ dltTxId: 'ALGO_TX_123', blockHeight: 1000 }],
     });
     mockTransaction.mockImplementation(async (ops: any[]) => Promise.all(ops.map((op: any) => Promise.resolve(op))));
 
@@ -261,7 +261,7 @@ describe('SDMVerifierService.verifyTap', () => {
       publicDataKeys: ['brand'],
       metadata: { brand: 'QC', serial: 'PRIVATE', owner: 'PRIVATE' },
       status: 'ACTIVE',
-      eventLog: [],
+      events: [],
     });
     mockTransaction.mockImplementation(async (ops: any[]) => Promise.all(ops.map((op: any) => Promise.resolve(op))));
 
