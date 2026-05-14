@@ -27,7 +27,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 - [x] **Phase 1: Core Gap Closure + Production Hardening** _(4/4 plans complete)_ — Fechar falhas de segurança críticas e conectar features inacessíveis antes de qualquer expansão
 - [ ] **Phase 2: Document Verification + QTAG Production** _(3/3 plans complete; human UAT pending)_ — Verificação pública de documentos e NFC commissioning funcionando em produção
-- [ ] **Phase 3: Pluggable DLT Workers — Stellar/Soroban Priority** _(3/3 plans complete; UAT passed; PRs open)_ — Adapter Stellar para hackathon + infraestrutura multi-chain
+- [x] **Phase 3: Pluggable DLT Workers — Stellar/Soroban Priority** _(complete; UAT passed; PRs open for merge)_ — Adapter Stellar para hackathon + infraestrutura multi-chain
 - [ ] **Phase 4: Scale + Observability Infrastructure** — Redis, Pino, Sentry, BullMQ — plataforma multi-instância pronta para carga real
 - [ ] **Phase 5: EscrowFacet + Time-Lock Oracle + M2M** — Escrow on-chain com time-lock e registro de agentes IoT
 - [ ] **Phase 6: Specialized Domain Facets** — ERecycleFacet, transferência Multi-Party, biometria, contratos dinâmicos
@@ -125,7 +125,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 **Scope note:** This hackathon slice follows `03-SPEC.md`; `DLT-02` Solana and `DLT-05` persisted `lastScannedBlock` are intentionally deferred. Stellar is the execution target now, but queue/proof contracts must remain Solana-ready through `targetChain`, `IDLTAdapter`, and generic `blockchain` fields.
 
-**Execution note:** Backend proof and dashboard rendering are implemented; Stellar testnet UAT passed and evidence is recorded in `03-HUMAN-UAT.md`. Shipping PRs: `qc-backend#23` and `qc-dashboard#23`.
+**Completion note:** Backend proof and dashboard rendering are implemented; Stellar testnet UAT passed and evidence is recorded in `03-HUMAN-UAT.md`. Shipping PRs are open for merge: `qc-backend#23` and `qc-dashboard#23`.
 
 **Plans**: 3 plans, 3 waves
 **Cross-repo note:** dashboard proof display belongs to `qc-dashboard` and must render every `blockchain.chain`, not only Stellar; any monetization/pricing decision, including x402/Anchor/BRZ direction, belongs to `qc-business` before it becomes a hard implementation requirement.
@@ -265,7 +265,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 | --------------------------------------------------- | ------------------------------------------------------------ | ---------- | -------------- | ----------------- | ---------- |
 | 1. Core Gap Closure + Production Hardening          | [M#1](https://github.com/quantumcert/qc-backend/milestone/1) | #5, #7, #8 | 4/4            | Complete          | 2026-05-09 |
 | 2. Document Verification + QTAG Production          | [M#2](https://github.com/quantumcert/qc-backend/milestone/2) | #12, #2    | 3/3            | Human UAT pending | -          |
-| 3. Pluggable DLT Workers — Stellar/Soroban Priority | [M#3](https://github.com/quantumcert/qc-backend/milestone/3) | #11        | 3/3            | Shipped for review | 2026-05-14 |
+| 3. Pluggable DLT Workers — Stellar/Soroban Priority | [M#3](https://github.com/quantumcert/qc-backend/milestone/3) | #11        | 3/3            | Complete; PRs open | 2026-05-14 |
 | 4. Scale + Observability Infrastructure             | [M#4](https://github.com/quantumcert/qc-backend/milestone/4) | #13        | 0/?            | Not started       | -          |
 | 5. EscrowFacet + Time-Lock Oracle + M2M             | [M#5](https://github.com/quantumcert/qc-backend/milestone/5) | #3         | 0/?            | Not started       | -          |
 | 6. Specialized Domain Facets                        | [M#6](https://github.com/quantumcert/qc-backend/milestone/6) | #10, #15   | 0/?            | Not started       | -          |
