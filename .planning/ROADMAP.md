@@ -221,6 +221,26 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 - Existing wallet rule already supports credit-only activation through `creditsBalance`.
 - Existing store already models QTAG/QTRACK and credit packages, but physical checkout remains simulated.
 - Existing public verification route can become the post-onboarding certificate/QR destination.
+- `qc-dashboard` already has a `user`/`admin` role concept and server-side `adminProcedure`, but the admin area still needs a dedicated UI module and consistent use of admin-only tRPC procedures.
+
+**Administrative area hypothesis:** create a protected admin module in `qc-dashboard`, for example `/admin/registrations`, with two enforcement layers:
+
+1. UI navigation only shows admin entries when the logged-in user has `role = admin`.
+2. Server-side list/mutation routes use `adminProcedure`; hidden UI alone is not sufficient.
+
+**Admin queues to research:**
+
+- Pending: new registrations awaiting validation.
+- Approved: assets published/certified.
+- Rejected: records with reason and correction path for the user.
+- Flagged: reports, suspicious records, bad documents, or inconsistencies.
+
+**B2B flow to include in research:**
+
+- B2B customers should likely remain real tenants with their own tenant profile, limits, billing/commercial terms, API keys, users, and operational workflows.
+- B2B admins may need bulk asset import, team/user management, approval workflows, API access, branded public verification, QTAG batch fulfillment, and reporting.
+- The admin area must distinguish Quantum Cert platform admins from tenant admins. Platform admins validate/operate the marketplace; tenant admins manage their organization's users/assets.
+- B2B onboarding may need a sales/manual approval path before tenant activation, unlike low-friction B2C self-service.
 
 **Research questions before planning:**
 
@@ -230,6 +250,10 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 4. What backoffice/admin review is required before activation, QTAG issuance, or public certificate publication?
 5. Which steps belong in `qc-dashboard` versus `qc-home`, and which operational/business decisions belong in `qc-business`?
 6. How should `qc-record-module` pair a delivered QTAG to an existing consumer asset without exposing tenant internals?
+7. For admin validation, should assets be public/certified only after approval, active immediately with later audit, or hybrid by category/risk/value?
+8. What role model is required across platform admin, tenant admin, B2B operator, and B2C owner?
+9. What is the B2B onboarding path: self-service tenant signup, invitation, sales-assisted approval, or all three?
+10. Which B2B operations require bulk workflows, API keys, billing controls, and branded verification pages?
 
 **Do not implement yet:** this needs a dedicated research pass and product decision before becoming a roadmap phase.
 
