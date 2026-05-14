@@ -35,7 +35,7 @@ dashboard evidence, and `get_anchor_hash` output in `03-HUMAN-UAT.md`.
 
 - `npx vitest run tests/multi-chain/soroban-adapter.test.ts tests/anchor-queue-stellar.test.ts tests/provision-stellar.test.ts tests/document-verification.test.ts tests/document-payment-gate.test.ts tests/docs.test.ts` - 47 passed
 - `npm run build` in `qc-backend` - passed
-- `cd ../qc-dashboard && npx vitest run server/verify.asset.test.ts` - 11 passed
+- `cd ../qc-dashboard && npx vitest run server/verify.asset.test.ts` - 12 passed
 - `cd ../qc-dashboard && npm run build` - passed
 - `git diff --check` in `qc-backend` - passed
 - `git diff --check` in `qc-dashboard` - passed before dashboard commit

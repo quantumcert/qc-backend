@@ -28,7 +28,7 @@ key-files:
 key-decisions:
   - "Dashboard renders blockchain proof for any chain string; there is no Stellar-only UI filter."
   - "Backend-QC/demo fallback remains intact: missing proof returns blockchain:null instead of failing public verify."
-  - "Human Stellar testnet evidence is required before Phase 3 is ship-ready."
+  - "Human Stellar testnet evidence was required before shipping and is now recorded in 03-HUMAN-UAT.md."
 requirements-completed: [DLT-01, DLT-03, DLT-04]
 duration: 5 min
 completed: 2026-05-14
@@ -36,7 +36,7 @@ completed: 2026-05-14
 
 # Phase 03 Plan 03: Dashboard Proof Card + UAT Summary
 
-**qc-dashboard now propagates and renders generic blockchain proof, with manual Stellar testnet UAT tracked separately.**
+**qc-dashboard now propagates and renders generic blockchain proof, with Stellar testnet UAT completed and recorded.**
 
 ## Performance
 
@@ -52,7 +52,7 @@ completed: 2026-05-14
 - The dashboard server test covers Stellar proof propagation, Solana/future-chain propagation, `blockchain:null`, and local/demo fallback when backend-QC fails.
 - `VerifyAsset.tsx` now normalizes `result.blockchain ?? result.asset.blockchain ?? null` and renders a generic `Verificação Blockchain` card when `chain` and `dltTxId` exist.
 - The UI uses `ShieldCheck` and `ExternalLink`, displays the chain and transaction id, and opens `explorerUrl` only when backend sends it.
-- Created `03-HUMAN-UAT.md` with the Stellar txId, Stellar Expert URL, contract id, EventLog, ChainTransaction, screenshot/note, and `get_anchor_hash` evidence fields.
+- Created and completed `03-HUMAN-UAT.md` with the Stellar txId, Stellar Expert URL, contract id, EventLog, ChainTransaction, screenshot/note, and `get_anchor_hash` evidence fields.
 - ROADMAP/REQUIREMENTS explicitly preserve `DLT-02` Solana and `DLT-05` persisted `lastScannedBlock` as deferred backlog items.
 
 ## Task Commits
@@ -63,7 +63,7 @@ completed: 2026-05-14
 ## Files Created/Modified
 
 - `../qc-dashboard/server/routers.ts` - normalizes and propagates generic `blockchain` proof.
-- `../qc-dashboard/server/verify.asset.test.ts` - adds cross-chain proof and fallback regression coverage.
+- `../qc-dashboard/server/verify.asset.test.ts` - adds cross-chain proof, UUID lookup, and fallback regression coverage.
 - `../qc-dashboard/client/src/pages/VerifyAsset.tsx` - renders the public blockchain proof card.
 - `.planning/phases/03-pluggable-dlt-workers-stellar-soroban-priority/03-HUMAN-UAT.md` - tracks manual Stellar evidence.
 - `.planning/ROADMAP.md` - records execution note and deferred scope.
@@ -73,7 +73,7 @@ completed: 2026-05-14
 
 - Dashboard proof display is chain-agnostic; Stellar is the current UAT target, not a rendering condition.
 - Public verification remains demo-safe: failed backend-QC proof lookups do not break local/demo asset verification.
-- Phase 3 cannot be marked human-accepted until `03-HUMAN-UAT.md` is filled with real Stellar testnet evidence.
+- Phase 3 is human-accepted for the Stellar/Soroban hackathon slice after `03-HUMAN-UAT.md` captured real Stellar testnet evidence.
 
 ## Deviations from Plan
 
@@ -81,11 +81,11 @@ completed: 2026-05-14
 
 ## Issues Encountered
 
-Manual Stellar testnet evidence is pending and must be completed by a human/operator with access to the deployed/testnet environment.
+Manual Stellar testnet evidence was completed by a human/operator with access to the local testnet/UAT environment.
 
 ## Verification
 
-- `cd ../qc-dashboard && npx vitest run server/verify.asset.test.ts` - 11 passed
+- `cd ../qc-dashboard && npx vitest run server/verify.asset.test.ts` - 12 passed
 - `cd ../qc-dashboard && npm run build` - passed
 - `grep -c "blockchain" ../qc-dashboard/server/routers.ts` - passed
 - `grep -c "STELLAR" ../qc-dashboard/server/verify.asset.test.ts` - passed
@@ -98,13 +98,13 @@ Manual Stellar testnet evidence is pending and must be completed by a human/oper
 
 ## User Setup Required
 
-Fill `03-HUMAN-UAT.md` after running real Stellar testnet provisioning, anchor processing, document verification, and dashboard inspection.
+No remaining user setup is required to accept the Stellar/Soroban hackathon slice. Future production deployment still requires real deployment secrets and operator-controlled Stellar env vars.
 
 ## Next Phase Readiness
 
-Implementation is ready for final Phase 3 verification, but shipping remains blocked on manual Stellar UAT evidence.
+Implementation passed final Phase 3 verification and was shipped for review through the backend/dashboard PRs.
 
-## Self-Check: PASSED_WITH_PENDING_HUMAN_UAT
+## Self-Check: PASSED
 
 ---
 *Phase: 03-pluggable-dlt-workers-stellar-soroban-priority*
