@@ -12,6 +12,8 @@ export const Server = vi.fn().mockImplementation(() => ({
 }));
 
 export const assembleTransaction = vi.fn().mockReturnValue({
-  sign: vi.fn(),
-  toXDR: vi.fn().mockReturnValue('fake_xdr'),
+  build: vi.fn().mockReturnValue({
+    sign: vi.fn(),
+    toXDR: vi.fn().mockReturnValue('fake_xdr'),
+  }),
 });

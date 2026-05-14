@@ -9,7 +9,16 @@
     "chat_language": "pt-BR",
     "artifact_language": "pt-BR",
     "allow_codex_coauthorship": false,
-    "commit_footer_policy": "no_codex_coauthor"
+    "commit_footer_policy": "no_codex_coauthor",
+    "workspace_repos": [
+      "qc-backend",
+      "qc-dashboard",
+      "qc-home",
+      "qc-record-module",
+      "qc-business"
+    ],
+    "business_decisions_repo": "qc-business",
+    "cross_repo_requirements": true
   },
   "workflow": {
     "research": true,

@@ -1,4 +1,5 @@
 # Requirements — Quantum Cert Backend
+
 _Generated: 2026-05-08 | v1 scope: backend completo production-ready (6 sub-sistemas)_
 
 ---
@@ -25,7 +26,7 @@ _Generated: 2026-05-08 | v1 scope: backend completo production-ready (6 sub-sist
 
 ### DOC — Document Verification (Público)
 
-- [x] **DOC-01**: `GET /api/v1/verify/document/{sha3-512-hash}` — endpoint público sem autenticação, lookup por hash
+- [x] **DOC-01**: `GET /api/v1/public/verify/document/{sha3-512-hash}` — endpoint público sem autenticação, lookup por hash
 - [x] **DOC-02**: Lookup reverso por `signatureHash` — retorna asset e cadeia de eventos de ancoragem
 - [x] **DOC-03**: Response com metadados de ancoragem (txId, chain, timestamp) + info pública do tenant (sem dados sensíveis)
 
@@ -36,11 +37,11 @@ _Generated: 2026-05-08 | v1 scope: backend completo production-ready (6 sub-sist
 
 ### DLT — Pluggable DLT Workers
 
-- [ ] **DLT-01**: Stellar/Soroban adapter — implementa `IDLTAdapter` para ancoragem em Stellar (prioridade hackathon)
-- [ ] **DLT-02**: Solana adapter — implementa `IDLTAdapter` para ancoragem em Solana
-- [ ] **DLT-03**: Config `targetChain` por tenant — cada tenant escolhe qual chain usar para ancoragem
-- [ ] **DLT-04**: Omnibus routing por chain — master wallet opera em cada chain suportada
-- [ ] **DLT-05**: `lastScannedBlock` persistido em DB — confirmação de transações não depende de estado in-memory (sobrevive restarts)
+- [x] **DLT-01**: Stellar/Soroban adapter — implementa `IDLTAdapter` para ancoragem em Stellar (prioridade hackathon)
+- [ ] **DLT-02**: Solana adapter — implementa `IDLTAdapter` para ancoragem em Solana; permanece no backlog v1 e está deferred from Phase 3 hackathon slice
+- [x] **DLT-03**: Config `targetChain` por tenant — cada tenant escolhe qual chain usar para ancoragem
+- [x] **DLT-04**: Omnibus routing por chain — master wallet opera em cada chain suportada; no slice Stellar/hackathon, o aceite é preservar os seams multi-chain sem implementar todos os adapters
+- [ ] **DLT-05**: `lastScannedBlock` persistido em DB — confirmação de transações não depende de estado in-memory (sobrevive restarts); permanece no backlog v1 e está deferred from Phase 3 hackathon slice
 
 ### OPS — Scale & Observability
 
@@ -76,10 +77,9 @@ _Generated: 2026-05-08 | v1 scope: backend completo production-ready (6 sub-sist
 
 ---
 
-## v2 Requirements (Deferred)
+## Backlog / Deferred Beyond Current Slice
 
 - Triple-sign workflow completo (tenant + Quantum Authority + auditora terceira) — depende de M2M maduro
-- Solana adapter — pode ser entregue após hackathon Stellar sem impacto no prazo
 - Suporte a stablecoins/tokens para pagamento de fees além do Omnibus wallet
 - SDK cliente para tenants (wraps `POST /api/v1/diamond`)
 - Painel de billing multi-chain por tenant
@@ -88,59 +88,69 @@ _Generated: 2026-05-08 | v1 scope: backend completo production-ready (6 sub-sist
 
 ## Out of Scope
 
-- **Frontend/UI** — responsabilidade de `qc-dashboard`, `qc-home`, `qc-record-module`, `qc-tag-emulator`
+- **Frontend/UI dentro do backend** — implementação visual vive em `qc-dashboard`, `qc-home` e `qc-record-module`; porém requisitos podem ser transversais e exigir planejamento/validação nesses repos
 - **Lógica de negócio específica de tenant** — plataforma é agnóstica (Golden Rule); customizações ficam no payload opaco
 - **Operação de nó blockchain** — usamos nós hospedados (`ALGOD_SERVER`, Stellar Horizon, Solana RPC) — não rodamos nodes próprios
 - **Custódia de ativos físicos** — backend certifica, não guarda; responsabilidade do tenant
 - **Autenticação OAuth/magic link** — API keys são o único mecanismo de auth para o backend
 
+## Cross-Repo Requirement Policy
+
+Quantum Cert é um workspace multi-repo composto por `qc-backend`, `qc-dashboard`, `qc-home`, `qc-record-module` e `qc-business`.
+
+- `qc-business` é a fonte de verdade para decisões de negócio, produto, pricing, monetização e regras comerciais.
+- `qc-backend` é a fonte de verdade para contratos de API, segurança, persistência e integrações DLT.
+- `qc-dashboard`, `qc-home` e `qc-record-module` são consumidores/implementadores de experiências específicas.
+- Um requisito não deve ser marcado como aceito se o fluxo real depender de outro repo ainda não integrado.
+- Planos devem declarar os repos impactados, contratos entre eles, ordem de execução e UAT fim a fim quando o requisito for transversal.
+
 ---
 
 ## Traceability
 
-_Updated: 2026-05-08 — ROADMAP.md created (gsd-new-project, brownfield)_
+_Updated: 2026-05-14 — política de requisitos transversais multi-repo e recorte Phase 3 Stellar/hackathon adicionados_
 
-| REQ-ID | Phase | Status |
-|--------|-------|--------|
-| SEC-01 | Phase 1 | Done 2026-05-08 |
-| SEC-02 | Phase 1 | Done 2026-05-08 |
-| SEC-03 | Phase 1 | Done 2026-05-08 |
-| SEC-04 | Phase 1 | Done 2026-05-08 |
-| SEC-05 | Phase 1 | Done 2026-05-08 |
-| SEC-06 | Phase 1 | Done 2026-05-08 |
-| CORE-01 | Phase 1 | Done 2026-05-09 |
-| CORE-02 | Phase 1 | Done 2026-05-09 |
-| CORE-03 | Phase 1 | Done 2026-05-09 |
-| CORE-04 | Phase 1 | Done 2026-05-09 |
-| CORE-05 | Phase 1 | Done 2026-05-09 |
-| CORE-06 | Phase 1 | Done 2026-05-09 |
-| DOC-01 | Phase 2 | Complete |
-| DOC-02 | Phase 2 | Complete |
-| DOC-03 | Phase 2 | Complete |
-| QTAG-01 | Phase 2 | Complete |
-| QTAG-02 | Phase 2 | Complete |
-| DLT-01 | Phase 3 | Pending |
-| DLT-02 | Phase 3 | Pending |
-| DLT-03 | Phase 3 | Pending |
-| DLT-04 | Phase 3 | Pending |
-| DLT-05 | Phase 3 | Pending |
-| OPS-01 | Phase 4 | Pending |
-| OPS-02 | Phase 4 | Pending |
-| OPS-03 | Phase 4 | Pending |
-| OPS-04 | Phase 4 | Pending |
-| OPS-05 | Phase 4 | Pending |
-| OPS-06 | Phase 4 | Pending |
-| OPS-07 | Phase 4 | Pending |
-| ESC-01 | Phase 5 | Pending |
-| ESC-02 | Phase 5 | Pending |
-| ESC-03 | Phase 5 | Pending |
-| ESC-04 | Phase 5 | Pending |
-| ESC-05 | Phase 5 | Pending |
-| M2M-01 | Phase 5 | Pending |
-| M2M-02 | Phase 5 | Pending |
-| M2M-03 | Phase 5 | Pending |
-| FACET-01 | Phase 6 | Pending |
-| FACET-02 | Phase 6 | Pending |
-| FACET-03 | Phase 6 | Pending |
-| FACET-04 | Phase 6 | Pending |
-| FACET-05 | Phase 6 | Pending |
+| REQ-ID   | Phase   | Status                          |
+| -------- | ------- | ------------------------------- |
+| SEC-01   | Phase 1 | Done 2026-05-08                 |
+| SEC-02   | Phase 1 | Done 2026-05-08                 |
+| SEC-03   | Phase 1 | Done 2026-05-08                 |
+| SEC-04   | Phase 1 | Done 2026-05-08                 |
+| SEC-05   | Phase 1 | Done 2026-05-08                 |
+| SEC-06   | Phase 1 | Done 2026-05-08                 |
+| CORE-01  | Phase 1 | Done 2026-05-09                 |
+| CORE-02  | Phase 1 | Done 2026-05-09                 |
+| CORE-03  | Phase 1 | Done 2026-05-09                 |
+| CORE-04  | Phase 1 | Done 2026-05-09                 |
+| CORE-05  | Phase 1 | Done 2026-05-09                 |
+| CORE-06  | Phase 1 | Done 2026-05-09                 |
+| DOC-01   | Phase 2 | Complete                        |
+| DOC-02   | Phase 2 | Complete                        |
+| DOC-03   | Phase 2 | Complete                        |
+| QTAG-01  | Phase 2 | Complete                        |
+| QTAG-02  | Phase 2 | Complete                        |
+| DLT-01   | Phase 3 | Pending (current Stellar slice) |
+| DLT-02   | Phase 3 | Deferred from Stellar slice     |
+| DLT-03   | Phase 3 | Pending (current Stellar slice) |
+| DLT-04   | Phase 3 | Partial seam in current slice   |
+| DLT-05   | Phase 3 | Deferred from Stellar slice     |
+| OPS-01   | Phase 4 | Pending                         |
+| OPS-02   | Phase 4 | Pending                         |
+| OPS-03   | Phase 4 | Pending                         |
+| OPS-04   | Phase 4 | Pending                         |
+| OPS-05   | Phase 4 | Pending                         |
+| OPS-06   | Phase 4 | Pending                         |
+| OPS-07   | Phase 4 | Pending                         |
+| ESC-01   | Phase 5 | Pending                         |
+| ESC-02   | Phase 5 | Pending                         |
+| ESC-03   | Phase 5 | Pending                         |
+| ESC-04   | Phase 5 | Pending                         |
+| ESC-05   | Phase 5 | Pending                         |
+| M2M-01   | Phase 5 | Pending                         |
+| M2M-02   | Phase 5 | Pending                         |
+| M2M-03   | Phase 5 | Pending                         |
+| FACET-01 | Phase 6 | Pending                         |
+| FACET-02 | Phase 6 | Pending                         |
+| FACET-03 | Phase 6 | Pending                         |
+| FACET-04 | Phase 6 | Pending                         |
+| FACET-05 | Phase 6 | Pending                         |

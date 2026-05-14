@@ -18,6 +18,8 @@ import { TripleSignPayload } from '../services/multi-chain/types';
 export type AnchorMode = 'LOG' | 'STATE';
 
 export interface AnchorOptions {
+  /** Tenant that owns the anchored event; required for tenant-safe transaction logging. */
+  tenantId?: string;
   /** Solana: Mode A (Instruction Data) or Mode B (PDA). Default: 'LOG'. */
   mode?: AnchorMode;
   /** Unix timestamp (seconds) for time-lock escrow. Server-side calculated. */

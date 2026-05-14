@@ -78,11 +78,14 @@ export class AnchorQueueService {
         const results: Array<{ id: string; txId?: string; success: boolean; error?: string }> = [];
 
         for (const [chain, events] of byChain) {
-            const adapter = DLTAdapterFactory.getAdapter(chain as SupportedChain);
+            const tenant = { targetChain: chain as SupportedChain };
+            const adapter = DLTAdapterFactory.getAdapter(tenant.targetChain);
 
             for (const event of events) {
                 try {
-                    const txId = await adapter.anchorEvent(event.id, event.signatureHash!);
+                    const txId = await adapter.anchorEvent(event.id, event.signatureHash!, {
+                        tenantId: event.tenantId,
+                    });
 
                     await prisma.eventLog.update({
                         where: { id: event.id },

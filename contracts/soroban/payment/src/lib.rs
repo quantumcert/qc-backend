@@ -1,9 +1,6 @@
 #![no_std]
 
-use soroban_sdk::{
-    contract, contractimpl, contracttype, symbol_short, vec, Address, Bytes, BytesN, Env,
-    Symbol, Vec,
-};
+use soroban_sdk::{contract, contractimpl, contracttype, symbol_short, Address, Bytes, BytesN, Env};
 
 // ===========================================================
 // CONSTANTS
@@ -24,9 +21,6 @@ const STATUS_ACTIVE: u32 = 2;
 const STATUS_RELEASED: u32 = 3;
 /// Status: cancelled
 const STATUS_CANCELLED: u32 = 4;
-
-/// Error: circuit breaker active
-const ERR_CIRCUIT_BREAKER: u32 = 100;
 
 // ===========================================================
 // DATA TYPES
@@ -131,16 +125,13 @@ impl QuantumCertPayment {
             .instance()
             .get(&DataKey::Paused)
             .unwrap_or(false);
-        assert!(!paused, symbol_short!("ERR_PAUSE"));
+        assert!(!paused, "ERR_PAUSE");
     }
 
-    fn validate_triple_proof(env: &Env, proof: &TripleProof) {
-        assert!(proof.seller_address != Address::from_string(&String::from_str(env, "")), symbol_short!("ERR_TP_SELLER"));
-        assert!(proof.buyer_address != Address::from_string(&String::from_str(env, "")), symbol_short!("ERR_TP_BUYER"));
-        assert!(proof.quantum_address != Address::from_string(&String::from_str(env, "")), symbol_short!("ERR_TP_QC"));
-        assert!(proof.seller_address != proof.buyer_address, symbol_short!("ERR_TP_DUP"));
-        assert!(proof.seller_address != proof.quantum_address, symbol_short!("ERR_TP_DUP"));
-        assert!(proof.buyer_address != proof.quantum_address, symbol_short!("ERR_TP_DUP"));
+    fn validate_triple_proof(proof: &TripleProof) {
+        assert!(proof.seller_address != proof.buyer_address, "ERR_TP_DUP");
+        assert!(proof.seller_address != proof.quantum_address, "ERR_TP_DUP");
+        assert!(proof.buyer_address != proof.quantum_address, "ERR_TP_DUP");
     }
 
     // --- 1. CREATE ESCROW (Payment) ---------------------
@@ -149,6 +140,7 @@ impl QuantumCertPayment {
     pub fn create_escrow(
         env: Env,
         escrow_id: Bytes,
+        sender: Address,
         receiver: Address,
         amount: i128,
         asset_address: Option<Address>,
@@ -156,34 +148,32 @@ impl QuantumCertPayment {
         triple_proof: Option<TripleProof>,
     ) {
         Self::check_not_paused(&env);
-
-        let sender = env.current_contract_address();
-        let invoker = env.invoker();
+        sender.require_auth();
 
         assert!(
             escrow_id.len() <= 32,
-            symbol_short!("ERR_ID_LEN")
+            "ERR_ID_LEN"
         );
-        assert!(amount > 0, symbol_short!("ERR_AMT"));
+        assert!(amount > 0, "ERR_AMT");
         assert!(
             unlock_timestamp > env.ledger().timestamp(),
-            symbol_short!("ERR_LOCK")
+            "ERR_LOCK"
         );
 
         if let Some(ref proof) = triple_proof {
-            Self::validate_triple_proof(&env, proof);
+            Self::validate_triple_proof(proof);
         }
 
         let key = DataKey::Escrow(escrow_id.clone());
         assert!(
             !env.storage().persistent().has(&key),
-            symbol_short!("ERR_EXISTS")
+            "ERR_EXISTS"
         );
 
         let escrow = Escrow {
             escrow_id: escrow_id.clone(),
-            sender: invoker.clone(),
-            receiver,
+            sender: sender.clone(),
+            receiver: receiver.clone(),
             amount,
             asset_address,
             unlock_timestamp,
@@ -197,7 +187,7 @@ impl QuantumCertPayment {
         // Emit event
         env.events().publish(
             (symbol_short!("ESCROW"), symbol_short!("CREATE")),
-            (escrow_id, invoker, receiver, amount, unlock_timestamp),
+            (escrow_id, sender, receiver, amount, unlock_timestamp),
         );
     }
 
@@ -216,24 +206,14 @@ impl QuantumCertPayment {
 
         assert!(
             escrow.status == STATUS_ACTIVE,
-            symbol_short!("ERR_STATUS")
+            "ERR_STATUS"
         );
         assert!(
             env.ledger().timestamp() >= escrow.unlock_timestamp,
-            symbol_short!("ERR_TIME")
+            "ERR_TIME"
         );
 
-        let invoker = env.invoker();
-        let admin: Address = env
-            .storage()
-            .instance()
-            .get(&DataKey::Admin)
-            .unwrap_or_else(|| panic!("Admin not set"));
-
-        assert!(
-            invoker == escrow.receiver || invoker == admin,
-            symbol_short!("ERR_AUTH")
-        );
+        escrow.receiver.require_auth();
 
         escrow.status = STATUS_RELEASED;
         env.storage().persistent().set(&key, &escrow);
@@ -259,14 +239,10 @@ impl QuantumCertPayment {
 
         assert!(
             escrow.status == STATUS_ACTIVE,
-            symbol_short!("ERR_STATUS")
+            "ERR_STATUS"
         );
 
-        let invoker = env.invoker();
-        assert!(
-            invoker == escrow.sender,
-            symbol_short!("ERR_AUTH")
-        );
+        escrow.sender.require_auth();
 
         escrow.status = STATUS_CANCELLED;
         env.storage().persistent().set(&key, &escrow);
@@ -288,19 +264,18 @@ impl QuantumCertPayment {
     ) {
         Self::check_not_paused(&env);
 
-        let invoker = env.invoker();
         let admin: Address = env
             .storage()
             .instance()
             .get(&DataKey::Admin)
             .unwrap_or_else(|| panic!("Admin not set"));
-
-        assert!(invoker == admin, symbol_short!("ERR_AUTH"));
+        admin.require_auth();
+        assert!(event_id.len() <= 32, "ERR_ID_LEN");
 
         let key = DataKey::Anchor(event_id.clone());
 
         let record = AnchorRecord {
-            authority: invoker,
+            authority: admin,
             payload_hash: hash.clone(),
             status: if unlock_timestamp > 0 {
                 STATUS_ACTIVE // Using STATUS_ACTIVE as ESCROW_LOCKED equivalent
