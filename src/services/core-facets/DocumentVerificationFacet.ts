@@ -1,16 +1,21 @@
 import prisma from '../../config/prisma';
 
+export type DocumentVerificationFailureReason = 'INVALID_DOCUMENT_HASH' | 'DOCUMENT_NOT_FOUND';
+
 export interface VerifyDocumentResponse {
     verified: boolean;
     // Returned only when verified is true
     assetId?: string;
     assetStatus?: string;
+    publicUrl?: string | null;
     dltTxId?: string | null;
+    chain?: string;
     anchoredAt?: Date;
     eventId?: string;
     issuerId?: string | null;
+    confirmationStatus?: string;
     // Returned only when verified is false
-    reason?: string;
+    reason?: DocumentVerificationFailureReason;
 }
 
 export class DocumentVerificationFacet {
@@ -24,7 +29,7 @@ export class DocumentVerificationFacet {
     static async verifyByHash(hash: string): Promise<VerifyDocumentResponse> {
         // Hash received is SHA3-512 => 128 hex chars.
         if (!/^[a-f0-9]{128}$/i.test(hash)) {
-            return { verified: false };
+            return { verified: false, reason: 'INVALID_DOCUMENT_HASH' };
         }
 
         // Document hash is stored on EventLog.documentHash.
@@ -32,22 +37,30 @@ export class DocumentVerificationFacet {
         const event = await prisma.eventLog.findFirst({
             where: { documentHash: hash },
             include: {
-                asset: { select: { status: true } },
+                asset: { select: { status: true, publicUrl: true } },
             },
         });
 
         if (!event) {
-            return { verified: false };
+            return { verified: false, reason: 'DOCUMENT_NOT_FOUND' };
         }
+
+        const anchorTx = await prisma.chainTransaction.findFirst({
+            where: { txRef: event.id, direction: 'ANCHOR' },
+            orderBy: { createdAt: 'desc' },
+        });
 
         return {
             verified: true,
             assetId: event.assetId,
             assetStatus: event.asset.status,
-            dltTxId: event.dltTxId,
-            anchoredAt: event.updatedAt,
+            publicUrl: event.asset.publicUrl,
+            dltTxId: anchorTx?.chainTxId ?? event.dltTxId,
+            chain: anchorTx?.chain,
+            anchoredAt: anchorTx?.confirmedAt ?? event.updatedAt,
             eventId: event.id,
             issuerId: event.issuerId ?? null,
+            confirmationStatus: anchorTx?.status ?? (event.dltTxId ? 'CONFIRMED' : 'PENDING'),
         };
     }
 }

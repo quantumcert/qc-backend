@@ -72,13 +72,19 @@ router.use('/v1/contributions', contributionRoutes);
  *   post:
  *     summary: Diamond Proxy - roteador universal de Facets
  *     description: |
- *       Entrada unica para operacoes mutantes autenticadas.
- *       O selector mapeia para uma funcao registrada de Facet.
- *       O contexto seguro e injetado pelo middleware.
+ *       Entrada única para operações mutantes autenticadas.
+ *       O selector mapeia para uma função registrada de Facet.
+ *       O contexto seguro é injetado pelo middleware.
  *
- *       Selectors disponiveis:
- *       - asset.register (OPERATOR)
- *       - asset.update (OPERATOR)
+ *       Selectors de document verification e QTAG:
+ *       - event.recordAuthenticated (OPERATOR): registra eventos autenticados e aceita `documentHash`
+ *       - commissioning.start (OPERATOR): cria sessão de gravação QTAG e retorna material one-time
+ *       - commissioning.confirm (OPERATOR): conclui ou falha uma sessão de gravação física
+ *       - commissioning.status (OPERATOR): consulta status da sessão de gravação
+ *
+ *       Outros selectors disponíveis:
+ *       - asset.create (OPERATOR)
+ *       - asset.update (ADMIN)
  *       - lifecycle.transition (OPERATOR)
  *       - transfer.initiate (OPERATOR)
  *       - escrow.lock (OPERATOR)
@@ -86,7 +92,6 @@ router.use('/v1/contributions', contributionRoutes);
  *       - escrow.cancel (ADMIN)
  *       - escrow.status (READER)
  *       - agent.register (ADMIN)
- *       - commissioning.start (OPERATOR)
  *     tags: [Diamond]
  *     security:
  *       - ApiKeyAuth: []
@@ -129,6 +134,55 @@ router.use('/v1/contributions', contributionRoutes);
  *                 selector: escrow.status
  *                 payload:
  *                   escrowId: "uuid-do-escrow"
+ *             eventRecordAuthenticatedDocument:
+ *               summary: Registrar hash documental autenticado
+ *               description: |
+ *                 Bridge usado por integrações como qc-record-module. O `documentHash`
+ *                 deve ser SHA3-512 em hex com 128 caracteres. Duplicatas são idempotentes
+ *                 por tenant.
+ *               value:
+ *                 selector: event.recordAuthenticated
+ *                 payload:
+ *                   assetId: "uuid-do-ativo"
+ *                   origin: "QC_RECORD_MODULE"
+ *                   documentHash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+ *                   payload:
+ *                     type: "DOCUMENT_VERIFICATION"
+ *                     filename: "certificate.pdf"
+ *             commissioningStart:
+ *               summary: Iniciar commissioning QTAG
+ *               description: |
+ *                 Retorna `sessionId`, `layout`, 36 `pages` em base64, `sdmMacKey`,
+ *                 `writeKey` e `lockAfterWrite`. `sdmMacKey` e `writeKey` são expostos
+ *                 uma única vez para a estação física de gravação e não são persistidos
+ *                 em plaintext.
+ *               value:
+ *                 selector: commissioning.start
+ *                 payload:
+ *                   assetId: "uuid-do-ativo"
+ *                   ntagUID: "045c8f82322190"
+ *                   metadata:
+ *                     stationId: "ESTACAO-01"
+ *                     batchId: "QTAG-2026-001"
+ *             commissioningConfirm:
+ *               summary: Confirmar commissioning QTAG
+ *               description: |
+ *                 Chame com `success: true` somente depois da gravação física. Se a
+ *                 gravação falhar, chame com `success: false`; o próximo
+ *                 `commissioning.start` deve gerar nova sessão e novas chaves.
+ *               value:
+ *                 selector: commissioning.confirm
+ *                 payload:
+ *                   sessionId: "encoding-session-id"
+ *                   success: true
+ *                   bytesWritten: 144
+ *                   ntagUID: "045c8f82322190"
+ *             commissioningStatus:
+ *               summary: Consultar status do commissioning QTAG
+ *               value:
+ *                 selector: commissioning.status
+ *                 payload:
+ *                   sessionId: "encoding-session-id"
  *           schema:
  *             type: object
  *             required: [selector, payload]
@@ -145,6 +199,33 @@ router.use('/v1/contributions', contributionRoutes);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
+ *             examples:
+ *               commissioningStart:
+ *                 summary: Retorno de commissioning.start
+ *                 value:
+ *                   success: true
+ *                   data:
+ *                     sessionId: "encoding-session-id"
+ *                     layout: "base64-layout-144-bytes"
+ *                     pages: ["AQAEXA==", "j4IyIQ=="]
+ *                     sdmMacKey: "d9c12fff5ea810b5edfb8b7730272c1b"
+ *                     writeKey: "85a2d097370e1843bbd30529112b74f9"
+ *                     lockAfterWrite: true
+ *                   meta:
+ *                     selector: commissioning.start
+ *                     executionMode: DELEGATE_CALL
+ *                     timestamp: "2026-05-13T22:52:33.323Z"
+ *               commissioningConfirm:
+ *                 summary: Retorno de commissioning.confirm
+ *                 value:
+ *                   success: true
+ *                   data:
+ *                     status: COMPLETED
+ *                     sessionId: "encoding-session-id"
+ *                   meta:
+ *                     selector: commissioning.confirm
+ *                     executionMode: DELEGATE_CALL
+ *                     timestamp: "2026-05-13T22:53:14.499Z"
  *       400:
  *         description: Erro de negócio (selector inválido, estado proibido, escrow já fechado, etc.)
  *         content:
@@ -171,6 +252,138 @@ router.post('/v1/diamond', requireApiKey, DiamondProxy.delegateCall);
 // QTAG SDM Scan — public endpoint, no apiKeyAuth
 // Rate limit is applied in server.ts before this route
 // ═══════════════════════════════════════════════════════════
+/**
+ * @openapi
+ * /api/v1/scan:
+ *   get:
+ *     summary: Verificar scan público de QTAG via SDM
+ *     description: |
+ *       Endpoint público usado pelo smartphone ao ler uma NTAG 424 DNA configurada
+ *       com Secure Dynamic Messaging (SDM). A tag gera `p` (`picc_data`) e `m`
+ *       (`cmac`) a cada leitura; o backend decripta, valida o CMAC, bloqueia replay
+ *       por contador monotonicamente crescente e retorna `APPROVED` ou `DENIED`.
+ *
+ *       A query `uid` é opcional, mas recomendada no MVP para localizar o Device
+ *       antes da decriptação do `picc_data`.
+ *     tags: [QTAG]
+ *     security: []
+ *     parameters:
+ *       - in: query
+ *         name: p
+ *         required: true
+ *         schema:
+ *           type: string
+ *           minLength: 32
+ *           maxLength: 32
+ *           pattern: '^[0-9A-Fa-f]{32}$'
+ *           example: "00112233445566778899aabbccddeeff"
+ *         description: NTAG SDM `picc_data` cifrado, 16 bytes em hex.
+ *       - in: query
+ *         name: m
+ *         required: true
+ *         schema:
+ *           type: string
+ *           minLength: 16
+ *           maxLength: 16
+ *           pattern: '^[0-9A-Fa-f]{16}$'
+ *           example: "a1b2c3d4e5f60708"
+ *         description: NTAG SDM CMAC truncado, 8 bytes em hex.
+ *       - in: query
+ *         name: uid
+ *         required: false
+ *         schema:
+ *           type: string
+ *           minLength: 14
+ *           maxLength: 14
+ *           pattern: '^[0-9A-Fa-f]{14}$'
+ *           example: "045c8f82322190"
+ *         description: UID plaintext da tag para lookup do Device.
+ *       - in: query
+ *         name: lat
+ *         required: false
+ *         schema:
+ *           type: number
+ *           format: double
+ *           example: -23.55052
+ *         description: Latitude opcional para heurística anti-relay.
+ *       - in: query
+ *         name: lon
+ *         required: false
+ *         schema:
+ *           type: number
+ *           format: double
+ *           example: -46.633308
+ *         description: Longitude opcional para heurística anti-relay.
+ *     responses:
+ *       200:
+ *         description: QTAG autêntico aprovado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               required: [status, counter, asset]
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   enum: [APPROVED]
+ *                 counter:
+ *                   type: integer
+ *                   example: 42
+ *                 asset:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     publicUrl:
+ *                       type: string
+ *                     metadata:
+ *                       type: object
+ *                     anchorTxId:
+ *                       type: string
+ *                       nullable: true
+ *                     blockHeight:
+ *                       type: integer
+ *                       nullable: true
+ *                     status:
+ *                       type: string
+ *       400:
+ *         description: Parâmetros ausentes ou malformados
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Missing required parameters: p, m"
+ *       403:
+ *         description: QTAG rejeitado por autenticidade, replay, relay ou Device ausente/inativo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               required: [status, reason, message]
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   enum: [DENIED]
+ *                 reason:
+ *                   type: string
+ *                   enum: [MAC_INVALID, REPLAY_ATTACK, RELAY_ATTACK, DEVICE_NOT_FOUND, DEVICE_INACTIVE]
+ *                 message:
+ *                   type: string
+ *                   example: "Assinatura inválida."
+ *       429:
+ *         description: Rate limit público excedido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: "Too many requests. Try again later."
+ */
 router.get('/v1/scan', async (req: Request, res: Response) => {
   const { p, m, lat, lon, uid } = req.query as Record<string, string>;
 

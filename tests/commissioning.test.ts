@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-const { mockEncodingSession, mockDevice, mockEventLog } = vi.hoisted(() => {
+const { mockEncodingSession, mockDevice, mockEventLog, mockKmsGetTenantSecretHex, mockKmsWrapUserKey } = vi.hoisted(() => {
   const mockEncodingSession = {
     create: vi.fn(),
     findUnique: vi.fn(),
@@ -12,7 +12,9 @@ const { mockEncodingSession, mockDevice, mockEventLog } = vi.hoisted(() => {
   const mockEventLog = {
     create: vi.fn(),
   };
-  return { mockEncodingSession, mockDevice, mockEventLog };
+  const mockKmsGetTenantSecretHex = vi.fn();
+  const mockKmsWrapUserKey = vi.fn();
+  return { mockEncodingSession, mockDevice, mockEventLog, mockKmsGetTenantSecretHex, mockKmsWrapUserKey };
 });
 
 vi.mock('../src/config/prisma', () => ({
@@ -37,7 +39,8 @@ vi.mock('../src/services/QuantumSignerService', () => ({
 vi.mock('../src/services/KMSService', () => ({
   KMSService: {
     getInstance: () => ({
-      wrapUserKey: vi.fn((k: string) => `wrapped:${k}`),
+      getTenantSecretHex: mockKmsGetTenantSecretHex,
+      wrapUserKey: mockKmsWrapUserKey,
       unwrapUserKey: vi.fn((k: string) => k.replace('wrapped:', '')),
     }),
   },
@@ -46,9 +49,18 @@ vi.mock('../src/services/KMSService', () => ({
 import { CommissioningFacet } from '../src/services/core-facets/CommissioningFacet';
 
 const ctx = { tenantId: 'tenant-1', apiKeyId: 'key-1', role: 'OPERATOR' as const };
+const ORIGINAL_NODE_ENV = process.env.NODE_ENV;
 
 describe('CommissioningFacet.start', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockKmsGetTenantSecretHex.mockResolvedValue('f'.repeat(4610));
+    mockKmsWrapUserKey.mockImplementation((k: string) => `wrapped:${k}`);
+  });
+
+  afterEach(() => {
+    process.env.NODE_ENV = ORIGINAL_NODE_ENV;
+  });
 
   it('creates EncodingSession and returns layout + sdmMacKey', async () => {
     mockEncodingSession.create.mockResolvedValue({
@@ -71,8 +83,84 @@ describe('CommissioningFacet.start', () => {
     expect(result.sdmMacKey).toHaveLength(32); // 16 bytes hex
     expect(result.writeKey).toHaveLength(32);
     expect(result.lockAfterWrite).toBe(false);
+    expect(mockKmsGetTenantSecretHex).toHaveBeenCalledWith('tenant-1', 'qtag-commissioning');
     expect(mockEncodingSession.create).toHaveBeenCalledOnce();
     expect(mockEventLog.create).toHaveBeenCalledOnce();
+    expect(mockEventLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        tenantId: 'tenant-1',
+        assetId: 'asset-1',
+        origin: 'COMMISSIONING',
+        signatureHash: 'a'.repeat(128),
+        status: 'PENDING',
+      }),
+    });
+    expect(mockEventLog.create.mock.calls[0][0].data).not.toHaveProperty('eventType');
+    expect(mockEventLog.create.mock.calls[0][0].data).not.toHaveProperty('hash');
+  });
+
+  it('does not persist plaintext one-time SDM or write keys', async () => {
+    mockEncodingSession.create.mockResolvedValue({
+      id: 'session-plain-check',
+      layoutB64: Buffer.alloc(144).toString('base64'),
+      sdmMacKeyId: 'wrapped:aabb',
+      sdmEncKeyId: 'wrapped:ccdd',
+    });
+    mockEventLog.create.mockResolvedValue({ id: 'log-plain-check' });
+
+    const result = await CommissioningFacet.start(ctx, {
+      assetId: 'asset-plain-check',
+      ntagUID: '04AABBCCDDEE11',
+      metadata: { type: 'ring' },
+    });
+
+    const sessionData = mockEncodingSession.create.mock.calls[0][0].data;
+    expect(result.sdmMacKey).toHaveLength(32);
+    expect(result.writeKey).toHaveLength(32);
+    expect(sessionData).toHaveProperty('sdmMacKeyId');
+    expect(sessionData).toHaveProperty('sdmEncKeyId');
+    expect(sessionData).not.toHaveProperty('sdmMacKey');
+    expect(sessionData).not.toHaveProperty('writeKey');
+    expect(sessionData).not.toHaveProperty('sdmMacKeyPlain');
+    expect(sessionData).not.toHaveProperty('writeKeyPlain');
+  });
+
+  it('returns lockAfterWrite=true in production', async () => {
+    process.env.NODE_ENV = 'production';
+    mockEncodingSession.create.mockResolvedValue({
+      id: 'session-prod',
+      layoutB64: Buffer.alloc(144).toString('base64'),
+      sdmMacKeyId: 'wrapped:aabb',
+      sdmEncKeyId: 'wrapped:ccdd',
+    });
+    mockEventLog.create.mockResolvedValue({ id: 'log-prod' });
+
+    const result = await CommissioningFacet.start(ctx, {
+      assetId: 'asset-prod',
+      ntagUID: '04AABBCCDDEE11',
+      metadata: {},
+    });
+
+    expect(result.lockAfterWrite).toBe(true);
+  });
+
+  it('fails closed without creating event or session when tenant secret is missing', async () => {
+    mockKmsGetTenantSecretHex.mockRejectedValueOnce(
+      Object.assign(new Error('Tenant secret not configured for commissioning'), {
+        code: 'TENANT_SECRET_NOT_CONFIGURED',
+      })
+    );
+
+    await expect(
+      CommissioningFacet.start(ctx, {
+        assetId: 'asset-1',
+        ntagUID: '04AABBCCDDEE11',
+        metadata: { type: 'ring' },
+      })
+    ).rejects.toMatchObject({ code: 'TENANT_SECRET_NOT_CONFIGURED' });
+
+    expect(mockEventLog.create).not.toHaveBeenCalled();
+    expect(mockEncodingSession.create).not.toHaveBeenCalled();
   });
 
   it('throws if ntagUID is not 14 hex chars', async () => {

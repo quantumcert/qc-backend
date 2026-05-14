@@ -19,6 +19,9 @@ import { ethers } from 'ethers';
 import algosdk from 'algosdk';
 import nacl from 'tweetnacl';
 import { PostQuantumCrypto } from '../utils/PostQuantumCrypto';
+import prisma from '../config/prisma';
+
+const TENANT_SECRET_NOT_CONFIGURED = 'TENANT_SECRET_NOT_CONFIGURED';
 
 export type ChainKeyType = 'privateKey' | 'rpcUrl' | 'mnemonic' | 'secretKey' | 'apiToken';
 
@@ -136,6 +139,61 @@ export class KMSService {
   unwrapUserKey(ciphertext: string): string {
     const masterKey = this.getQuantumMasterKey();
     return PostQuantumCrypto.unwrapKey(ciphertext, masterKey);
+  }
+
+  async storeTenantSecretHex(
+    tenantId: string,
+    purpose: string,
+    secretHex: string,
+    publicKeyB64?: string
+  ): Promise<void> {
+    if (!tenantId?.trim() || !purpose?.trim()) {
+      throw new Error('tenantId and purpose are required');
+    }
+
+    if (!/^[a-f0-9]+$/i.test(secretHex) || secretHex.length < 4610) {
+      throw new Error('Tenant secret must be a Falcon-512 private key hex string with at least 4610 characters');
+    }
+
+    const encryptedSecret = this.wrapUserKey(secretHex);
+    const rotatedAt = new Date();
+
+    await (prisma as any).tenantSecret.upsert({
+      where: { tenantId_purpose: { tenantId, purpose } },
+      update: {
+        keyType: 'FALCON-512',
+        encryptedSecret,
+        publicKeyB64,
+        keyWrapVersion: 1,
+        isActive: true,
+        rotatedAt,
+      },
+      create: {
+        tenantId,
+        purpose,
+        keyType: 'FALCON-512',
+        encryptedSecret,
+        publicKeyB64,
+        keyWrapVersion: 1,
+        isActive: true,
+        rotatedAt,
+      },
+    });
+  }
+
+  async getTenantSecretHex(tenantId: string, purpose: string): Promise<string> {
+    const record = await (prisma as any).tenantSecret.findUnique({
+      where: { tenantId_purpose: { tenantId, purpose } },
+    });
+
+    if (!record || record.isActive === false) {
+      throw Object.assign(
+        new Error('Tenant secret not configured for commissioning'),
+        { code: TENANT_SECRET_NOT_CONFIGURED }
+      );
+    }
+
+    return this.unwrapUserKey(record.encryptedSecret);
   }
 
   /**

@@ -24,7 +24,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 ## Phases
 
 - [x] **Phase 1: Core Gap Closure + Production Hardening** _(4/4 plans complete)_ — Fechar falhas de segurança críticas e conectar features inacessíveis antes de qualquer expansão
-- [ ] **Phase 2: Document Verification + QTAG Production** — Verificação pública de documentos e NFC commissioning funcionando em produção
+- [ ] **Phase 2: Document Verification + QTAG Production** _(3/3 plans complete; human UAT pending)_ — Verificação pública de documentos e NFC commissioning funcionando em produção
 - [ ] **Phase 3: Pluggable DLT Workers — Stellar/Soroban Priority** — Adapter Stellar para hackathon + infraestrutura multi-chain
 - [ ] **Phase 4: Scale + Observability Infrastructure** — Redis, Pino, Sentry, BullMQ — plataforma multi-instância pronta para carga real
 - [ ] **Phase 5: EscrowFacet + Time-Lock Oracle + M2M** — Escrow on-chain com time-lock e registro de agentes IoT
@@ -70,12 +70,26 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 **Depends on**: Phase 1
 **Requirements**: DOC-01, DOC-02, DOC-03, QTAG-01, QTAG-02
 **Success Criteria** (what must be TRUE):
-  1. Um usuário anônimo pode fazer `GET /api/v1/verify/document/{sha3-512-hash}` e receber metadados de ancoragem (txId, chain, timestamp) sem precisar de API key
+  1. Um usuário anônimo pode fazer `GET /api/v1/public/verify/document/{sha3-512-hash}` e receber metadados de ancoragem (txId, chain, timestamp) sem precisar de API key
   2. O response de verificação pública não expõe dados sensíveis do tenant — apenas campos públicos definidos (nome, chain, txId)
   3. Um QTAG físico pode ser comissionado em produção — `CommissioningFacet` usa KMS production path, não dev stub
   4. Um QTAG suspeito é rejeitado na verificação — `SDMVerifier` detecta tags não-autênticas e retorna erro de autenticidade
-**Plans**: TBD
+**Plans**: 3 plans, 3 waves
 **UI hint**: no
+
+**Wave 1**
+  - [x] 02-01-PLAN.md — Public document verification + qc-record-module bridge idempotency: DOC-01, DOC-02, DOC-03
+
+**Wave 2** *(blocked on Wave 1 completion)*
+  - [x] 02-02-PLAN.md — QTAG production commissioning with tenant-scoped KMS material: QTAG-01
+
+**Wave 3** *(blocked on Wave 2 completion)*
+  - [x] 02-03-PLAN.md — Suspicious QTAG scan verification and audit trail: QTAG-02
+
+**Cross-cutting constraints:**
+  - Keep canonical public document route as `/api/v1/public/verify/document/{hash}`; do not add `/api/v1/verify/document/{hash}` in this phase.
+  - Use blocking Prisma schema push tasks after planned schema changes before verification.
+  - Preserve public QTAG `DENIED` response shape while adding audit logging for identifiable devices.
 
 ### Phase 3: Pluggable DLT Workers — Stellar/Soroban Priority
 **Goal**: Tenants podem ancorar eventos em Stellar (hackathon) e a infraestrutura multi-chain está pronta para adicionar novas chains sem tocar no core
@@ -143,7 +157,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 | Phase | GitHub Milestone | Issues | Plans Complete | Status | Completed |
 |-------|-----------------|--------|----------------|--------|-----------|
 | 1. Core Gap Closure + Production Hardening | [M#1](https://github.com/quantumcert/qc-backend/milestone/1) | #5, #7, #8 | 4/4 | Complete | 2026-05-09 |
-| 2. Document Verification + QTAG Production | [M#2](https://github.com/quantumcert/qc-backend/milestone/2) | #12, #2 | 0/? | Not started | - |
+| 2. Document Verification + QTAG Production | [M#2](https://github.com/quantumcert/qc-backend/milestone/2) | #12, #2 | 3/3 | Human UAT pending | - |
 | 3. Pluggable DLT Workers — Stellar/Soroban Priority | [M#3](https://github.com/quantumcert/qc-backend/milestone/3) | #11 | 0/? | Not started | - |
 | 4. Scale + Observability Infrastructure | [M#4](https://github.com/quantumcert/qc-backend/milestone/4) | #13 | 0/? | Not started | - |
 | 5. EscrowFacet + Time-Lock Oracle + M2M | [M#5](https://github.com/quantumcert/qc-backend/milestone/5) | #3 | 0/? | Not started | - |

@@ -1,4 +1,19 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: Human UAT blocked
+last_updated: "2026-05-13T22:58:30Z"
+progress:
+  total_phases: 6
+  completed_phases: 1
+  total_plans: 7
+  completed_plans: 7
+  percent: 100
+---
+
 # STATE — Quantum Cert Backend
+
 _Initialized: 2026-05-08_
 
 ---
@@ -7,23 +22,26 @@ _Initialized: 2026-05-08_
 
 **Core Value**: Tríade indivisível: ancoragem DLT com assinatura pós-quântica + ciclo de vida completo de ativos rastreável + plataforma white-label multi-tenant.
 
-**Current Focus**: Phase 2 — Document Verification + QTAG Production
+**Current Focus**: Phase 2 — Document Verification + QTAG Production (backend verified; physical QTAG UAT blocked)
 
 ---
 
 ## Current Position
 
+Phase: 02 (Document Verification + QTAG Production) — EXECUTED
+Plan: 3 of 3 complete; physical QTAG UAT blocked
 | Field | Value |
 |-------|-------|
 | Milestone | 1 |
-| Phase | 1 — Core Gap Closure + Production Hardening ✓ → next: Phase 2 |
-| Plan | Phase 1 COMPLETE — All 4 plans done |
-| Status | Complete |
+| Phase | 2 — Document Verification + QTAG Production |
+| Plan | Phase 2 EXECUTED — 3/3 plans complete |
+| Status | Human UAT blocked by external NFC writer integration |
 
 **Progress**:
+
 ```
 Phase 1 [██████████] 100% (Plan 01: SEC-01/02/03 | Plan 02: SEC-04/05/06 | Plan 03: CORE-01/02/03/04 | Plan 04: CORE-05/06)
-Phase 2 [          ] 0%
+Phase 2 [██████████] 100% (3/3 plans complete; backend verified; physical QTAG UAT blocked)
 Phase 3 [          ] 0%
 Phase 4 [          ] 0%
 Phase 5 [          ] 0%
@@ -47,8 +65,8 @@ Phase 6 [          ] 0%
 | Phases total | 6 |
 | Requirements total (v1) | 41 (36 original + 5 FACET) |
 | Requirements mapped | 41/41 |
-| Plans written | 4 |
-| Plans complete | 4 |
+| Plans written | 7 |
+| Plans complete | 7 |
 
 ---
 
@@ -81,11 +99,11 @@ Phase 6 [          ] 0%
 
 ### Blockers
 
-_Nenhum blocker ativo._
+- Phase 2 physical QTAG UAT: `qc-backend` generates production commissioning material and confirms sessions, but full physical acceptance is blocked until the external NFC writer module (`qc-record-module`) is updated from the old `/api/production-queue` and `/api/tag-provisioned` contract to the current Diamond selectors `commissioning.start` and `commissioning.confirm`.
 
 ### Todos
 
-_Nenhum todo pendente._
+- Plan/update `qc-record-module` integration so a real NTAG 424 DNA can be written, locked, scanned, and approved through `/api/v1/scan`.
 
 ---
 
@@ -97,10 +115,13 @@ _Nenhum todo pendente._
 
 **Phase 1 merge**: PR #17 mergeado em `main` em 2026-05-09T04:43:15Z, merge commit `62a12252ca921893641ec7b8c47a9205a5e40306`. Branch remota removida e branch local de trabalho apagada após sincronização.
 
-**Next action**: `/gsd-discuss-phase 2` para iniciar Phase 2
+**Last planning session**: 2026-05-13 — Phase 2 planejada com 3 planos em 3 waves: 02-01 public document verification + bridge idempotency, 02-02 QTAG commissioning with tenant-scoped KMS material, 02-03 suspicious QTAG scan verification/audit. Research, pattern map, and validation strategy created.
+
+**Next action**: Planejar/atualizar o `qc-record-module` para gravar uma NTAG 424 DNA real com o contrato novo do `qc-backend`; depois retomar `/gsd-verify-work 2` para aprovar o UAT físico.
 
 **Context for next session**:
+
 - Branch: `main` atualizada com PR #17 mergeado
 - Phase 1 COMPLETA: Falcon-512 real, SKIP LOCKED, Lifecycle, Transfer REST, Curation Layer, review-fix aplicado
 - Code review fix report: `.planning/phases/01-core-gap-closure-production-hardening/01-REVIEW-FIX.md` — encerrado sem blocker; WR-01, WR-06, WR-07 postergados como dívida técnica não bloqueante por exigirem mudança cross-cutting/schema
-- Phase 2: DOC-01/02/03 (verificação pública) + QTAG-01/02 (commissioning NFC) — depende só de Phase 1
+- Phase 2: DOC-01/02/03 + QTAG-01/02 implementados e verificados automaticamente; UAT físico registrado como bloqueado em `.planning/phases/02-document-verification-qtag-production/02-HUMAN-UAT.md` por dependência externa do `qc-record-module`.

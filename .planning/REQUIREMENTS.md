@@ -25,14 +25,14 @@ _Generated: 2026-05-08 | v1 scope: backend completo production-ready (6 sub-sist
 
 ### DOC — Document Verification (Público)
 
-- [ ] **DOC-01**: `GET /api/v1/verify/document/{sha3-512-hash}` — endpoint público sem autenticação, lookup por hash
-- [ ] **DOC-02**: Lookup reverso por `signatureHash` — retorna asset e cadeia de eventos de ancoragem
-- [ ] **DOC-03**: Response com metadados de ancoragem (txId, chain, timestamp) + info pública do tenant (sem dados sensíveis)
+- [x] **DOC-01**: `GET /api/v1/verify/document/{sha3-512-hash}` — endpoint público sem autenticação, lookup por hash
+- [x] **DOC-02**: Lookup reverso por `signatureHash` — retorna asset e cadeia de eventos de ancoragem
+- [x] **DOC-03**: Response com metadados de ancoragem (txId, chain, timestamp) + info pública do tenant (sem dados sensíveis)
 
 ### QTAG — QTAG / NFC Production
 
-- [ ] **QTAG-01**: `CommissioningFacet` com KMS production path — NFC commissioning funcional em produção (não só dev)
-- [ ] **QTAG-02**: `SDMVerifier` integrado com `CommissioningFacet` — verifica autenticidade do QTAG físico
+- [x] **QTAG-01**: `CommissioningFacet` com KMS production path — NFC commissioning funcional em produção (não só dev)
+- [x] **QTAG-02**: `SDMVerifier` integrado com `CommissioningFacet` — verifica autenticidade do QTAG físico
 
 ### DLT — Pluggable DLT Workers
 
@@ -114,11 +114,11 @@ _Updated: 2026-05-08 — ROADMAP.md created (gsd-new-project, brownfield)_
 | CORE-04 | Phase 1 | Done 2026-05-09 |
 | CORE-05 | Phase 1 | Done 2026-05-09 |
 | CORE-06 | Phase 1 | Done 2026-05-09 |
-| DOC-01 | Phase 2 | Pending |
-| DOC-02 | Phase 2 | Pending |
-| DOC-03 | Phase 2 | Pending |
-| QTAG-01 | Phase 2 | Pending |
-| QTAG-02 | Phase 2 | Pending |
+| DOC-01 | Phase 2 | Complete |
+| DOC-02 | Phase 2 | Complete |
+| DOC-03 | Phase 2 | Complete |
+| QTAG-01 | Phase 2 | Complete |
+| QTAG-02 | Phase 2 | Complete |
 | DLT-01 | Phase 3 | Pending |
 | DLT-02 | Phase 3 | Pending |
 | DLT-03 | Phase 3 | Pending |

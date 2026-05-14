@@ -31,7 +31,7 @@ const PORT = process.env.PORT || 3000;
 // -----------------------------------------------------------
 // MIDDLEWARE GLOBAL
 // /api-docs precisa carregar scripts da CDN (Scalar UI) - CSP desabilitado
-// apenas para esse prefixo. Todas as outras rotas mantem o helmet padrao.
+// apenas para esse prefixo. Todas as outras rotas mantêm o helmet padrão.
 // -----------------------------------------------------------
 app.use((req, res, next) => {
   if (req.path.startsWith('/api-docs')) {
@@ -44,7 +44,7 @@ app.use((req, res, next) => {
 app.set('trust proxy', 1);
 
 // CORS - Whitelist frontend origins
-// localhost:3000 incluido para permitir chamadas da Scalar UI (/api-docs) em dev
+// localhost:3000 incluído para permitir chamadas da Scalar UI (/api-docs) em dev
 const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:5173',
   'http://localhost:3001',
@@ -126,12 +126,12 @@ setInterval(() => {
  * /health:
  *   get:
  *     summary: Health check do servidor
- *     description: Verifica se o servidor e o banco de dados estao operacionais. Nao requer autenticacao.
+ *     description: Verifica se o servidor e o banco de dados estão operacionais. Não requer autenticação.
  *     tags: [System]
  *     security: []
  *     responses:
  *       200:
- *         description: Servidor saudavel
+ *         description: Servidor saudável
  *         content:
  *           application/json:
  *             schema:
