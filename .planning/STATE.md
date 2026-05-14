@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Human UAT pending
-last_updated: "2026-05-13T22:20:38Z"
+status: Human UAT blocked
+last_updated: "2026-05-13T22:58:30Z"
 progress:
   total_phases: 6
   completed_phases: 1
@@ -22,26 +22,26 @@ _Initialized: 2026-05-08_
 
 **Core Value**: Tríade indivisível: ancoragem DLT com assinatura pós-quântica + ciclo de vida completo de ativos rastreável + plataforma white-label multi-tenant.
 
-**Current Focus**: Phase 2 — Document Verification + QTAG Production (human UAT pending)
+**Current Focus**: Phase 2 — Document Verification + QTAG Production (backend verified; physical QTAG UAT blocked)
 
 ---
 
 ## Current Position
 
 Phase: 02 (Document Verification + QTAG Production) — EXECUTED
-Plan: 3 of 3 complete; human UAT pending
+Plan: 3 of 3 complete; physical QTAG UAT blocked
 | Field | Value |
 |-------|-------|
 | Milestone | 1 |
 | Phase | 2 — Document Verification + QTAG Production |
 | Plan | Phase 2 EXECUTED — 3/3 plans complete |
-| Status | Human UAT pending |
+| Status | Human UAT blocked by external NFC writer integration |
 
 **Progress**:
 
 ```
 Phase 1 [██████████] 100% (Plan 01: SEC-01/02/03 | Plan 02: SEC-04/05/06 | Plan 03: CORE-01/02/03/04 | Plan 04: CORE-05/06)
-Phase 2 [██████████] 100% (3/3 plans complete; physical QTAG UAT pending)
+Phase 2 [██████████] 100% (3/3 plans complete; backend verified; physical QTAG UAT blocked)
 Phase 3 [          ] 0%
 Phase 4 [          ] 0%
 Phase 5 [          ] 0%
@@ -99,11 +99,11 @@ Phase 6 [          ] 0%
 
 ### Blockers
 
-_Nenhum blocker ativo._
+- Phase 2 physical QTAG UAT: `qc-backend` generates production commissioning material and confirms sessions, but full physical acceptance is blocked until the external NFC writer module (`qc-record-module`) is updated from the old `/api/production-queue` and `/api/tag-provisioned` contract to the current Diamond selectors `commissioning.start` and `commissioning.confirm`.
 
 ### Todos
 
-_Nenhum todo pendente._
+- Plan/update `qc-record-module` integration so a real NTAG 424 DNA can be written, locked, scanned, and approved through `/api/v1/scan`.
 
 ---
 
@@ -117,11 +117,11 @@ _Nenhum todo pendente._
 
 **Last planning session**: 2026-05-13 — Phase 2 planejada com 3 planos em 3 waves: 02-01 public document verification + bridge idempotency, 02-02 QTAG commissioning with tenant-scoped KMS material, 02-03 suspicious QTAG scan verification/audit. Research, pattern map, and validation strategy created.
 
-**Next action**: `/gsd-verify-work 2` para registrar/aprovar o UAT físico pendente da Phase 2
+**Next action**: Planejar/atualizar o `qc-record-module` para gravar uma NTAG 424 DNA real com o contrato novo do `qc-backend`; depois retomar `/gsd-verify-work 2` para aprovar o UAT físico.
 
 **Context for next session**:
 
 - Branch: `main` atualizada com PR #17 mergeado
 - Phase 1 COMPLETA: Falcon-512 real, SKIP LOCKED, Lifecycle, Transfer REST, Curation Layer, review-fix aplicado
 - Code review fix report: `.planning/phases/01-core-gap-closure-production-hardening/01-REVIEW-FIX.md` — encerrado sem blocker; WR-01, WR-06, WR-07 postergados como dívida técnica não bloqueante por exigirem mudança cross-cutting/schema
-- Phase 2: DOC-01/02/03 + QTAG-01/02 implementados e verificados automaticamente; resta UAT físico em `.planning/phases/02-document-verification-qtag-production/02-HUMAN-UAT.md`
+- Phase 2: DOC-01/02/03 + QTAG-01/02 implementados e verificados automaticamente; UAT físico registrado como bloqueado em `.planning/phases/02-document-verification-qtag-production/02-HUMAN-UAT.md` por dependência externa do `qc-record-module`.
