@@ -198,6 +198,43 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 ---
 
+## Future Research Candidates
+
+### B2C Consumer Onboarding
+
+**Status:** research candidate, not yet planned
+**Scope:** cross-repo product research before implementation
+**Repos likely involved:** `qc-dashboard`, `qc-backend`, `qc-home`, `qc-record-module`; business decisions in `qc-business`
+
+**Product hypothesis:** B2C users should register assets under an operational Quantum Cert consumer tenant, for example `quantum-cert-consumer`, instead of becoming tenants themselves. The client experience should be "registre conosco", while tenant/API-key complexity stays internal.
+
+**Preferred model to research first:** hybrid onboarding.
+
+1. User creates a free draft asset.
+2. Activation/certification consumes one registration credit or requires buying credits.
+3. Physical QTAG is optional and can be bought/linked after the digital asset exists.
+
+**Current codebase anchors:**
+
+- `qc-dashboard` already has protected routes for store, profile, assets, and asset creation.
+- Existing asset creation wizard can be reused for category, details, photos/documents, and public privacy.
+- Existing wallet rule already supports credit-only activation through `creditsBalance`.
+- Existing store already models QTAG/QTRACK and credit packages, but physical checkout remains simulated.
+- Existing public verification route can become the post-onboarding certificate/QR destination.
+
+**Research questions before planning:**
+
+1. Which B2C model should be productized first: register-first, purchase-first, or hybrid?
+2. What is the minimum public self-service account flow: email/password, magic link, social login, or invite?
+3. What asset states are needed for consumers: draft, active digital, QTAG ordered, QTAG linked, blockchain anchored, incident reported?
+4. What backoffice/admin review is required before activation, QTAG issuance, or public certificate publication?
+5. Which steps belong in `qc-dashboard` versus `qc-home`, and which operational/business decisions belong in `qc-business`?
+6. How should `qc-record-module` pair a delivered QTAG to an existing consumer asset without exposing tenant internals?
+
+**Do not implement yet:** this needs a dedicated research pass and product decision before becoming a roadmap phase.
+
+---
+
 ## Progress Table
 
 | Phase                                               | GitHub Milestone                                             | Issues     | Plans Complete | Status            | Completed  |
