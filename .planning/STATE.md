@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase complete — ready for verification
-last_updated: "2026-05-14T03:05:22.134Z"
+status: Phase 03 shipped — backend PR #23, dashboard PR #23
+last_updated: "2026-05-14T19:14:15Z"
 progress:
   total_phases: 6
   completed_phases: 3
@@ -24,27 +24,27 @@ _Initialized: 2026-05-08_
 
 **Workspace Scope**: Produto multi-repo — `qc-backend`, `qc-dashboard`, `qc-home`, `qc-record-module`; decisões de negócio em `qc-business`.
 
-**Current Focus**: Phase 3 — Pluggable DLT Workers — Stellar/Soroban Priority (ready for verification; human Stellar UAT pending)
+**Current Focus**: Phase 3 — Pluggable DLT Workers — Stellar/Soroban Priority (shipped for review; backend PR #23 and dashboard PR #23)
 
 ---
 
 ## Current Position
 
-Phase: 03 (pluggable-dlt-workers-stellar-soroban-priority) — READY_FOR_VERIFICATION
+Phase: 03 (pluggable-dlt-workers-stellar-soroban-priority) — SHIPPED_FOR_REVIEW
 Plan: 3 of 3
 | Field | Value |
 |-------|-------|
 | Milestone | 1 |
 | Phase | 3 — Pluggable DLT Workers — Stellar/Soroban Priority |
 | Plan | 3 plans ready |
-| Status | Ready for verification; human UAT pending |
+| Status | Shipped for review via backend PR #23 and dashboard PR #23 |
 
 **Progress**:
 
 ```
 Phase 1 [██████████] 100% (Plan 01: SEC-01/02/03 | Plan 02: SEC-04/05/06 | Plan 03: CORE-01/02/03/04 | Plan 04: CORE-05/06)
 Phase 2 [██████████] 100% (3/3 plans complete; backend verified; physical QTAG UAT blocked)
-Phase 3 [██████████] 100% implementation (3/3 plans complete; human Stellar UAT pending)
+Phase 3 [██████████] 100% (3/3 plans complete; Stellar UAT passed; PRs open for review)
 Phase 4 [          ] 0%
 Phase 5 [          ] 0%
 Phase 6 [          ] 0%
@@ -134,7 +134,9 @@ Phase 6 [          ] 0%
 
 **Phase 3 planning session**: 2026-05-13 — Phase 3 planejada com 3 planos em 3 waves: 03-01 Stellar/Soroban provisioning + tenant-safe anchoring, 03-02 public blockchain proof + optional env-gated document payment hook, 03-03 cross-chain dashboard proof card + UAT + scope reconciliation. Em 2026-05-14, REQ-6 foi reclassificado: x402/micropagamento é nice-to-have, não must-have, com direção futura preferida via Anchor/BRZ (ex: Transfero).
 
-**Next action**: Executar Phase 3 com `$gsd-execute-phase 3`.
+**Phase 3 ship**: 2026-05-14 — backend PR #23 (`phase-3-stellar-soroban`) and dashboard PR #23 (`phase-3-dashboard-blockchain-proof`) opened for review. Stellar testnet UAT passed with tx `75f2d84ec135f06a903b91a82484bb6b82267ed002605a5827d54143fc8dd5cc`.
+
+**Next action**: Review and merge Phase 3 PRs, then run `$gsd-progress` to choose the next phase or `$gsd-complete-milestone` if this milestone is considered complete.
 
 **Context for next session**:
 
