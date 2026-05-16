@@ -29,8 +29,31 @@ type AddOwnerContext = {
     role?: string;
 };
 
+type RevokeOwnerPayload = {
+    assetId?: string;
+    id?: string;
+    ownerId?: string;
+    ownerRef?: string;
+    reason?: string;
+};
+
+type AcceptOwnerPayload = {
+    assetId?: string;
+    id?: string;
+    ownerId?: string;
+    ownerRef?: string;
+    acceptedByOpenId?: string;
+    role?: string;
+};
+
 function hashPrivateRef(value: string): string {
     return crypto.createHash('sha256').update(value).digest('hex');
+}
+
+function businessError(message: string, code: string) {
+    const err: any = new Error(message);
+    err.code = code;
+    return err;
 }
 
 export class AssetRegistryFacet {
@@ -327,5 +350,170 @@ export class AssetRegistryFacet {
         AnchorQueueService.processQueue({ tenantId, assetId }).catch(console.error);
 
         return owner;
+    }
+
+    static async revokeOwner(secureContext: AddOwnerContext, payload: RevokeOwnerPayload) {
+        if (secureContext.role && !['ADMIN', 'OPERATOR'].includes(secureContext.role)) {
+            throw businessError('Forbidden: Insufficient privileges to revoke owner', 'INSUFFICIENT_PERMISSIONS');
+        }
+
+        const assetId = String(payload.assetId ?? payload.id ?? '');
+        const ownerId = payload.ownerId ? String(payload.ownerId) : undefined;
+        const ownerRef = payload.ownerRef ? String(payload.ownerRef) : undefined;
+        const tenantId = String(secureContext.tenantId);
+        const issuerId = secureContext.apiKeyId || 'asset.revokeOwner';
+
+        if (!assetId || (!ownerId && !ownerRef)) {
+            throw businessError('assetId and ownerId or ownerRef are required', 'INVALID_OWNER_REVOKE_INPUT');
+        }
+
+        const { owner, assetTenantId } = await prisma.$transaction(async (tx) => {
+            const asset = await tx.asset.findUnique({
+                where: { id: assetId, tenantId },
+                select: { id: true, tenantId: true }
+            });
+
+            if (!asset) {
+                throw businessError('Asset not found or unauthorized', 'ASSET_NOT_FOUND');
+            }
+
+            const activeOwner = await tx.owner.findFirst({
+                where: {
+                    assetId,
+                    revokedAt: null,
+                    ...(ownerId ? { id: ownerId } : { ownerRef })
+                }
+            });
+
+            if (!activeOwner) {
+                throw businessError('Owner not found or already revoked', 'OWNER_NOT_FOUND');
+            }
+
+            if (String(activeOwner.label ?? '').toLowerCase() === 'primary') {
+                throw businessError('Primary owner cannot be revoked through delegation removal', 'PRIMARY_OWNER_REVOKE_FORBIDDEN');
+            }
+
+            const revokedAt = new Date();
+            const revokedOwner = await tx.owner.update({
+                where: { id: activeOwner.id },
+                data: { revokedAt }
+            });
+
+            await tx.auditLog.create({
+                data: {
+                    tenantId: asset.tenantId,
+                    action: AuditActions.OWNER_REMOVED,
+                    resourceType: ResourceTypes.OWNER,
+                    resourceId: activeOwner.id,
+                    metadata: {
+                        assetId,
+                        ownerRefHash: hashPrivateRef(String(activeOwner.ownerRef ?? ownerRef ?? activeOwner.id)),
+                        role: activeOwner.label ?? null,
+                        reason: payload.reason ?? null,
+                    }
+                }
+            });
+
+            const delegationPayload = {
+                eventType: 'DELEGATION_REVOKED',
+                schemaVersion: 1,
+                assetId,
+                tenantId: asset.tenantId,
+                ownerId: activeOwner.id,
+                ownerRefHash: hashPrivateRef(String(activeOwner.ownerRef ?? ownerRef ?? activeOwner.id)),
+                role: activeOwner.label ?? 'delegate',
+                reason: payload.reason ?? null,
+                revokedAt: revokedAt.toISOString(),
+            };
+
+            await tx.eventLog.create({
+                data: {
+                    assetId,
+                    tenantId: asset.tenantId,
+                    issuerId,
+                    origin: 'DELEGATION',
+                    status: 'APPROVED',
+                    payload: delegationPayload,
+                    signatureHash: AssetAnchoringService.signatureHash(delegationPayload),
+                }
+            });
+
+            return { owner: revokedOwner, assetTenantId: asset.tenantId };
+        });
+
+        AnchorQueueService.processQueue({ tenantId: assetTenantId, assetId }).catch(console.error);
+
+        return owner;
+    }
+
+    static async acceptOwner(secureContext: AddOwnerContext, payload: AcceptOwnerPayload) {
+        if (secureContext.role && !['ADMIN', 'OPERATOR'].includes(secureContext.role)) {
+            throw businessError('Forbidden: Insufficient privileges to accept owner delegation', 'INSUFFICIENT_PERMISSIONS');
+        }
+
+        const assetId = String(payload.assetId ?? payload.id ?? '');
+        const ownerId = payload.ownerId ? String(payload.ownerId) : undefined;
+        const ownerRef = payload.ownerRef ? String(payload.ownerRef) : undefined;
+        const tenantId = String(secureContext.tenantId);
+        const issuerId = secureContext.apiKeyId || 'asset.acceptOwner';
+
+        if (!assetId || (!ownerId && !ownerRef)) {
+            throw businessError('assetId and ownerId or ownerRef are required', 'INVALID_OWNER_ACCEPT_INPUT');
+        }
+
+        const { owner, assetTenantId } = await prisma.$transaction(async (tx) => {
+            const asset = await tx.asset.findUnique({
+                where: { id: assetId, tenantId },
+                select: { id: true, tenantId: true }
+            });
+
+            if (!asset) {
+                throw businessError('Asset not found or unauthorized', 'ASSET_NOT_FOUND');
+            }
+
+            const activeOwner = await tx.owner.findFirst({
+                where: {
+                    assetId,
+                    revokedAt: null,
+                    ...(ownerId ? { id: ownerId } : { ownerRef })
+                }
+            });
+
+            if (!activeOwner) {
+                throw businessError('Owner not found or already revoked', 'OWNER_NOT_FOUND');
+            }
+
+            const acceptedAt = new Date();
+            const acceptedByOpenId = payload.acceptedByOpenId ? String(payload.acceptedByOpenId) : ownerRef ?? activeOwner.ownerRef;
+            const delegationPayload = {
+                eventType: 'DELEGATION_ACCEPTED',
+                schemaVersion: 1,
+                assetId,
+                tenantId: asset.tenantId,
+                ownerId: activeOwner.id,
+                ownerRefHash: hashPrivateRef(String(activeOwner.ownerRef ?? ownerRef ?? activeOwner.id)),
+                acceptedByOpenId,
+                role: payload.role ?? activeOwner.label ?? 'delegate',
+                acceptedAt: acceptedAt.toISOString(),
+            };
+
+            await tx.eventLog.create({
+                data: {
+                    assetId,
+                    tenantId: asset.tenantId,
+                    issuerId,
+                    origin: 'DELEGATION',
+                    status: 'APPROVED',
+                    payload: delegationPayload,
+                    signatureHash: AssetAnchoringService.signatureHash(delegationPayload),
+                }
+            });
+
+            return { owner: activeOwner, assetTenantId: asset.tenantId };
+        });
+
+        AnchorQueueService.processQueue({ tenantId: assetTenantId, assetId }).catch(console.error);
+
+        return { accepted: true, owner };
     }
 }
