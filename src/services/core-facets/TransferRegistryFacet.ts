@@ -1,5 +1,8 @@
 // src/services/core-facets/TransferRegistryFacet.ts
+import crypto from 'crypto';
 import prisma from '../../config/prisma';
+import { AnchorQueueService } from '../AnchorQueueService';
+import { AssetAnchoringService } from '../AssetAnchoringService';
 import { BillingFacet } from './BillingFacet';
 
 interface SecureContext {
@@ -69,21 +72,31 @@ export class TransferRegistryFacet {
             data: { status: 'AWAITING_PAYMENT' },
         });
 
+        const transferEventPayload = {
+            eventType: 'TRANSFER_INITIATED',
+            schemaVersion: 1,
+            assetId: asset.id,
+            tenantId: asset.tenantId,
+            buyerDocumentHash: crypto.createHash('sha256').update(buyerDocument).digest('hex'),
+            documentType,
+            fee,
+            buyerOwnerId: owner.id,
+            initiatedAt: new Date().toISOString(),
+        };
+
         await prisma.eventLog.create({
             data: {
                 assetId: asset.id,
                 tenantId: asset.tenantId,
-                origin: apiKeyId || 'MANUAL',
+                issuerId: apiKeyId || 'transfer.initiate',
+                origin: 'TRANSFER',
                 status: 'APPROVED',
-                payload: {
-                    action: 'TRANSFER_INITIATED',
-                    buyerDocument,
-                    documentType,
-                    fee,
-                    buyerOwnerId: owner.id,
-                },
+                payload: transferEventPayload,
+                signatureHash: AssetAnchoringService.signatureHash(transferEventPayload),
             },
         });
+
+        AnchorQueueService.processQueue({ tenantId: asset.tenantId, assetId: asset.id }).catch(console.error);
 
         const billing = await BillingFacet.createPaymentPreference(secureContext, {
             assetId: asset.id,

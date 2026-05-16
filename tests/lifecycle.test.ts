@@ -25,7 +25,14 @@ vi.mock('../src/config/prisma', () => ({
     }
 }));
 
+vi.mock('../src/services/AnchorQueueService', () => ({
+    AnchorQueueService: {
+        processQueue: vi.fn().mockResolvedValue({ processed: 0, items: [] }),
+    }
+}));
+
 import { LifecycleFacet } from '../src/services/core-facets/LifecycleFacet';
+import { AnchorQueueService } from '../src/services/AnchorQueueService';
 
 const CTX_ADMIN    = { tenantId: 'tenant_001', apiKeyId: 'key_001', role: 'ADMIN' };
 const CTX_OPERATOR = { tenantId: 'tenant_001', apiKeyId: 'key_001', role: 'OPERATOR' };
@@ -62,14 +69,21 @@ describe('LifecycleFacet.transition', () => {
         });
         expect(mockEventLog.create).toHaveBeenCalledWith(expect.objectContaining({
             data: expect.objectContaining({
+                origin: 'LIFECYCLE',
+                status: 'APPROVED',
+                signatureHash: expect.any(String),
                 payload: expect.objectContaining({
-                    action: 'LIFECYCLE_TRANSITION',
+                    eventType: 'LIFECYCLE_TRANSITION',
                     fromState: 'DRAFT',
                     toState: 'ACTIVE',
                     reason: 'activation',
                 })
             })
         }));
+        expect(AnchorQueueService.processQueue).toHaveBeenCalledWith({
+            tenantId: 'tenant_001',
+            assetId: 'asset_001',
+        });
     });
 
     it('✅ ACTIVE → SUSPENDED (ADMIN)', async () => {

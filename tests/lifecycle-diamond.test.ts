@@ -37,9 +37,16 @@ vi.mock('../src/config/prisma', () => ({
   },
 }));
 
+vi.mock('../src/services/AnchorQueueService', () => ({
+  AnchorQueueService: {
+    processQueue: vi.fn().mockResolvedValue({ processed: 0, items: [] }),
+  },
+}));
+
 // Import app AFTER mocks are set up
 import { app } from '../src/server';
 import prisma from '../src/config/prisma';
+import { AnchorQueueService } from '../src/services/AnchorQueueService';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -140,6 +147,22 @@ describe('LifecycleFacet — regression: terminal states and invalid transitions
 
     expect(res.status).toBe(200);
     expect(res.body.data.currentState).toBe('ACTIVE');
+    expect(prisma.eventLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        origin: 'LIFECYCLE',
+        status: 'APPROVED',
+        signatureHash: expect.any(String),
+        payload: expect.objectContaining({
+          eventType: 'LIFECYCLE_TRANSITION',
+          fromState: 'DRAFT',
+          toState: 'ACTIVE',
+        }),
+      }),
+    }));
+    expect(AnchorQueueService.processQueue).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      assetId: 'asset-1',
+    });
   });
 });
 

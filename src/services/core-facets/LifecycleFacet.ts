@@ -1,4 +1,6 @@
 import prisma from '../../config/prisma';
+import { AnchorQueueService } from '../AnchorQueueService';
+import { AssetAnchoringService } from '../AssetAnchoringService';
 
 interface SecureContext {
     tenantId: string;
@@ -69,6 +71,18 @@ export class LifecycleFacet {
             );
         }
 
+        const lifecyclePayload = {
+            eventType: 'LIFECYCLE_TRANSITION',
+            action: 'LIFECYCLE_TRANSITION',
+            schemaVersion: 1,
+            assetId,
+            tenantId,
+            fromState,
+            toState: targetState,
+            reason: reason ?? null,
+            transitionedAt: new Date().toISOString(),
+        };
+
         await prisma.$transaction(async (tx) => {
             await tx.asset.update({
                 where: { id: assetId },
@@ -79,17 +93,16 @@ export class LifecycleFacet {
                 data: {
                     assetId,
                     tenantId,
-                    origin: apiKeyId,
+                    issuerId: apiKeyId || 'lifecycle.transition',
+                    origin: 'LIFECYCLE',
                     status: 'APPROVED',
-                    payload: {
-                        action: 'LIFECYCLE_TRANSITION',
-                        fromState,
-                        toState: targetState,
-                        reason: reason ?? null,
-                    },
+                    payload: lifecyclePayload,
+                    signatureHash: AssetAnchoringService.signatureHash(lifecyclePayload),
                 },
             });
         });
+
+        AnchorQueueService.processQueue({ tenantId, assetId }).catch(console.error);
 
         return { assetId, previousState: fromState, currentState: targetState };
     }
