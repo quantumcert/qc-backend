@@ -135,6 +135,7 @@ describe('FACETA 1/3: AssetRegistryFacet — Criação e Ciclo de Vida', () => {
 
     it('✅ Registra delegação como evento de ciclo de vida ancorável', async () => {
         mockAsset.findUnique.mockResolvedValue({ id: BICYCLE.id, tenantId: BICYCLE.tenantId });
+        mockOwner.findFirst.mockResolvedValue(null);
         mockOwner.create.mockResolvedValue({ id: 'owner_delegate_001', assetId: BICYCLE.id });
         mockAuditLog.create.mockResolvedValue({ id: 'audit_owner_001' });
         mockEventLog.create.mockResolvedValue({ id: 'evt_delegation_001', status: 'APPROVED' });
@@ -167,6 +168,98 @@ describe('FACETA 1/3: AssetRegistryFacet — Criação e Ciclo de Vida', () => {
                 }),
             }),
         );
+        expect(AnchorQueueService.processQueue).toHaveBeenCalledWith({
+            tenantId: BICYCLE.tenantId,
+            assetId: BICYCLE.id,
+        });
+    });
+
+    it('✅ Reutiliza owner delegado ativo para evitar duplicidade por assetId e ownerRef', async () => {
+        const existingOwner = {
+            id: 'owner_delegate_existing',
+            assetId: BICYCLE.id,
+            ownerRef: 'delegate-open-id',
+            label: 'viewer',
+            sharePercent: 0,
+            revokedAt: null,
+        };
+
+        mockAsset.findUnique.mockResolvedValue({ id: BICYCLE.id, tenantId: BICYCLE.tenantId });
+        mockOwner.findFirst.mockResolvedValue(existingOwner);
+        mockOwner.create.mockRejectedValue(new Error('Unique constraint failed on the fields: (`assetId`,`ownerRef`)'));
+
+        const owner = await AssetRegistryFacet.addOwner(SECURE_CONTEXT, {
+            assetId: BICYCLE.id,
+            ownerRef: existingOwner.ownerRef,
+            label: 'viewer',
+            sharePercent: 0,
+        });
+
+        expect(owner).toBe(existingOwner);
+        expect(mockOwner.findFirst).toHaveBeenCalledWith({
+            where: {
+                assetId: BICYCLE.id,
+                ownerRef: existingOwner.ownerRef,
+            },
+        });
+        expect(mockOwner.create).not.toHaveBeenCalled();
+        expect(mockEventLog.create).not.toHaveBeenCalled();
+        expect(AnchorQueueService.processQueue).not.toHaveBeenCalled();
+    });
+
+    it('✅ Reativa owner delegado revogado antes de registrar novo aceite', async () => {
+        const revokedAt = new Date('2026-05-16T10:00:00.000Z');
+        const revokedOwner = {
+            id: 'owner_delegate_revoked',
+            assetId: BICYCLE.id,
+            ownerRef: 'delegate-open-id',
+            label: 'viewer',
+            sharePercent: 0,
+            revokedAt,
+        };
+        const reactivatedOwner = {
+            ...revokedOwner,
+            label: 'auditor',
+            revokedAt: null,
+        };
+
+        mockAsset.findUnique.mockResolvedValue({ id: BICYCLE.id, tenantId: BICYCLE.tenantId });
+        mockOwner.findFirst.mockResolvedValue(revokedOwner);
+        mockOwner.update.mockResolvedValue(reactivatedOwner);
+        mockAuditLog.create.mockResolvedValue({ id: 'audit_owner_reactivated_001' });
+        mockEventLog.create.mockResolvedValue({ id: 'evt_delegation_reactivated', status: 'APPROVED' });
+
+        const owner = await AssetRegistryFacet.addOwner(SECURE_CONTEXT, {
+            assetId: BICYCLE.id,
+            ownerRef: revokedOwner.ownerRef,
+            label: 'auditor',
+            sharePercent: 0,
+        });
+
+        expect(owner).toBe(reactivatedOwner);
+        expect(mockOwner.create).not.toHaveBeenCalled();
+        expect(mockOwner.update).toHaveBeenCalledWith(expect.objectContaining({
+            where: { id: revokedOwner.id },
+            data: expect.objectContaining({
+                revokedAt: null,
+                label: 'auditor',
+                sharePercent: 0,
+            }),
+        }));
+        expect(mockEventLog.create).toHaveBeenCalledWith(expect.objectContaining({
+            data: expect.objectContaining({
+                assetId: BICYCLE.id,
+                tenantId: BICYCLE.tenantId,
+                origin: 'DELEGATION',
+                status: 'APPROVED',
+                payload: expect.objectContaining({
+                    eventType: 'DELEGATION_GRANTED',
+                    ownerId: revokedOwner.id,
+                    role: 'auditor',
+                }),
+                signatureHash: expect.any(String),
+            }),
+        }));
         expect(AnchorQueueService.processQueue).toHaveBeenCalledWith({
             tenantId: BICYCLE.tenantId,
             assetId: BICYCLE.id,
