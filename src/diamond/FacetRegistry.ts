@@ -32,6 +32,7 @@ export const FacetRegistry: Record<string, FacetFunction> = {
     'asset.list': AssetRegistryFacet.listAssets,
     'asset.update': AssetRegistryFacet.updateAsset,
     'asset.addOwner': AssetRegistryFacet.addOwner,
+    'asset.revokeOwner': AssetRegistryFacet.revokeOwner,
 
     // EVENT LOG
     'event.recordAuthenticated': EventLogFacet.recordAuthenticatedEvent,
@@ -76,4 +77,3 @@ export const FacetRegistry: Record<string, FacetFunction> = {
     'erecycle.recordWaste': (ctx: any, payload: any) => ERecycleFacet.recordWaste(ctx, payload),
     'erecycle.issueCredit': (ctx: any, payload: any) => ERecycleFacet.issueCredit(ctx, payload),
 };
-

@@ -18,6 +18,7 @@ const { mockAsset, mockAuditLog, mockOwner, mockEventLog, mockBlindContact } = v
     mockOwner: {
         create: vi.fn(),
         findFirst: vi.fn(),
+        update: vi.fn(),
     },
     mockEventLog: {
         create: vi.fn(),
@@ -70,6 +71,7 @@ import { EventLogFacet } from '../src/services/core-facets/EventLogFacet';
 import { PublicProfileFacet } from '../src/services/core-facets/PublicProfileFacet';
 import { BlindContactLogFacet } from '../src/services/core-facets/BlindContactLogFacet';
 import { AnchorQueueService } from '../src/services/AnchorQueueService';
+import { AuditActions, ResourceTypes } from '../src/types';
 
 // ─────────────────────────────────────────────────────────
 // TEST FIXTURES
@@ -167,6 +169,73 @@ describe('FACETA 1/3: AssetRegistryFacet — Criação e Ciclo de Vida', () => {
         );
         expect(AnchorQueueService.processQueue).toHaveBeenCalledWith({
             tenantId: BICYCLE.tenantId,
+            assetId: BICYCLE.id,
+        });
+    });
+
+    it('✅ Revoga owner delegado e cria evento ancorável de delegação', async () => {
+        const activeOwner = {
+            id: 'owner_delegate_001',
+            assetId: BICYCLE.id,
+            ownerRef: 'delegate-open-id',
+            label: 'viewer',
+            sharePercent: 0,
+            revokedAt: null,
+        };
+        const revokedOwner = {
+            ...activeOwner,
+            revokedAt: new Date('2026-05-16T12:00:00.000Z'),
+        };
+
+        mockAsset.findUnique.mockResolvedValue({ id: BICYCLE.id, tenantId: BICYCLE.tenantId });
+        mockOwner.findFirst.mockResolvedValue(activeOwner);
+        mockOwner.update.mockResolvedValue(revokedOwner);
+        mockAuditLog.create.mockResolvedValue({ id: 'audit_owner_removed_001' });
+        mockEventLog.create.mockResolvedValue({ id: 'evt_delegation_revoked', status: 'APPROVED' });
+
+        const result = await AssetRegistryFacet.revokeOwner(SECURE_CONTEXT, {
+            assetId: BICYCLE.id,
+            ownerId: activeOwner.id,
+            ownerRef: activeOwner.ownerRef,
+            reason: 'Delegation removed from dashboard',
+        });
+
+        expect(result).toBe(revokedOwner);
+        expect(mockOwner.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+            where: {
+                assetId: BICYCLE.id,
+                id: activeOwner.id,
+                revokedAt: null,
+            },
+        }));
+        expect(mockOwner.update).toHaveBeenCalledWith(expect.objectContaining({
+            where: { id: activeOwner.id },
+            data: { revokedAt: expect.any(Date) },
+        }));
+        expect(mockAuditLog.create).toHaveBeenCalledWith(expect.objectContaining({
+            data: expect.objectContaining({
+                tenantId: SECURE_CONTEXT.tenantId,
+                action: AuditActions.OWNER_REMOVED,
+                resourceType: ResourceTypes.OWNER,
+                resourceId: activeOwner.id,
+            }),
+        }));
+        expect(mockEventLog.create).toHaveBeenCalledWith(expect.objectContaining({
+            data: expect.objectContaining({
+                assetId: BICYCLE.id,
+                tenantId: SECURE_CONTEXT.tenantId,
+                origin: 'DELEGATION',
+                status: 'APPROVED',
+                payload: expect.objectContaining({
+                    eventType: 'DELEGATION_REVOKED',
+                    ownerId: activeOwner.id,
+                    role: activeOwner.label,
+                }),
+                signatureHash: expect.any(String),
+            }),
+        }));
+        expect(AnchorQueueService.processQueue).toHaveBeenCalledWith({
+            tenantId: SECURE_CONTEXT.tenantId,
             assetId: BICYCLE.id,
         });
     });
