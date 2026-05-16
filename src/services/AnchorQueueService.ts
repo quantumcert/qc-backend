@@ -10,14 +10,33 @@ export class AnchorQueueService {
      * Groups events by tenant chain to minimize adapter instantiations per batch.
      * On failure, inserts into PendingTransaction for RetryWorker to handle.
      */
-    static async processQueue() {
+    static async processQueue(options: { tenantId?: string; assetId?: string; limit?: number } = {}) {
+        const limit = Math.min(Math.max(Number(options.limit ?? 10), 1), 50);
         // SELECT FOR UPDATE SKIP LOCKED inside $transaction — prevents double-processing
         // across rolling deploys and parallel workers.
         // The updateMany (dltTxId: 'PROCESSING') runs inside the SAME transaction as the
         // SELECT, converting the pessimistic lock into a persistent state marker before
         // the transaction commits (defense in depth).
         const pendingEvents = await prisma.$transaction(async (tx) => {
-            const events = await tx.$queryRaw<Array<{
+            const events = options.tenantId || options.assetId
+                ? await tx.$queryRaw<Array<{
+                    id: string;
+                    assetId: string;
+                    tenantId: string;
+                    signatureHash: string;
+                }>>`
+                SELECT id, "assetId", "tenantId", "signatureHash"
+                FROM "EventLog"
+                WHERE status IN ('APPROVED', 'PENDING_FUNDS')
+                  AND (${options.tenantId ?? null}::text IS NULL OR "tenantId" = ${options.tenantId ?? null})
+                  AND (${options.assetId ?? null}::text IS NULL OR "assetId" = ${options.assetId ?? null})
+                  AND ("dltTxId" IS NULL OR "dltTxId" = 'RETRY_QUEUED')
+                  AND "signatureHash" IS NOT NULL
+                ORDER BY id ASC
+                LIMIT ${limit}
+                FOR UPDATE SKIP LOCKED
+            `
+                : await tx.$queryRaw<Array<{
                 id: string;
                 assetId: string;
                 tenantId: string;
@@ -29,7 +48,7 @@ export class AnchorQueueService {
                   AND ("dltTxId" IS NULL OR "dltTxId" = 'RETRY_QUEUED')
                   AND "signatureHash" IS NOT NULL
                 ORDER BY id ASC
-                LIMIT 10
+                LIMIT ${limit}
                 FOR UPDATE SKIP LOCKED
             `;
 

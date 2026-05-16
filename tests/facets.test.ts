@@ -107,6 +107,17 @@ describe('FACETA 1/3: AssetRegistryFacet — Criação e Ciclo de Vida', () => {
         expect(result.status).toBe('ACTIVE');
         expect(mockAsset.create).toHaveBeenCalledOnce();
         expect(mockAuditLog.create).toHaveBeenCalledOnce();
+        expect(mockEventLog.create).toHaveBeenCalledWith(
+            expect.objectContaining({
+                data: expect.objectContaining({
+                    assetId: BICYCLE.id,
+                    tenantId: BICYCLE.tenantId,
+                    origin: 'SYSTEM_ASSET_REGISTRATION',
+                    status: 'APPROVED',
+                    signatureHash: expect.any(String),
+                }),
+            }),
+        );
     });
 
     it('✅ Atualiza status do Asset (State Transition)', async () => {

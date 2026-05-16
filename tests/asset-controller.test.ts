@@ -26,11 +26,18 @@ vi.mock('../src/middleware/idempotencyGuard', () => ({
   },
 }));
 
+vi.mock('../src/services/AnchorQueueService', () => ({
+  AnchorQueueService: {
+    processQueue: vi.fn().mockResolvedValue({ processed: 0, items: [] }),
+  },
+}));
+
 vi.mock('../src/config/prisma', () => ({
   default: {
     $transaction: vi.fn(async (cb: any) => cb({
       asset: { create: vi.fn() },
       auditLog: { create: vi.fn() },
+      eventLog: { create: vi.fn() },
     })),
     asset: { findUnique: vi.fn(), findMany: vi.fn(), count: vi.fn(), updateMany: vi.fn() },
     owner: { create: vi.fn() },
@@ -90,6 +97,7 @@ describe('POST /api/v1/assets — RBAC OPERATOR (bug #2)', () => {
       return cb({
         asset: { create: vi.fn().mockResolvedValue(createdAsset) },
         auditLog: { create: vi.fn().mockResolvedValue({}) },
+        eventLog: { create: vi.fn().mockResolvedValue({}) },
       });
     });
 
@@ -119,6 +127,7 @@ describe('POST /api/v1/assets — RBAC OPERATOR (bug #2)', () => {
       return cb({
         asset: { create: vi.fn().mockResolvedValue(createdAsset) },
         auditLog: { create: vi.fn().mockResolvedValue({}) },
+        eventLog: { create: vi.fn().mockResolvedValue({}) },
       });
     });
 
@@ -158,6 +167,7 @@ describe('POST /api/v1/assets — status enum completo (bug #3)', () => {
         return cb({
           asset: { create: vi.fn().mockResolvedValue(createdAsset) },
           auditLog: { create: vi.fn().mockResolvedValue({}) },
+          eventLog: { create: vi.fn().mockResolvedValue({}) },
         });
       });
 
