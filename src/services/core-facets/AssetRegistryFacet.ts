@@ -11,6 +11,8 @@
 
 import prisma from '../../config/prisma';
 import { AuditActions, ResourceTypes } from '../../types';
+import { AnchorQueueService } from '../AnchorQueueService';
+import { AssetAnchoringService } from '../AssetAnchoringService';
 
 export class AssetRegistryFacet {
     /**
@@ -23,7 +25,7 @@ export class AssetRegistryFacet {
         const tenantId = secureContext.tenantId;
         const { externalId, deviceId, metadata, publicDataKeys, owners, ...flags } = payload;
 
-        return await prisma.$transaction(async (tx) => {
+        const asset = await prisma.$transaction(async (tx) => {
             // Generate a secure UUID for the Asset to build the public URL synchronously
             const { v4: uuidv4 } = require('uuid');
             const id = uuidv4();
@@ -65,8 +67,28 @@ export class AssetRegistryFacet {
                 }
             });
 
+            await AssetAnchoringService.createAssetRegistrationEvent(tx, {
+                id: asset.id,
+                tenantId: asset.tenantId,
+                externalId: asset.externalId,
+                deviceId: asset.deviceId,
+                status: asset.status,
+                publicUrl: asset.publicUrl,
+                metadata,
+                publicDataKeys: publicDataKeys || [],
+                createdAt: asset.createdAt,
+            }, {
+                issuerId: secureContext.apiKeyId || 'asset.create',
+                metadata,
+                publicDataKeys: publicDataKeys || [],
+            });
+
             return asset;
         });
+
+        AnchorQueueService.processQueue({ tenantId }).catch(console.error);
+
+        return asset;
     }
 
     /**
