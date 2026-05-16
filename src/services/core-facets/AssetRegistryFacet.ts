@@ -9,10 +9,29 @@
 // GOLDEN RULE: 100% AGNOSTIC — Universal terms only.
 // ═══════════════════════════════════════════════════════════
 
+import crypto from 'crypto';
 import prisma from '../../config/prisma';
 import { AuditActions, ResourceTypes } from '../../types';
 import { AnchorQueueService } from '../AnchorQueueService';
 import { AssetAnchoringService } from '../AssetAnchoringService';
+
+type AddOwnerPayload = {
+    assetId?: string;
+    id?: string;
+    ownerRef: string;
+    label?: string;
+    sharePercent?: number;
+};
+
+type AddOwnerContext = {
+    tenantId: string;
+    apiKeyId?: string;
+    role?: string;
+};
+
+function hashPrivateRef(value: string): string {
+    return crypto.createHash('sha256').update(value).digest('hex');
+}
 
 export class AssetRegistryFacet {
     /**
@@ -216,16 +235,47 @@ export class AssetRegistryFacet {
     /**
      * Manage Owners (Atomic Add/Remove).
      */
-    static async addOwner(assetId: string, tenantId: string, ownerData: {
-        ownerRef: string;
-        label?: string;
-        sharePercent?: number;
-    }) {
-        return await prisma.$transaction(async (tx) => {
+    static async addOwner(
+        assetIdOrContext: string | AddOwnerContext,
+        tenantIdOrPayload: string | AddOwnerPayload,
+        ownerDataArg?: {
+            ownerRef: string;
+            label?: string;
+            sharePercent?: number;
+        }
+    ) {
+        let assetId: string;
+        let tenantId: string;
+        let ownerData: AddOwnerPayload;
+        let issuerId = 'asset.addOwner';
+
+        if (typeof assetIdOrContext === 'string') {
+            assetId = assetIdOrContext;
+            tenantId = String(tenantIdOrPayload);
+            ownerData = ownerDataArg as AddOwnerPayload;
+        } else {
+            const secureContext = assetIdOrContext;
+            const payload = tenantIdOrPayload as AddOwnerPayload;
+
+            if (secureContext.role && !['ADMIN', 'OPERATOR'].includes(secureContext.role)) {
+                throw new Error('Forbidden: Insufficient privileges');
+            }
+
+            assetId = String(payload.assetId ?? payload.id ?? '');
+            tenantId = secureContext.tenantId;
+            ownerData = payload;
+            issuerId = secureContext.apiKeyId || issuerId;
+        }
+
+        if (!assetId || !ownerData?.ownerRef) {
+            throw new Error('assetId and ownerRef are required');
+        }
+
+        const owner = await prisma.$transaction(async (tx) => {
             // Verify ownership of the asset
             const asset = await tx.asset.findUnique({
                 where: { id: assetId, tenantId },
-                select: { id: true }
+                select: { id: true, tenantId: true }
             });
 
             if (!asset) throw new Error('Asset not found or unauthorized');
@@ -247,7 +297,35 @@ export class AssetRegistryFacet {
                 }
             });
 
+            const delegationPayload = {
+                eventType: 'DELEGATION_GRANTED',
+                schemaVersion: 1,
+                assetId,
+                tenantId,
+                ownerId: owner.id,
+                ownerRefHash: hashPrivateRef(ownerData.ownerRef),
+                role: ownerData.label ?? 'delegate',
+                sharePercent: ownerData.sharePercent ?? null,
+                delegatedAt: new Date().toISOString(),
+            };
+
+            await tx.eventLog.create({
+                data: {
+                    assetId,
+                    tenantId,
+                    issuerId,
+                    origin: 'DELEGATION',
+                    status: 'APPROVED',
+                    payload: delegationPayload,
+                    signatureHash: AssetAnchoringService.signatureHash(delegationPayload),
+                }
+            });
+
             return owner;
         });
+
+        AnchorQueueService.processQueue({ tenantId, assetId }).catch(console.error);
+
+        return owner;
     }
 }

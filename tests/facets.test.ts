@@ -69,6 +69,7 @@ import { TransferRegistryFacet } from '../src/services/core-facets/TransferRegis
 import { EventLogFacet } from '../src/services/core-facets/EventLogFacet';
 import { PublicProfileFacet } from '../src/services/core-facets/PublicProfileFacet';
 import { BlindContactLogFacet } from '../src/services/core-facets/BlindContactLogFacet';
+import { AnchorQueueService } from '../src/services/AnchorQueueService';
 
 // ─────────────────────────────────────────────────────────
 // TEST FIXTURES
@@ -130,6 +131,46 @@ describe('FACETA 1/3: AssetRegistryFacet — Criação e Ciclo de Vida', () => {
         expect(mockAsset.updateMany).toHaveBeenCalledOnce();
     });
 
+    it('✅ Registra delegação como evento de ciclo de vida ancorável', async () => {
+        mockAsset.findUnique.mockResolvedValue({ id: BICYCLE.id, tenantId: BICYCLE.tenantId });
+        mockOwner.create.mockResolvedValue({ id: 'owner_delegate_001', assetId: BICYCLE.id });
+        mockAuditLog.create.mockResolvedValue({ id: 'audit_owner_001' });
+        mockEventLog.create.mockResolvedValue({ id: 'evt_delegation_001', status: 'APPROVED' });
+
+        const owner = await AssetRegistryFacet.addOwner(SECURE_CONTEXT, {
+            assetId: BICYCLE.id,
+            ownerRef: 'user-open-id-001',
+            label: 'viewer',
+            sharePercent: 0,
+        });
+
+        expect(owner.id).toBe('owner_delegate_001');
+        expect(mockEventLog.create).toHaveBeenCalledWith(
+            expect.objectContaining({
+                data: expect.objectContaining({
+                    assetId: BICYCLE.id,
+                    tenantId: BICYCLE.tenantId,
+                    origin: 'DELEGATION',
+                    status: 'APPROVED',
+                    signatureHash: expect.any(String),
+                    payload: expect.objectContaining({
+                        eventType: 'DELEGATION_GRANTED',
+                        assetId: BICYCLE.id,
+                        tenantId: BICYCLE.tenantId,
+                        ownerId: 'owner_delegate_001',
+                        ownerRefHash: expect.any(String),
+                        role: 'viewer',
+                        sharePercent: 0,
+                    }),
+                }),
+            }),
+        );
+        expect(AnchorQueueService.processQueue).toHaveBeenCalledWith({
+            tenantId: BICYCLE.tenantId,
+            assetId: BICYCLE.id,
+        });
+    });
+
     it('🚫 Rejeita acesso sem ser ADMIN', async () => {
         await expect(AssetRegistryFacet.createAsset({ tenantId: 'x', role: 'STANDARD' }, ASSET_PAYLOAD))
             .rejects.toThrow(/insufficient privileges/i);
@@ -163,7 +204,29 @@ describe('FACETA 2: TransferRegistryFacet — Transferência e Billing', () => {
         expect(mockOwner.findFirst).toHaveBeenCalledOnce();
         expect(mockOwner.create).toHaveBeenCalledOnce();
         expect(mockAsset.update).toHaveBeenCalledOnce();
-        expect(mockEventLog.create).toHaveBeenCalledOnce();
+        expect(mockEventLog.create).toHaveBeenCalledWith(
+            expect.objectContaining({
+                data: expect.objectContaining({
+                    assetId: BICYCLE.id,
+                    tenantId: BICYCLE.tenantId,
+                    origin: 'TRANSFER',
+                    status: 'APPROVED',
+                    signatureHash: expect.any(String),
+                    payload: expect.objectContaining({
+                        eventType: 'TRANSFER_INITIATED',
+                        buyerDocumentHash: expect.any(String),
+                        documentType: 'CPF',
+                        fee: 49.99,
+                        buyerOwnerId: 'owner_shadow_001',
+                    }),
+                }),
+            }),
+        );
+        expect(mockEventLog.create.mock.calls[0][0].data.payload.buyerDocument).toBeUndefined();
+        expect(AnchorQueueService.processQueue).toHaveBeenCalledWith({
+            tenantId: BICYCLE.tenantId,
+            assetId: BICYCLE.id,
+        });
     });
 
     it('✅ Reutiliza Shadow Account existente (mesmo CPF)', async () => {

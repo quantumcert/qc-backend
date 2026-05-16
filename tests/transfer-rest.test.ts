@@ -53,6 +53,12 @@ vi.mock('../src/services/core-facets/BillingFacet', () => ({
   },
 }));
 
+vi.mock('../src/services/AnchorQueueService', () => ({
+  AnchorQueueService: {
+    processQueue: vi.fn().mockResolvedValue({ processed: 0, items: [] }),
+  },
+}));
+
 // Import app AFTER mocks are set up
 import { app } from '../src/server';
 import prisma from '../src/config/prisma';
