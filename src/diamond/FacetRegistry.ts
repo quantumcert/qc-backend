@@ -33,6 +33,7 @@ export const FacetRegistry: Record<string, FacetFunction> = {
     'asset.update': AssetRegistryFacet.updateAsset,
     'asset.addOwner': AssetRegistryFacet.addOwner,
     'asset.revokeOwner': AssetRegistryFacet.revokeOwner,
+    'asset.acceptOwner': AssetRegistryFacet.acceptOwner,
 
     // EVENT LOG
     'event.recordAuthenticated': EventLogFacet.recordAuthenticatedEvent,

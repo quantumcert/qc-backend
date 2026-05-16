@@ -240,6 +240,49 @@ describe('FACETA 1/3: AssetRegistryFacet — Criação e Ciclo de Vida', () => {
         });
     });
 
+    it('✅ Registra aceite do delegado como evento ancorável', async () => {
+        const activeOwner = {
+            id: 'owner_delegate_002',
+            assetId: BICYCLE.id,
+            ownerRef: 'delegate-open-id',
+            label: 'auditor',
+            sharePercent: 0,
+            revokedAt: null,
+        };
+
+        mockAsset.findUnique.mockResolvedValue({ id: BICYCLE.id, tenantId: BICYCLE.tenantId });
+        mockOwner.findFirst.mockResolvedValue(activeOwner);
+        mockEventLog.create.mockResolvedValue({ id: 'evt_delegation_accepted', status: 'APPROVED' });
+
+        const result = await AssetRegistryFacet.acceptOwner(SECURE_CONTEXT, {
+            assetId: BICYCLE.id,
+            ownerId: activeOwner.id,
+            ownerRef: activeOwner.ownerRef,
+            acceptedByOpenId: activeOwner.ownerRef,
+        });
+
+        expect(result).toEqual({ accepted: true, owner: activeOwner });
+        expect(mockEventLog.create).toHaveBeenCalledWith(expect.objectContaining({
+            data: expect.objectContaining({
+                assetId: BICYCLE.id,
+                tenantId: SECURE_CONTEXT.tenantId,
+                origin: 'DELEGATION',
+                status: 'APPROVED',
+                payload: expect.objectContaining({
+                    eventType: 'DELEGATION_ACCEPTED',
+                    ownerId: activeOwner.id,
+                    acceptedByOpenId: activeOwner.ownerRef,
+                    role: activeOwner.label,
+                }),
+                signatureHash: expect.any(String),
+            }),
+        }));
+        expect(AnchorQueueService.processQueue).toHaveBeenCalledWith({
+            tenantId: SECURE_CONTEXT.tenantId,
+            assetId: BICYCLE.id,
+        });
+    });
+
     it('🚫 Rejeita acesso sem ser ADMIN', async () => {
         await expect(AssetRegistryFacet.createAsset({ tenantId: 'x', role: 'STANDARD' }, ASSET_PAYLOAD))
             .rejects.toThrow(/insufficient privileges/i);
