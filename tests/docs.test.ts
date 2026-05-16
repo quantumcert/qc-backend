@@ -102,13 +102,24 @@ describe('GET /api-docs/spec.json', () => {
   it('documents public document verification and QTAG contracts', async () => {
     const res = await request.get('/api-docs/spec.json');
 
-    expect(res.body.paths['/api/v1/public/verify/document/{hash}']).toBeDefined();
+    const documentVerification =
+      res.body.paths['/api/v1/public/verify/document/{hash}'];
+    expect(documentVerification).toBeDefined();
     expect(res.body.paths['/api/v1/scan']).toBeDefined();
+    expect(documentVerification.get.responses['501']).toBeDefined();
+    expect(
+      documentVerification.get.responses['501'].content['application/json']
+        .schema.properties.code.example,
+    ).toBe('PAYMENT_PROVIDER_NOT_CONFIGURED');
+    expect(
+      documentVerification.get.responses['200'].content['application/json']
+        .schema.properties.blockchain,
+    ).toBeDefined();
 
     const scan = res.body.paths['/api/v1/scan'].get;
     expect(scan.security).toEqual([]);
     expect(scan.parameters.map((p: any) => p.name)).toEqual(
-      expect.arrayContaining(['p', 'm', 'uid', 'lat', 'lon'])
+      expect.arrayContaining(['p', 'm', 'uid', 'lat', 'lon']),
     );
     expect(scan.responses['200']).toBeDefined();
     expect(scan.responses['403']).toBeDefined();
@@ -118,14 +129,22 @@ describe('GET /api-docs/spec.json', () => {
   it('documents Diamond selectors for document verification and QTAG', async () => {
     const res = await request.get('/api-docs/spec.json');
     const examples =
-      res.body.paths['/api/v1/diamond'].post.requestBody.content['application/json'].examples;
+      res.body.paths['/api/v1/diamond'].post.requestBody.content[
+        'application/json'
+      ].examples;
 
     expect(examples.eventRecordAuthenticatedDocument.value.selector).toBe(
-      'event.recordAuthenticated'
+      'event.recordAuthenticated',
     );
-    expect(examples.commissioningStart.value.selector).toBe('commissioning.start');
-    expect(examples.commissioningConfirm.value.selector).toBe('commissioning.confirm');
-    expect(examples.commissioningStatus.value.selector).toBe('commissioning.status');
+    expect(examples.commissioningStart.value.selector).toBe(
+      'commissioning.start',
+    );
+    expect(examples.commissioningConfirm.value.selector).toBe(
+      'commissioning.confirm',
+    );
+    expect(examples.commissioningStatus.value.selector).toBe(
+      'commissioning.status',
+    );
   });
 });
 

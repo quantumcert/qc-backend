@@ -12,6 +12,8 @@ dist/
 coverage/
 .turbo
 .worktrees/
+contracts/soroban/**/.stellar/
+contracts/soroban/**/target/
 docs/doc-inpi-atualizado.pdf
 TODO.md
 .gitignore

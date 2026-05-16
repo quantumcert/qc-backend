@@ -39,6 +39,7 @@ export class SorobanAdapter implements IDLTAdapter {
   private keypair: Keypair;
   private contractId: string;
   private networkPassphrase: string;
+  private readonly legacySystemTenantId = 'SYSTEM';
 
   constructor() {
     const kms = KMSService.getInstance();
@@ -73,6 +74,11 @@ export class SorobanAdapter implements IDLTAdapter {
   // ----------------------------------------------------------
 
   async anchorEvent(eventId: string, hash: string, options?: AnchorOptions): Promise<string> {
+    const tenantId = options?.tenantId;
+    if (!tenantId) {
+      throw new Error('STELLAR anchor requires tenantId for ChainTransaction logging.');
+    }
+
     if (options?.tripleSign) {
       const validation = await QuantumSignerService.getInstance().verifyTriple(options.tripleSign);
       if (!validation.valid) {
@@ -90,9 +96,6 @@ export class SorobanAdapter implements IDLTAdapter {
     const contract = new Contract(this.contractId);
 
     const args = this._toScValArgs(eventId, hash64, options?.unlockTimestamp ?? 0);
-    if (options?.pqcProof) {
-      args.push(nativeToScVal(options.pqcProof, { type: 'string' }));
-    }
 
     const builder = new TransactionBuilder(account, {
       fee: '100000',
@@ -105,24 +108,19 @@ export class SorobanAdapter implements IDLTAdapter {
     tx.sign(this.keypair);
 
     const simulateResult = await this.sorobanServer.simulateTransaction(tx);
-    const preparedTx = SorobanRpc.assembleTransaction(tx, simulateResult) as any;
+    const preparedTx = SorobanRpc.assembleTransaction(tx, simulateResult).build();
     preparedTx.sign(this.keypair);
 
-    const submitResult = await this.sorobanServer.sendTransaction(preparedTx);
-
-    if (submitResult.status === 'ERROR') {
-      throw new Error(`Soroban anchor failed: ${submitResult.status}`);
-    }
-
-    const txHash = submitResult.hash;
+    const txHash = await this.submitSorobanTransaction(preparedTx, 'anchor');
 
     await this.logTransaction({
-      tenantId: 'SYSTEM',
+      tenantId,
       txRef: eventId,
       chain: 'STELLAR',
       direction: 'ANCHOR',
       chainTxId: txHash,
-      status: 'PENDING',
+      status: 'CONFIRMED',
+      confirmedAt: new Date(),
       metadata: { hash, pqcProof: options?.pqcProof, tripleSign: options?.tripleSign },
     });
 
@@ -150,15 +148,12 @@ export class SorobanAdapter implements IDLTAdapter {
       }
     }
 
-    const { escrowId, receiver, amount, unlockTimestamp, pqcProof, tripleSign } = params;
+    const { escrowId, sender, receiver, amount, unlockTimestamp, pqcProof, tripleSign } = params;
 
     const account = await this.horizonServer.loadAccount(this.keypair.publicKey());
     const contract = new Contract(this.contractId);
 
-    const args = this._toScValEscrowArgs(escrowId, receiver, amount, params.assetAddress, unlockTimestamp);
-    if (pqcProof) {
-      args.push(nativeToScVal(pqcProof, { type: 'string' }));
-    }
+    const args = this._toScValEscrowArgs(escrowId, sender, receiver, amount, params.assetAddress, unlockTimestamp);
 
     const builder = new TransactionBuilder(account, {
       fee: '100000',
@@ -171,29 +166,26 @@ export class SorobanAdapter implements IDLTAdapter {
     tx.sign(this.keypair);
 
     const simulateResult = await this.sorobanServer.simulateTransaction(tx);
-    const preparedTx = SorobanRpc.assembleTransaction(tx, simulateResult) as any;
+    const preparedTx = SorobanRpc.assembleTransaction(tx, simulateResult).build();
     preparedTx.sign(this.keypair);
 
-    const submitResult = await this.sorobanServer.sendTransaction(preparedTx);
-
-    if (submitResult.status === 'ERROR') {
-      throw new Error(`Soroban createEscrow failed: ${submitResult.status}`);
-    }
+    const txHash = await this.submitSorobanTransaction(preparedTx, 'createEscrow');
 
     await this.logTransaction({
-      tenantId: 'SYSTEM',
+      tenantId: this.legacySystemTenantId,
       txRef: escrowId,
       chain: 'STELLAR',
       direction: 'ESCROW_CREATE',
       fromAddress: this.keypair.publicKey(),
       toAddress: receiver,
       amount,
-      chainTxId: submitResult.hash,
-      status: 'PENDING',
+      chainTxId: txHash,
+      status: 'CONFIRMED',
+      confirmedAt: new Date(),
       metadata: { unlockTimestamp, pqcProof, tripleSign },
     });
 
-    return submitResult.hash;
+    return txHash;
   }
 
   async releaseEscrow(escrowId: string, txRef: string): Promise<string> {
@@ -211,26 +203,23 @@ export class SorobanAdapter implements IDLTAdapter {
     tx.sign(this.keypair);
 
     const simulateResult = await this.sorobanServer.simulateTransaction(tx);
-    const preparedTx = SorobanRpc.assembleTransaction(tx, simulateResult) as any;
+    const preparedTx = SorobanRpc.assembleTransaction(tx, simulateResult).build();
     preparedTx.sign(this.keypair);
 
-    const submitResult = await this.sorobanServer.sendTransaction(preparedTx);
-
-    if (submitResult.status === 'ERROR') {
-      throw new Error(`Soroban releaseEscrow failed: ${submitResult.status}`);
-    }
+    const txHash = await this.submitSorobanTransaction(preparedTx, 'releaseEscrow');
 
     await this.logTransaction({
-      tenantId: 'SYSTEM',
+      tenantId: this.legacySystemTenantId,
       txRef,
       chain: 'STELLAR',
       direction: 'ESCROW_RELEASE',
-      chainTxId: submitResult.hash,
-      status: 'PENDING',
+      chainTxId: txHash,
+      status: 'CONFIRMED',
+      confirmedAt: new Date(),
       metadata: { escrowId },
     });
 
-    return submitResult.hash;
+    return txHash;
   }
 
   async cancelEscrow(escrowId: string, txRef: string): Promise<string> {
@@ -248,26 +237,23 @@ export class SorobanAdapter implements IDLTAdapter {
     tx.sign(this.keypair);
 
     const simulateResult = await this.sorobanServer.simulateTransaction(tx);
-    const preparedTx = SorobanRpc.assembleTransaction(tx, simulateResult) as any;
+    const preparedTx = SorobanRpc.assembleTransaction(tx, simulateResult).build();
     preparedTx.sign(this.keypair);
 
-    const submitResult = await this.sorobanServer.sendTransaction(preparedTx);
-
-    if (submitResult.status === 'ERROR') {
-      throw new Error(`Soroban cancelEscrow failed: ${submitResult.status}`);
-    }
+    const txHash = await this.submitSorobanTransaction(preparedTx, 'cancelEscrow');
 
     await this.logTransaction({
-      tenantId: 'SYSTEM',
+      tenantId: this.legacySystemTenantId,
       txRef,
       chain: 'STELLAR',
       direction: 'ESCROW_CANCEL',
-      chainTxId: submitResult.hash,
-      status: 'PENDING',
+      chainTxId: txHash,
+      status: 'CONFIRMED',
+      confirmedAt: new Date(),
       metadata: { escrowId },
     });
 
-    return submitResult.hash;
+    return txHash;
   }
 
   // ----------------------------------------------------------
@@ -305,7 +291,7 @@ export class SorobanAdapter implements IDLTAdapter {
     const result = await this.horizonServer.submitTransaction(tx);
 
     await this.logTransaction({
-      tenantId: 'SYSTEM',
+      tenantId: this.legacySystemTenantId,
       txRef,
       chain: 'STELLAR',
       direction: 'SEND',
@@ -324,7 +310,7 @@ export class SorobanAdapter implements IDLTAdapter {
     const { from, expectedAmount, txRef, pqcProof } = params;
 
     await this.logTransaction({
-      tenantId: 'SYSTEM',
+      tenantId: this.legacySystemTenantId,
       txRef,
       chain: 'STELLAR',
       direction: 'RECEIVE',
@@ -344,9 +330,9 @@ export class SorobanAdapter implements IDLTAdapter {
 
   private _toScValArgs(eventId: string, hash: Buffer, unlockTimestamp: number): any[] {
     return [
-      nativeToScVal(eventId, { type: 'string' }),
+      nativeToScVal(this._toContractBytes(eventId), { type: 'bytes' }),
       nativeToScVal(hash, { type: 'bytes' }),
-      nativeToScVal(unlockTimestamp, { type: 'i64' }),
+      nativeToScVal(unlockTimestamp, { type: 'u64' }),
     ];
   }
 
@@ -356,22 +342,68 @@ export class SorobanAdapter implements IDLTAdapter {
 
   private _toScValEscrowArgs(
     escrowId: string,
+    sender: string,
     receiver: string,
     amount: string,
     assetAddress: string | undefined,
     unlockTimestamp: number
   ): any[] {
     return [
-      nativeToScVal(escrowId, { type: 'string' }),
-      nativeToScVal(receiver, { type: 'string' }),
+      nativeToScVal(this._toContractBytes(escrowId), { type: 'bytes' }),
+      nativeToScVal(sender, { type: 'address' }),
+      nativeToScVal(receiver, { type: 'address' }),
       nativeToScVal(amount, { type: 'i128' }),
-      nativeToScVal(assetAddress || null, { type: 'string' }),
-      nativeToScVal(unlockTimestamp, { type: 'i64' }),
+      nativeToScVal(assetAddress || null, { type: 'address' }),
+      nativeToScVal(unlockTimestamp, { type: 'u64' }),
+      nativeToScVal(null),
     ];
   }
 
   private _toScValEscrowId(escrowId: string): any[] {
-    return [nativeToScVal(escrowId, { type: 'string' })];
+    return [nativeToScVal(this._toContractBytes(escrowId), { type: 'bytes' })];
+  }
+
+  private _toContractBytes(value: string, maxBytes = 32): Buffer {
+    const bytes = Buffer.from(value, 'utf8');
+    if (bytes.length > maxBytes) {
+      throw new Error(`Soroban identifier exceeds ${maxBytes} bytes.`);
+    }
+    return bytes;
+  }
+
+  private async submitSorobanTransaction(preparedTx: Transaction, action: string): Promise<string> {
+    const submitResult = await this.sorobanServer.sendTransaction(preparedTx);
+
+    if (submitResult.status === 'ERROR') {
+      throw new Error(`Soroban ${action} failed: ${submitResult.status}`);
+    }
+    if (submitResult.status === 'TRY_AGAIN_LATER') {
+      throw new Error(`Soroban ${action} submit returned TRY_AGAIN_LATER`);
+    }
+    if (submitResult.status !== 'PENDING' && submitResult.status !== 'DUPLICATE') {
+      throw new Error(`Soroban ${action} returned unexpected status: ${submitResult.status}`);
+    }
+
+    await this.waitForSorobanSuccess(submitResult.hash, action);
+    return submitResult.hash;
+  }
+
+  private async waitForSorobanSuccess(txHash: string, action: string): Promise<void> {
+    const maxAttempts = Number(process.env.SOROBAN_TX_WAIT_ATTEMPTS || 30);
+    const delayMs = Number(process.env.SOROBAN_TX_WAIT_MS || 1000);
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      const result = await this.sorobanServer.getTransaction(txHash);
+      if (result.status === 'SUCCESS') return;
+      if (result.status === 'FAILED') {
+        throw new Error(`Soroban ${action} transaction failed: ${txHash}`);
+      }
+      if (attempt < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
+
+    throw new Error(`Soroban ${action} transaction was not confirmed: ${txHash}`);
   }
 
   // ----------------------------------------------------------
@@ -389,6 +421,7 @@ export class SorobanAdapter implements IDLTAdapter {
     assetAddress?: string | null;
     chainTxId?: string;
     status: string;
+    confirmedAt?: Date;
     metadata?: Record<string, unknown>;
     error?: string;
   }) {

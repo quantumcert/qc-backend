@@ -1,10 +1,14 @@
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 
 // ── Module mocks (self-contained factories — no external refs) ──
 
+const { mockChainTransactionCreate } = vi.hoisted(() => ({
+    mockChainTransactionCreate: vi.fn(),
+}));
+
 vi.mock('../../src/config/prisma', () => ({
     default: {
-        chainTransaction: { create: vi.fn().mockResolvedValue({}) },
+        chainTransaction: { create: mockChainTransactionCreate },
     },
 }));
 
@@ -20,6 +24,11 @@ process.env.STELLAR_ANCHOR_CONTRACT_ID = 'CA7VBJVNTVMFFH2E3QNOZT3X3ZTUHX7ZYMX6PY
 import { SorobanAdapter } from '../../src/services/multi-chain/SorobanAdapter';
 
 describe('SorobanAdapter', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockChainTransactionCreate.mockResolvedValue({} as any);
+    });
+
     it('✅ instantiates with required env vars', () => {
         const adapter = new SorobanAdapter();
         expect(adapter).toBeDefined();
@@ -35,8 +44,25 @@ describe('SorobanAdapter', () => {
     it('✅ anchorEvent returns a tx hash', async () => {
         const adapter = new SorobanAdapter();
         const hash64 = 'a3f5c8e9b2d1f4a7e6c3b8d5a2f1e4c7b6a3d8f5e2c1b4a7f6e3d8c5b2a1f4ee';
-        const txId = await adapter.anchorEvent('evt_001', hash64);
+        const txId = await adapter.anchorEvent('evt_001', hash64, { tenantId: 'tenant_stellar' });
         expect(txId).toBe('fake_soroban_hash');
+        expect(mockChainTransactionCreate).toHaveBeenCalledWith({
+            data: expect.objectContaining({
+                tenantId: 'tenant_stellar',
+                chain: 'STELLAR',
+                direction: 'ANCHOR',
+                txRef: 'evt_001',
+                chainTxId: 'fake_soroban_hash',
+            }),
+        });
+    });
+
+    it('🚫 anchorEvent requires tenantId for ChainTransaction logging', async () => {
+        const adapter = new SorobanAdapter();
+        const hash64 = 'a3f5c8e9b2d1f4a7e6c3b8d5a2f1e4c7b6a3d8f5e2c1b4a7f6e3d8c5b2a1f4ee';
+
+        await expect(adapter.anchorEvent('evt_001', hash64)).rejects.toThrow('requires tenantId');
+        expect(mockChainTransactionCreate).not.toHaveBeenCalled();
     });
 
     it('✅ verifyAnchor returns true for SUCCESS tx', async () => {

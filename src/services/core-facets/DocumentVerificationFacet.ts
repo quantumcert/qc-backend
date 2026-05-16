@@ -1,6 +1,9 @@
 import prisma from '../../config/prisma';
+import { buildExplorerUrl } from '../../utils/blockchainExplorer';
 
-export type DocumentVerificationFailureReason = 'INVALID_DOCUMENT_HASH' | 'DOCUMENT_NOT_FOUND';
+export type DocumentVerificationFailureReason =
+    | 'INVALID_DOCUMENT_HASH'
+    | 'DOCUMENT_NOT_FOUND';
 
 export interface VerifyDocumentResponse {
     verified: boolean;
@@ -11,6 +14,12 @@ export interface VerifyDocumentResponse {
     dltTxId?: string | null;
     chain?: string;
     anchoredAt?: Date;
+    blockchain?: {
+        dltTxId: string;
+        explorerUrl: string | null;
+        chain: string;
+        anchoredAt: Date;
+    } | null;
     eventId?: string;
     issuerId?: string | null;
     confirmationStatus?: string;
@@ -50,17 +59,27 @@ export class DocumentVerificationFacet {
             orderBy: { createdAt: 'desc' },
         });
 
+        const dltTxId = anchorTx?.chainTxId ?? event.dltTxId ?? null;
+        const chain = anchorTx?.chain;
+        const anchoredAt = anchorTx?.confirmedAt ?? event.updatedAt;
+        const explorerUrl = buildExplorerUrl(chain, dltTxId);
+
         return {
             verified: true,
             assetId: event.assetId,
             assetStatus: event.asset.status,
             publicUrl: event.asset.publicUrl,
-            dltTxId: anchorTx?.chainTxId ?? event.dltTxId,
-            chain: anchorTx?.chain,
-            anchoredAt: anchorTx?.confirmedAt ?? event.updatedAt,
+            dltTxId,
+            chain,
+            anchoredAt,
+            blockchain:
+                dltTxId && chain
+                    ? { dltTxId, explorerUrl, chain, anchoredAt }
+                    : null,
             eventId: event.id,
             issuerId: event.issuerId ?? null,
-            confirmationStatus: anchorTx?.status ?? (event.dltTxId ? 'CONFIRMED' : 'PENDING'),
+            confirmationStatus:
+                anchorTx?.status ?? (event.dltTxId ? 'CONFIRMED' : 'PENDING'),
         };
     }
 }

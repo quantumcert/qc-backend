@@ -49,6 +49,8 @@ export const rpc = {
     getTransaction = () => Promise.resolve({ status: 'SUCCESS' });
   },
   assembleTransaction: (_tx: any, _simulateResult: any) => {
-    return { sign: () => {}, toXDR: () => 'fake_xdr' };
+    return {
+      build: () => ({ sign: () => {}, toXDR: () => 'fake_xdr' }),
+    };
   },
 };

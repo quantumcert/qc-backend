@@ -10,6 +10,7 @@ import { BlindContactController } from '../../controllers/BlindContactController
 import { DocumentVerificationFacet } from '../../services/core-facets/DocumentVerificationFacet';
 import { CurationFacet } from '../../services/core-facets/CurationFacet';
 import { optionalApiKey } from '../../middleware/apiKeyAuth';
+import { createDocumentPaymentGate } from '../../middleware/documentPaymentGate';
 import rateLimit from 'express-rate-limit';
 
 const router = Router();
@@ -127,6 +128,11 @@ router.post('/asset/:id/contact', BlindContactController.submitContact);
  *       e status de confirmação. Esta é a rota pública canônica para verificação documental; não existe
  *       rota alternativa `/api/v1/verify/document/{hash}`.
  *
+ *       O objeto `blockchain` é chain-agnostic e pode conter link de explorer
+ *       quando a chain tiver mapeamento suportado. Micropagamento/x402 é opcional,
+ *       fica desabilitado por default e, se `X402_ENABLED=true` for ativado sem
+ *       provider real, a rota falha fechada com `PAYMENT_PROVIDER_NOT_CONFIGURED`.
+ *
  *       O hash deve ser calculado **client-side** (WebCrypto API) — o arquivo nunca
  *       é enviado ao backend. A resposta de sucesso não expõe `tenantId`, `metadata`,
  *       `owners`, `payload`, `signatureHash`, `sdmMacKey`, `writeKey` ou `apiKey`.
@@ -171,7 +177,24 @@ router.post('/asset/:id/contact', BlindContactController.submitContact);
  *                   format: date-time
  *                 chain:
  *                   type: string
- *                   example: ALGORAND
+ *                   example: STELLAR
+ *                 blockchain:
+ *                   type: object
+ *                   nullable: true
+ *                   properties:
+ *                     dltTxId:
+ *                       type: string
+ *                       example: STELLAR-TX
+ *                     explorerUrl:
+ *                       type: string
+ *                       nullable: true
+ *                       example: https://stellar.expert/explorer/testnet/tx/STELLAR-TX
+ *                     chain:
+ *                       type: string
+ *                       example: STELLAR
+ *                     anchoredAt:
+ *                       type: string
+ *                       format: date-time
  *                 issuerId:
  *                   type: string
  *                   nullable: true
@@ -183,9 +206,14 @@ router.post('/asset/:id/contact', BlindContactController.submitContact);
  *               assetId: "uuid-do-ativo"
  *               assetStatus: "ACTIVE"
  *               publicUrl: "https://api.domain.com/v1/public/asset/uuid-do-ativo"
- *               dltTxId: "ALGOTX123"
- *               chain: "ALGORAND"
+ *               dltTxId: "STELLAR-TX"
+ *               chain: "STELLAR"
  *               anchoredAt: "2026-05-13T22:00:00.000Z"
+ *               blockchain:
+ *                 dltTxId: "STELLAR-TX"
+ *                 explorerUrl: "https://stellar.expert/explorer/testnet/tx/STELLAR-TX"
+ *                 chain: "STELLAR"
+ *                 anchoredAt: "2026-05-13T22:00:00.000Z"
  *               eventId: "event-id"
  *               issuerId: "api-key-id"
  *               confirmationStatus: "CONFIRMED"
@@ -227,6 +255,25 @@ router.post('/asset/:id/contact', BlindContactController.submitContact);
  *               success: false
  *               error: "Document not found."
  *               code: "DOCUMENT_NOT_FOUND"
+ *       501:
+ *         description: Pagamento opcional habilitado sem provider configurado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                 code:
+ *                   type: string
+ *                   example: PAYMENT_PROVIDER_NOT_CONFIGURED
+ *             example:
+ *               success: false
+ *               error: "Document verification payment provider is not configured."
+ *               code: "PAYMENT_PROVIDER_NOT_CONFIGURED"
  */
 /**
  * @openapi
@@ -340,7 +387,7 @@ router.post('/asset/:assetId/contribution', publicContributionLimiter, async (re
 });
 
 // Sub-sistema 3: Zero-Knowledge Document Verification
-router.get('/verify/document/:hash', async (req, res, next) => {
+router.get('/verify/document/:hash', createDocumentPaymentGate(), async (req, res, next) => {
     try {
         const hash = req.params.hash;
         const result = await DocumentVerificationFacet.verifyByHash(hash);
@@ -369,6 +416,7 @@ router.get('/verify/document/:hash', async (req, res, next) => {
             dltTxId: result.dltTxId,
             chain: result.chain,
             anchoredAt: result.anchoredAt,
+            blockchain: result.blockchain,
             eventId: result.eventId,
             issuerId: result.issuerId,
             confirmationStatus: result.confirmationStatus,
@@ -377,6 +425,5 @@ router.get('/verify/document/:hash', async (req, res, next) => {
         next(err);
     }
 });
-
 
 export default router;

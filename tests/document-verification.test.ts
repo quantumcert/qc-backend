@@ -5,21 +5,22 @@ import request from 'supertest';
 // ─────────────────────────────────────────────────────────
 // HOISTED MOCKS
 // ─────────────────────────────────────────────────────────
-const { mockEventLog, mockAsset, mockAuditLog, mockChainTransaction } = vi.hoisted(() => ({
-    mockEventLog: {
-        create: vi.fn(),
-        findFirst: vi.fn(),
-    },
-    mockAsset: {
-        findUnique: vi.fn(),
-    },
-    mockAuditLog: {
-        create: vi.fn(),
-    },
-    mockChainTransaction: {
-        findFirst: vi.fn(),
-    },
-}));
+const { mockEventLog, mockAsset, mockAuditLog, mockChainTransaction } =
+    vi.hoisted(() => ({
+        mockEventLog: {
+            create: vi.fn(),
+            findFirst: vi.fn(),
+        },
+        mockAsset: {
+            findUnique: vi.fn(),
+        },
+        mockAuditLog: {
+            create: vi.fn(),
+        },
+        mockChainTransaction: {
+            findFirst: vi.fn(),
+        },
+    }));
 
 vi.mock('../src/config/prisma', () => ({
     default: {
@@ -28,7 +29,11 @@ vi.mock('../src/config/prisma', () => ({
         auditLog: mockAuditLog,
         chainTransaction: mockChainTransaction,
         $transaction: vi.fn(async (cb) =>
-            cb({ eventLog: mockEventLog, asset: mockAsset, auditLog: mockAuditLog })
+            cb({
+                eventLog: mockEventLog,
+                asset: mockAsset,
+                auditLog: mockAuditLog,
+            }),
         ),
     },
 }));
@@ -70,7 +75,9 @@ describe('DocumentVerificationFacet.verifyByHash', () => {
     });
 
     it('returns verified:false when hash contains non-hex characters', async () => {
-        const result = await DocumentVerificationFacet.verifyByHash('z'.repeat(128));
+        const result = await DocumentVerificationFacet.verifyByHash(
+            'z'.repeat(128),
+        );
         expect(result.verified).toBe(false);
         expect(result.reason).toBe('INVALID_DOCUMENT_HASH');
     });
@@ -97,7 +104,10 @@ describe('DocumentVerificationFacet.verifyByHash', () => {
             issuerId: 'qc_key_abc',
             dltTxId: 'ALGO-TX-xyz',
             updatedAt: now,
-            asset: { status: 'ACTIVE', publicUrl: 'https://verify.quantumcert.io/a/asset_001' },
+            asset: {
+                status: 'ACTIVE',
+                publicUrl: 'https://verify.quantumcert.io/a/asset_001',
+            },
         });
         mockChainTransaction.findFirst.mockResolvedValue({
             chain: 'ALGORAND',
@@ -115,6 +125,12 @@ describe('DocumentVerificationFacet.verifyByHash', () => {
             dltTxId: 'ALGO-TX-anchor',
             chain: 'ALGORAND',
             anchoredAt: confirmedAt,
+            blockchain: {
+                dltTxId: 'ALGO-TX-anchor',
+                explorerUrl: null,
+                chain: 'ALGORAND',
+                anchoredAt: confirmedAt,
+            },
             eventId: 'evt_001',
             issuerId: 'qc_key_abc',
             confirmationStatus: 'CONFIRMED',
@@ -125,12 +141,96 @@ describe('DocumentVerificationFacet.verifyByHash', () => {
         });
     });
 
+    it('returns blockchain:null when there is no ChainTransaction proof', async () => {
+        const now = new Date();
+        mockEventLog.findFirst.mockResolvedValue({
+            id: 'evt_legacy',
+            assetId: 'asset_legacy',
+            issuerId: 'qc_key_abc',
+            dltTxId: 'LEGACY-TX',
+            updatedAt: now,
+            asset: { status: 'ACTIVE', publicUrl: null },
+        });
+        mockChainTransaction.findFirst.mockResolvedValue(null);
+
+        const result = await DocumentVerificationFacet.verifyByHash(VALID_HASH);
+
+        expect(result.verified).toBe(true);
+        expect(result.dltTxId).toBe('LEGACY-TX');
+        expect(result.chain).toBeUndefined();
+        expect(result.blockchain).toBeNull();
+    });
+
+    it('returns Stellar blockchain proof with Stellar Expert testnet explorer URL', async () => {
+        const now = new Date();
+        const confirmedAt = new Date(now.getTime() + 1000);
+        mockEventLog.findFirst.mockResolvedValue({
+            id: 'evt_stellar',
+            assetId: 'asset_stellar',
+            issuerId: 'qc_key_stellar',
+            dltTxId: null,
+            updatedAt: now,
+            asset: { status: 'ACTIVE', publicUrl: null },
+        });
+        mockChainTransaction.findFirst.mockResolvedValue({
+            chain: 'STELLAR',
+            chainTxId: 'STELLAR-TX',
+            confirmedAt,
+            status: 'CONFIRMED',
+        });
+
+        const result = await DocumentVerificationFacet.verifyByHash(VALID_HASH);
+
+        expect(result.blockchain).toEqual({
+            dltTxId: 'STELLAR-TX',
+            explorerUrl:
+                'https://stellar.expert/explorer/testnet/tx/STELLAR-TX',
+            chain: 'STELLAR',
+            anchoredAt: confirmedAt,
+        });
+        expect(result).not.toHaveProperty('stellarTxId');
+        expect(result).not.toHaveProperty('stellarExplorerUrl');
+    });
+
+    it('keeps future chains in the blockchain object with explorerUrl null', async () => {
+        const now = new Date();
+        mockEventLog.findFirst.mockResolvedValue({
+            id: 'evt_solana',
+            assetId: 'asset_solana',
+            issuerId: null,
+            dltTxId: null,
+            updatedAt: now,
+            asset: { status: 'ACTIVE', publicUrl: null },
+        });
+        mockChainTransaction.findFirst.mockResolvedValue({
+            chain: 'SOLANA',
+            chainTxId: 'SOLANA-TX',
+            confirmedAt: null,
+            status: 'PENDING',
+        });
+
+        const result = await DocumentVerificationFacet.verifyByHash(VALID_HASH);
+
+        expect(result.blockchain).toEqual({
+            dltTxId: 'SOLANA-TX',
+            explorerUrl: null,
+            chain: 'SOLANA',
+            anchoredAt: now,
+        });
+    });
+
     it('is reachable through the document.verify Diamond selector', async () => {
         mockEventLog.findFirst.mockResolvedValue(null);
 
-        const result = await FacetRegistry['document.verify']({}, { hash: VALID_HASH });
+        const result = await FacetRegistry['document.verify'](
+            {},
+            { hash: VALID_HASH },
+        );
 
-        expect(result).toEqual({ verified: false, reason: 'DOCUMENT_NOT_FOUND' });
+        expect(result).toEqual({
+            verified: false,
+            reason: 'DOCUMENT_NOT_FOUND',
+        });
         expect(mockEventLog.findFirst).toHaveBeenCalledWith({
             where: { documentHash: VALID_HASH },
             include: { asset: { select: { status: true, publicUrl: true } } },
@@ -139,7 +239,9 @@ describe('DocumentVerificationFacet.verifyByHash', () => {
 
     it('accepts uppercase hex hashes', async () => {
         mockEventLog.findFirst.mockResolvedValue(null);
-        const result = await DocumentVerificationFacet.verifyByHash('A'.repeat(128));
+        const result = await DocumentVerificationFacet.verifyByHash(
+            'A'.repeat(128),
+        );
         expect(result.reason).toBe('DOCUMENT_NOT_FOUND');
     });
 });
@@ -151,7 +253,9 @@ describe('GET /api/v1/public/verify/document/:hash', () => {
     beforeEach(() => vi.clearAllMocks());
 
     it('returns 400 with structured INVALID_DOCUMENT_HASH for malformed hashes', async () => {
-        const response = await request(createPublicApp()).get('/api/v1/public/verify/document/not-a-valid-hash');
+        const response = await request(createPublicApp()).get(
+            '/api/v1/public/verify/document/not-a-valid-hash',
+        );
 
         expect(response.status).toBe(400);
         expect(response.body).toEqual({
@@ -165,7 +269,9 @@ describe('GET /api/v1/public/verify/document/:hash', () => {
     it('returns 404 with structured DOCUMENT_NOT_FOUND when hash is absent', async () => {
         mockEventLog.findFirst.mockResolvedValue(null);
 
-        const response = await request(createPublicApp()).get(`/api/v1/public/verify/document/${VALID_HASH}`);
+        const response = await request(createPublicApp()).get(
+            `/api/v1/public/verify/document/${VALID_HASH}`,
+        );
 
         expect(response.status).toBe(404);
         expect(response.body).toEqual({
@@ -184,7 +290,10 @@ describe('GET /api/v1/public/verify/document/:hash', () => {
             issuerId: 'qc_key_abc',
             dltTxId: 'ALGO-TX-xyz',
             updatedAt: now,
-            asset: { status: 'ACTIVE', publicUrl: 'https://verify.quantumcert.io/a/asset_001' },
+            asset: {
+                status: 'ACTIVE',
+                publicUrl: 'https://verify.quantumcert.io/a/asset_001',
+            },
         });
         mockChainTransaction.findFirst.mockResolvedValue({
             chain: 'ALGORAND',
@@ -193,7 +302,9 @@ describe('GET /api/v1/public/verify/document/:hash', () => {
             status: 'CONFIRMED',
         });
 
-        const response = await request(createPublicApp()).get(`/api/v1/public/verify/document/${VALID_HASH}`);
+        const response = await request(createPublicApp()).get(
+            `/api/v1/public/verify/document/${VALID_HASH}`,
+        );
 
         expect(response.status).toBe(200);
         expect(response.body).toMatchObject({
@@ -204,12 +315,29 @@ describe('GET /api/v1/public/verify/document/:hash', () => {
             dltTxId: 'ALGO-TX-anchor',
             chain: 'ALGORAND',
             anchoredAt: confirmedAt.toISOString(),
+            blockchain: {
+                dltTxId: 'ALGO-TX-anchor',
+                explorerUrl: null,
+                chain: 'ALGORAND',
+                anchoredAt: confirmedAt.toISOString(),
+            },
             eventId: 'evt_001',
             issuerId: 'qc_key_abc',
             confirmationStatus: 'CONFIRMED',
         });
 
-        for (const forbidden of ['tenantId', 'metadata', 'owners', 'payload', 'signatureHash', 'sdmMacKey', 'writeKey', 'apiKey']) {
+        for (const forbidden of [
+            'tenantId',
+            'metadata',
+            'owners',
+            'payload',
+            'signatureHash',
+            'sdmMacKey',
+            'writeKey',
+            'apiKey',
+            'stellarTxId',
+            'stellarExplorerUrl',
+        ]) {
             expect(response.body).not.toHaveProperty(forbidden);
         }
     });
@@ -219,14 +347,21 @@ describe('GET /api/v1/public/verify/document/:hash', () => {
 // EventLogFacet — documentHash extraction
 // ─────────────────────────────────────────────────────────
 describe('EventLogFacet.recordAuthenticatedEvent — documentHash', () => {
-    const secureCtx = { tenantId: 'tenant_001', role: 'ADMIN', apiKeyId: 'qc_key' };
+    const secureCtx = {
+        tenantId: 'tenant_001',
+        role: 'ADMIN',
+        apiKeyId: 'qc_key',
+    };
     const asset = { id: 'asset_001', tenantId: 'tenant_001', status: 'ACTIVE' };
 
     beforeEach(() => {
         vi.clearAllMocks();
         mockAsset.findUnique.mockResolvedValue(asset);
         mockEventLog.findFirst.mockResolvedValue(null);
-        mockEventLog.create.mockResolvedValue({ id: 'evt_new', assetId: 'asset_001' });
+        mockEventLog.create.mockResolvedValue({
+            id: 'evt_new',
+            assetId: 'asset_001',
+        });
         mockAuditLog.create.mockResolvedValue({});
     });
 
@@ -240,7 +375,7 @@ describe('EventLogFacet.recordAuthenticatedEvent — documentHash', () => {
         expect(mockEventLog.create).toHaveBeenCalledWith(
             expect.objectContaining({
                 data: expect.objectContaining({ documentHash: VALID_HASH }),
-            })
+            }),
         );
     });
 
@@ -274,7 +409,7 @@ describe('EventLogFacet.recordAuthenticatedEvent — documentHash', () => {
         expect(mockEventLog.create).toHaveBeenCalledWith(
             expect.objectContaining({
                 data: expect.objectContaining({ documentHash: null }),
-            })
+            }),
         );
     });
 
@@ -284,7 +419,7 @@ describe('EventLogFacet.recordAuthenticatedEvent — documentHash', () => {
                 assetId: 'asset_001',
                 documentHash: 'short-invalid-hash',
                 payload: { type: 'EXPERT_REPORT' },
-            })
+            }),
         ).rejects.toThrow('Invalid documentHash');
     });
 });
