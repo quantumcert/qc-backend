@@ -102,7 +102,7 @@ No remaining user setup is required to accept the Stellar/Soroban hackathon slic
 
 ## Next Phase Readiness
 
-Implementation passed final Phase 3 verification and was shipped for review through the backend/dashboard PRs.
+Implementation passed final Phase 3 verification and was merged through the backend/dashboard PRs.
 
 ## Self-Check: PASSED
 
