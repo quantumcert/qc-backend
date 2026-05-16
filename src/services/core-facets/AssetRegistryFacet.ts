@@ -294,7 +294,7 @@ export class AssetRegistryFacet {
             throw new Error('assetId and ownerRef are required');
         }
 
-        const owner = await prisma.$transaction(async (tx) => {
+        const result = await prisma.$transaction(async (tx) => {
             // Verify ownership of the asset
             const asset = await tx.asset.findUnique({
                 where: { id: assetId, tenantId },
@@ -303,20 +303,46 @@ export class AssetRegistryFacet {
 
             if (!asset) throw new Error('Asset not found or unauthorized');
 
-            const owner = await tx.owner.create({
-                data: {
+            const existingOwner = await tx.owner.findFirst({
+                where: {
                     assetId,
-                    ...ownerData
+                    ownerRef: ownerData.ownerRef,
                 }
             });
 
+            if (existingOwner && !existingOwner.revokedAt) {
+                return { owner: existingOwner, shouldAnchor: false };
+            }
+
+            const delegatedAt = new Date();
+            const owner = existingOwner
+                ? await tx.owner.update({
+                    where: { id: existingOwner.id },
+                    data: {
+                        revokedAt: null,
+                        acquiredAt: delegatedAt,
+                        label: ownerData.label,
+                        sharePercent: ownerData.sharePercent,
+                    }
+                })
+                : await tx.owner.create({
+                    data: {
+                        assetId,
+                        ...ownerData
+                    }
+                });
+
             await tx.auditLog.create({
                 data: {
-                    tenantId,
+                    tenantId: asset.tenantId,
                     action: AuditActions.OWNER_ADDED,
                     resourceType: ResourceTypes.OWNER,
                     resourceId: owner.id,
-                    metadata: { assetId, ownerRef: ownerData.ownerRef }
+                    metadata: {
+                        assetId,
+                        ownerRef: ownerData.ownerRef,
+                        reactivated: Boolean(existingOwner?.revokedAt),
+                    }
                 }
             });
 
@@ -324,18 +350,18 @@ export class AssetRegistryFacet {
                 eventType: 'DELEGATION_GRANTED',
                 schemaVersion: 1,
                 assetId,
-                tenantId,
+                tenantId: asset.tenantId,
                 ownerId: owner.id,
                 ownerRefHash: hashPrivateRef(ownerData.ownerRef),
                 role: ownerData.label ?? 'delegate',
                 sharePercent: ownerData.sharePercent ?? null,
-                delegatedAt: new Date().toISOString(),
+                delegatedAt: delegatedAt.toISOString(),
             };
 
             await tx.eventLog.create({
                 data: {
                     assetId,
-                    tenantId,
+                    tenantId: asset.tenantId,
                     issuerId,
                     origin: 'DELEGATION',
                     status: 'APPROVED',
@@ -344,12 +370,14 @@ export class AssetRegistryFacet {
                 }
             });
 
-            return owner;
+            return { owner, shouldAnchor: true };
         });
 
-        AnchorQueueService.processQueue({ tenantId, assetId }).catch(console.error);
+        if (result.shouldAnchor) {
+            AnchorQueueService.processQueue({ tenantId, assetId }).catch(console.error);
+        }
 
-        return owner;
+        return result.owner;
     }
 
     static async revokeOwner(secureContext: AddOwnerContext, payload: RevokeOwnerPayload) {
