@@ -8,6 +8,8 @@
     "language": "pt-BR",
     "chat_language": "pt-BR",
     "artifact_language": "pt-BR",
+    "copy_language": "pt-BR",
+    "copy_accentuation": "required",
     "allow_codex_coauthorship": false,
     "commit_footer_policy": "no_codex_coauthor",
     "workspace_repos": [

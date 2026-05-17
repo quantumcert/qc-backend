@@ -376,17 +376,17 @@ The confirm button text must include the action and target type, for example `Su
 | Platform admin primary CTA | `Cadastrar cliente` |
 | Tenant detail activation CTA | `Ativar tenant` |
 | First API key CTA | `Emitir primeira API key` |
-| Credit grant CTA | `Conceder creditos` |
+| Credit grant CTA | `Conceder créditos` |
 | QTAG reservation CTA | `Reservar QTAG para asset` |
 | Empty tenant list heading | `Nenhum cliente B2B cadastrado` |
-| Empty tenant list body | `Cadastre o primeiro cliente para ativar tenant, API keys, creditos e operacao QTAG.` |
-| Empty queue heading | `Nenhuma pendencia operacional` |
-| Empty queue body | `Quando houver ativacoes, pagamentos ou QTAGs aguardando acao, elas aparecerao aqui.` |
-| Empty audit heading | `Nenhuma requisicao encontrada` |
+| Empty tenant list body | `Cadastre o primeiro cliente para ativar tenant, API keys, créditos e operação QTAG.` |
+| Empty queue heading | `Nenhuma pendência operacional` |
+| Empty queue body | `Quando houver ativações, pagamentos ou QTAGs aguardando ação, elas aparecerão aqui.` |
+| Empty audit heading | `Nenhuma requisição encontrada` |
 | Empty audit body | `Ajuste os filtros ou selecione outro tenant/API key para revisar a atividade.` |
-| Generic error state | `Nao foi possivel carregar os dados. Tente novamente ou consulte o audit log da operacao.` |
-| Authorization error | `Voce nao tem permissao para acessar esta area. Solicite acesso de Platform Admin ou Tenant Admin.` |
-| Destructive confirmation | `{Acao}: esta operacao sera auditada e pode afetar o acesso do tenant.` |
+| Generic error state | `Não foi possível carregar os dados. Tente novamente ou consulte o audit log da operação.` |
+| Authorization error | `Você não tem permissão para acessar esta área. Solicite acesso de Platform Admin ou Tenant Admin.` |
+| Destructive confirmation | `{Ação}: esta operação será auditada e pode afetar o acesso do tenant.` |
 
 Copy rules:
 

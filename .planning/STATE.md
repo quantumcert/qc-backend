@@ -141,7 +141,7 @@ Phase 9 [          ] 0% (Specialized Domain Facets)
 ### Todos
 
 - Plan/update `qc-record-module` integration so a real NTAG 424 DNA can be written, locked, scanned, and approved through `/api/v1/scan`.
-- Execute Phase 4 from 7 plans: canonical schema/admin authorization; tenant lifecycle/dashboard shell; API keys/request audit; credits/receivables; QTAG entitlement/fulfillment; Tenant Quantum/backfill/B2C cutover; cross-repo admin UAT.
+- Executar a Fase 4 a partir de 7 planos: schema canônico/autorização admin; ciclo de vida de tenant/dashboard shell; API keys/request audit; créditos/recebíveis; QTAG entitlement/fulfillment; Tenant Quantum/backfill/cutover B2C; UAT admin cross-repo.
 - Plan Phase 5 around B2B external tenant readiness after Phase 4: tenant admins/operators, tenant API consumption, white-label/public boundaries, B2B pilot and `qc-business` commercial packaging decisions.
 - Plan Phase 6 after Phase 5 so on-chain Asset identity uses stable tenant/user/ownership references.
 - Before executing a requirement with product/business ambiguity, check whether the decision belongs in `qc-business` and whether acceptance depends on `qc-dashboard`, `qc-home`, or `qc-record-module`.
@@ -176,4 +176,4 @@ Phase 9 [          ] 0% (Specialized Domain Facets)
 - Phase 5 approved 2026-05-17: focus B2B external tenant readiness after Phase 4, including tenant admins/operators, API consumption, white-label/public boundaries and pilot cutover; B2C Tenant Quantum/backfill is not Phase 5 scope.
 - Phase 6 approved 2026-05-17: every profile/dependent/pet/object/document/QTAG must be represented as local Asset plus on-chain Asset/registry proof with event provenance.
 - Phase 4 Plan 02 completed 2026-05-17: backend `/api/v1/admin/platform/tenants` lifecycle/profile routes, `AdminTenantOperationsFacet`, admin audit, dashboard `adminRouter`, `QCBackendClient.admin.tenants.*`, and `/admin/platform/tenants` + `/admin/platform/tenants/:tenantId` UI are implemented and verified.
-- Phase 4 Plan 03 completed 2026-05-17: backend admin API-key lifecycle, sanitized API request audit, dashboard API Keys tab, `/admin/platform/audit`, and canonical Quantum Cert seed invariant are implemented and verified. `dev@localhost` resolves as Platform Admin and `Quantum Cert` appears in admin listing with slug `quantum-cert-platform`.
+- Fase 4 Plano 03 concluído em 2026-05-17: ciclo de vida admin de API keys no backend, request audit sanitizado, aba API Keys no dashboard, `/admin/platform/audit` e invariante canônico de seed da Quantum Cert foram implementados e verificados. `dev@localhost` resolve como Platform Admin e `Quantum Cert` aparece na listagem admin com slug `quantum-cert-platform`.

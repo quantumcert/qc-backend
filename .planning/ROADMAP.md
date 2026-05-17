@@ -32,7 +32,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 - [ ] **Phase 2: Document Verification + QTAG Production** _(3/3 plans complete; human UAT pending)_ — Verificação pública de documentos e NFC commissioning funcionando em produção
 - [x] **Phase 3: Pluggable DLT Workers — Stellar/Soroban Priority** _(complete; UAT passed; PRs merged)_ — Adapter Stellar para hackathon + infraestrutura multi-chain
 - [ ] **Phase 4: B2B Admin Operations Console** _(2/7 plans complete; in progress)_ — Área admin no `qc-dashboard` para cadastrar empresas/tenants, ativações, API keys, compras, recebimentos via provider, concessão de créditos, saldo/fila QTAG, Tenant Quantum, backfill e operação comercial B2B
-- [ ] **Phase 5: B2B Tenant External Readiness** — Tenants B2B externos operam com admins, operadores, API keys, créditos, QTAGs, auditoria e boundaries white-label/publicos próprios após Tenant Quantum/backfill da Phase 4
+- [ ] **Phase 5: B2B Tenant External Readiness** — Tenants B2B externos operam com admins, operadores, API keys, créditos, QTAGs, auditoria e boundaries white-label/públicos próprios após Tenant Quantum/backfill da Phase 4
 - [ ] **Phase 6: On-chain Asset Identity + Provenance** — Todo perfil, dependente, pet, objeto, documento e QTAG tem Asset local + Asset/registro on-chain e rastreabilidade por eventos na Stellar/Soroban
 - [ ] **Phase 7: Scale + Observability Infrastructure** — Redis, Pino, Sentry, BullMQ — plataforma multi-instância pronta para carga real
 - [ ] **Phase 8: EscrowFacet + Time-Lock Oracle + M2M** — Escrow on-chain com time-lock e registro de agentes IoT
@@ -212,7 +212,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 ### Phase 5: B2B Tenant External Readiness
 
-**Goal**: Tenants B2B externos ficam prontos para operar com admins, operadores, API keys, créditos, QTAGs, auditoria, consumo por API e boundaries white-label/publicos próprios, partindo do Tenant Quantum/backfill e da fundação admin entregues na Phase 4
+**Goal**: Tenants B2B externos ficam prontos para operar com admins, operadores, API keys, créditos, QTAGs, auditoria, consumo por API e boundaries white-label/públicos próprios, partindo do Tenant Quantum/backfill e da fundação admin entregues na Phase 4
 **Mode:** mvp
 **GitHub Milestone**: TBD
 **GitHub Issues**: TBD
@@ -224,13 +224,13 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 2. Tenant Admin B2B gerencia equipe, API keys permitidas, créditos, QTAGs, compras e auditoria apenas do próprio tenant.
 3. API keys B2B têm scopes, auditoria de requisições, limites e visibilidade de consumo adequados para tenants externos.
 4. Tenant Admin B2B não acessa rotas Platform Admin, grants globais, ativação cross-tenant nem auditoria de outros tenants.
-5. Boundaries white-label/publicos por tenant ficam explícitos e não vazam payloads privados de admin/billing.
+5. Boundaries white-label/públicos por tenant ficam explícitos e não vazam payloads privados de admin/billing.
 6. Um tenant B2B piloto completa onboarding -> chamada API -> operação de créditos/QTAG -> consulta pública usando contratos tenant-scoped.
 
 **Plans**: TBD
 **Cross-repo note:** Esta fase é transversal a `qc-backend`, `qc-dashboard` e `qc-home`; depende da Phase 4 para admin operacional, Tenant Quantum/backfill, API keys, créditos e QTAG ledgers; `qc-business` deve confirmar regras comerciais/planos/white-label antes do piloto B2B.
 
-**Phase 4 dependency:** Tenant Quantum, canonical B2C users, migration engine, complete dashboard user/dependent backfill, B2B admin console, tenant/API key foundation, credit/QTAG ledgers and fulfillment queues are delivered by Phase 4. Phase 5 starts from those artifacts and focuses on B2B external tenant readiness.
+**Dependência da Fase 4:** Tenant Quantum, usuários B2C canônicos, migration engine, backfill completo de usuários/dependentes do dashboard, console admin B2B, fundação tenant/API key, ledgers de crédito/QTAG e filas de fulfillment são entregues pela Fase 4. A Fase 5 começa a partir desses artefatos e foca a prontidão de tenants B2B externos.
 
 ### Phase 6: On-chain Asset Identity + Provenance
 
