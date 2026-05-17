@@ -8,7 +8,8 @@
 //
 // Run: npx tsx src/seeds/seed-bootstrap.ts
 //
-// Creates the canonical Quantum Cert platform tenant unless overridden by env vars.
+// Creates and normalizes the canonical Quantum Cert platform tenant.
+// The platform tenant identity is intentionally not overridable by env vars.
 // ═══════════════════════════════════════════════════════════
 
 import dotenv from 'dotenv';
@@ -47,7 +48,22 @@ async function main() {
         : null;
 
     if (platformTenant) {
-        console.log(`  ✅ Quantum Cert Tenant already exists: ${platformTenant.id}`);
+        platformTenant = await prisma.tenant.update({
+            where: { id: platformTenant.id },
+            data: {
+                name: platformName,
+                slug: platformSlug,
+                contactEmail: platformContactEmail,
+                planTier: 'ENTERPRISE',
+                isActive: true,
+                status: 'ACTIVE',
+                activatedAt: platformTenant.activatedAt ?? new Date(),
+                suspendedAt: null,
+                archivedAt: null,
+                statusReason: null,
+            },
+        });
+        console.log(`  ✅ Quantum Cert Tenant normalized: ${platformTenant.id}`);
     } else if (previousPlatformTenant) {
         platformTenant = await prisma.tenant.update({
             where: { id: previousPlatformTenant.id },
@@ -59,6 +75,9 @@ async function main() {
                 isActive: true,
                 status: 'ACTIVE',
                 activatedAt: previousPlatformTenant.activatedAt ?? new Date(),
+                suspendedAt: null,
+                archivedAt: null,
+                statusReason: null,
             },
         });
         console.log(`  ✅ Previous Platform Tenant aligned as Quantum Cert Tenant: ${platformTenant.id}`);
