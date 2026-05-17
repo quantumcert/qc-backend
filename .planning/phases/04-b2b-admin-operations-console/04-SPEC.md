@@ -7,9 +7,9 @@
 
 ## Goal
 
-Create the operational admin surface Quantum Cert needs before tenant identity migration and on-chain asset rollout. Platform admins must be able to register and manage B2B clients/companies, activate tenants, create API keys, manage purchases/receivables, grant credits, and operate the commercial lifecycle from one controlled interface.
+Create the operational admin surface Quantum Cert needs before tenant identity migration and on-chain asset rollout. Platform admins must be able to register and manage B2B clients/companies, activate tenants, create API keys, manage purchases/receivables, grant credits, operate QTAG fulfillment, and operate the commercial lifecycle from one controlled interface.
 
-This phase must come before the unified identity/backfill phase because B2B tenants, API keys, activation state, credit grants, purchase records, receivables and commercial terms need to exist before users/assets are migrated onto the canonical backend model.
+This phase must come before the unified identity/backfill phase because B2B tenants, API keys, activation state, credit grants, QTAG entitlements, purchase records, receivables and commercial terms need to exist before users/assets are migrated onto the canonical backend model.
 
 ## Current Problem
 
@@ -22,6 +22,7 @@ That creates operational risk:
 3. Purchases and credit grants can drift from the tenant record and later break identity/backfill/on-chain phases.
 4. Platform admin and tenant admin responsibilities remain mixed.
 5. Wallet/credit terminology can drift into direct client-wallet custody, which must be avoided for the production commercial model.
+6. QTAG purchases can drift into physical fulfillment without an Asset selection, making tags impossible to trace back to the protected asset.
 
 ## Product Boundary
 
@@ -56,6 +57,7 @@ Quantum platform admins can operate across tenants:
 - approve purchases or commercial orders;
 - grant, revoke or adjust tenant credits with mandatory reason;
 - inspect receivables/payment status from the configured external provider;
+- manage QTAG entitlement balances, issuance queue, engraving/encoding status, dispatch and failed/retry states;
 - view tenant usage, asset counts, credit balance, API activity, and operational incidents;
 - impersonation/debug must be explicit, audited, and disabled by default unless planned separately.
 
@@ -81,6 +83,8 @@ Required audit events:
 - credit grant/revoke/adjustment;
 - purchase approved/refunded/cancelled;
 - payment/receivable confirmed/failed/reversed;
+- QTAG entitlement purchased/reserved/released/consumed;
+- QTAG issuance requested/encoded/failed/dispatched/activated;
 - plan/limit changed;
 - tenant admin invited/removed;
 - white-label settings changed.
@@ -121,6 +125,42 @@ Manual admin credit changes must use the same ledger with types such as `GRANTED
 
 **Provider decision:** implement the receivables path behind a `PaymentProvider`/`ReceivablesProvider` interface. Transfero should be documented as the first candidate anchor/provider, but Phase 4 planning must leave the concrete integration contract, settlement model, supported currencies, webhook security and compliance flow as implementation details to confirm with `qc-business`.
 
+## QTAG Entitlement and Fulfillment Model
+
+Physical QTAGs must be treated as their own entitlement balance, separate from application credits.
+
+Target flow for buying QTAGs:
+
+```text
+Tenant/User selects physical QTAG package
+  -> backend creates PurchaseOrder / PaymentIntent
+  -> external provider confirms payment
+  -> backend appends QTagLedgerEntry(PURCHASED)
+  -> availableQTags increases
+```
+
+Target flow for using a QTAG:
+
+```text
+Tenant/User selects existing Asset
+  -> backend verifies Asset ownership and eligibility
+  -> backend reserves or consumes 1 available QTAG entitlement
+  -> backend creates QTagFulfillmentOrder(assetId, tenantId/userId)
+  -> admin queue receives issuance job
+  -> qc-record-module/encoding station writes the physical tag
+  -> commissioning.confirm(success=true) activates the Device/QTAG
+  -> shipping/tracking is recorded
+```
+
+Rules:
+
+- A QTAG can never be active without being linked to exactly one protected Asset.
+- Buying a QTAG does not activate the chip and does not create final physical linkage.
+- Selecting an Asset for QTAG issuance removes that unit from `availableQTags` by reservation/consumption; if issuance is cancelled or fails before physical activation, the unit can be released back through an auditable ledger entry.
+- The fulfillment order is the bridge between commercial purchase, Asset selection, physical engraving/encoding, dispatch and eventual QTAG activation.
+- Activation must happen only after physical write/commissioning confirmation, not at purchase time.
+- The admin console must expose the operational queue for pending issuance, in progress encoding, failed write/retry, QA, dispatched, delivered/active and cancelled orders.
+
 ## Required Backend Surfaces
 
 The planning phase must define API contracts for:
@@ -133,6 +173,9 @@ The planning phase must define API contracts for:
 - payment intent and payment event records;
 - receivables provider adapter boundary, with Transfero as candidate implementation to define;
 - credit ledger for B2B tenant credits;
+- QTAG entitlement ledger and available balance;
+- QTAG fulfillment/order records linked to a target `Asset`;
+- QTAG issuance queue statuses for engraving/encoding, QA, dispatch, delivery/activation and failure/retry;
 - credit grant/revoke/adjustment with reason and actor;
 - audit log query by tenant and by actor;
 - tenant-admin self-service views constrained to current tenant.
@@ -145,9 +188,11 @@ Minimum `qc-dashboard` admin UI:
 - tenant/company list with status filters;
 - create/edit company form;
 - tenant detail page with status, plan, limits, usage, credits, API keys, purchases and audit timeline;
+- QTAG balance panel showing available, reserved/in fulfillment, active/dispatched and failed/cancelled quantities;
 - activation review/action panel;
 - API key management panel with create, rotate and revoke flows;
 - purchase/receivables/credit operations panel with payment status and reason fields;
+- QTAG fulfillment queue with asset, owner, order, status, encoder/operator, dispatch tracking and retry actions;
 - tenant admin user/team panel;
 - safe empty/loading/error states for operational work.
 
@@ -162,6 +207,9 @@ Add or confirm canonical backend storage for:
 - purchase orders/payment intents;
 - payment events/provider callbacks;
 - B2B credit ledger entries;
+- QTAG ledger entries for purchased, reserved, consumed, released, refunded and adjusted units;
+- QTAG fulfillment order with tenant/user/asset references, status, selected asset, optional product SKU, shipping recipient and tracking metadata;
+- link from fulfillment order to `EncodingSession`/`Device` once physical commissioning starts;
 - purchase/order records or integration reference IDs;
 - admin audit log entries tied to actor, tenant, action and payload hash;
 - tenant admin membership and role assignments.
@@ -177,7 +225,11 @@ Add or confirm canonical backend storage for:
 7. Every privileged mutation is protected by server-side authorization and creates an audit event.
 8. A credit purchase creates a purchase/payment record first and only increases credits after confirmed payment/provider event.
 9. The implementation does not require Quantum Cert to custody the customer's wallet directly.
-10. This phase produces the tenant/API-key/credit foundation required by Phase 5 identity/backfill.
+10. A QTAG purchase increases available QTAG balance and does not activate any physical tag.
+11. Assigning a QTAG to an Asset reserves/consumes one available unit and creates an operational fulfillment order linked to that Asset.
+12. The admin queue allows operators to process engraving/encoding, retry failures, record dispatch/tracking and see pending work.
+13. The physical tag becomes active only after successful commissioning confirmation, and a failed/cancelled order can release the reserved unit through the QTAG ledger.
+14. This phase produces the tenant/API-key/credit/QTAG foundation required by Phase 5 identity/backfill.
 
 ## Out of Scope
 

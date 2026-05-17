@@ -1,6 +1,6 @@
 # Requirements — Quantum Cert Backend
 
-_Generated: 2026-05-08 | updated 2026-05-17 with B2B admin operations, receivables/credits, tenant identity, data unification and on-chain asset identity transition_
+_Generated: 2026-05-08 | updated 2026-05-17 with B2B admin operations, receivables/credits, QTAG fulfillment, tenant identity, data unification and on-chain asset identity transition_
 
 ---
 
@@ -55,6 +55,9 @@ _Generated: 2026-05-08 | updated 2026-05-17 with B2B admin operations, receivabl
 - [ ] **ADMIN-08**: Auditoria admin server-side — toda mutação privilegiada exige autorização backend e gera evento de auditoria por actor/tenant/ação
 - [ ] **ADMIN-09**: Ledger de créditos separado da wallet financeira — créditos de uso da aplicação são conta/ledger comercial, não saldo on-chain nem custódia direta da wallet do cliente
 - [ ] **ADMIN-10**: Recebimentos via provider externo — compra de créditos cria pedido/intenção de pagamento e só credita após confirmação de provider; Transfero é candidata preferencial, implementação final a definir
+- [ ] **ADMIN-11**: Saldo de QTAGs separado de créditos — compra de TAG física incrementa saldo/entitlement de QTAG disponível, exibido ao cliente sem ativar TAG nem vincular chip físico
+- [ ] **ADMIN-12**: Associação obrigatória QTAG→Asset — usuário escolhe um Asset existente para usar uma QTAG; o saldo disponível é reservado/consumido e um pedido de emissão/gravação é criado
+- [ ] **ADMIN-13**: Fila operacional de emissão e despacho QTAG — admin acompanha gravação, QA, falha/retry, despacho, tracking e ativação; TAG só ativa após confirmação de gravação/commissioning físico, não na compra
 
 ### ID — Unified Tenant Identity + Data Backfill
 
@@ -72,6 +75,7 @@ _Generated: 2026-05-08 | updated 2026-05-17 with B2B admin operations, receivabl
 - [ ] **OCHAIN-03**: Eventos rastreáveis na chain — lifecycle, ownership, delegação, QTAG, scan, documento e incidente geram eventos on-chain ordenados com hash do payload
 - [ ] **OCHAIN-04**: Prova pública unificada — API pública e dashboard exibem app data + timeline local + prova on-chain + links de explorer/contrato em uma visão única
 - [ ] **OCHAIN-05**: Backfill on-chain idempotente — assets existentes recebem registro on-chain e eventos mínimos de origem, com relatório de pendências, retries e conflitos
+- [ ] **OCHAIN-06**: Proveniência QTAG vinculada ao Asset — QTAG/Device tem identidade de Asset própria e eventos on-chain de vínculo, commissioning, despacho e ativação relacionados ao Asset protegido
 
 ### OPS — Scale & Observability
 
@@ -138,7 +142,7 @@ Quantum Cert é um workspace multi-repo composto por `qc-backend`, `qc-dashboard
 
 ## Traceability
 
-_Updated: 2026-05-17 — requisitos ADMIN/ID/OCHAIN adicionados para administrar B2B, recebimentos/créditos, unificar usuários/tenants/bancos e garantir Asset on-chain por entidade_
+_Updated: 2026-05-17 — requisitos ADMIN/ID/OCHAIN adicionados para administrar B2B, recebimentos/créditos, QTAG fulfillment, unificar usuários/tenants/bancos e garantir Asset on-chain por entidade_
 
 | REQ-ID   | Phase   | Status                          |
 | -------- | ------- | ------------------------------- |
@@ -174,6 +178,9 @@ _Updated: 2026-05-17 — requisitos ADMIN/ID/OCHAIN adicionados para administrar
 | ADMIN-08 | Phase 4 | Approved for planning           |
 | ADMIN-09 | Phase 4 | Approved for planning           |
 | ADMIN-10 | Phase 4 | Approved for planning           |
+| ADMIN-11 | Phase 4 | Approved for planning           |
+| ADMIN-12 | Phase 4 | Approved for planning           |
+| ADMIN-13 | Phase 4 | Approved for planning           |
 | ID-01    | Phase 5 | Approved for planning           |
 | ID-02    | Phase 5 | Approved for planning           |
 | ID-03    | Phase 5 | Approved for planning           |
@@ -185,6 +192,7 @@ _Updated: 2026-05-17 — requisitos ADMIN/ID/OCHAIN adicionados para administrar
 | OCHAIN-03 | Phase 6 | Approved for planning          |
 | OCHAIN-04 | Phase 6 | Approved for planning          |
 | OCHAIN-05 | Phase 6 | Approved for planning          |
+| OCHAIN-06 | Phase 6 | Approved for planning          |
 | OPS-01   | Phase 7 | Pending                         |
 | OPS-02   | Phase 7 | Pending                         |
 | OPS-03   | Phase 7 | Pending                         |

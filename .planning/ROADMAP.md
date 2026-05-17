@@ -1,7 +1,7 @@
 # ROADMAP — Quantum Cert Backend
 
 _Generated: 2026-05-08 | Granularity: standard | Mode: mvp_
-_Coverage: 62 requirements mapped (41 original/current + 21 architecture transition requirements)_
+_Coverage: 66 requirements mapped (41 original/current + 25 architecture transition requirements)_
 _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 ---
@@ -31,7 +31,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 - [x] **Phase 1: Core Gap Closure + Production Hardening** _(4/4 plans complete)_ — Fechar falhas de segurança críticas e conectar features inacessíveis antes de qualquer expansão
 - [ ] **Phase 2: Document Verification + QTAG Production** _(3/3 plans complete; human UAT pending)_ — Verificação pública de documentos e NFC commissioning funcionando em produção
 - [x] **Phase 3: Pluggable DLT Workers — Stellar/Soroban Priority** _(complete; UAT passed; PRs merged)_ — Adapter Stellar para hackathon + infraestrutura multi-chain
-- [ ] **Phase 4: B2B Admin Operations Console** — Área admin no `qc-dashboard` para cadastrar empresas/tenants, ativações, API keys, compras, recebimentos via provider, concessão de créditos e operação comercial B2B
+- [ ] **Phase 4: B2B Admin Operations Console** — Área admin no `qc-dashboard` para cadastrar empresas/tenants, ativações, API keys, compras, recebimentos via provider, concessão de créditos, saldo/fila QTAG e operação comercial B2B
 - [ ] **Phase 5: Unified Tenant Identity + Data Backfill** — Backend vira fonte canônica de tenants, usuários B2C/B2B, dependentes, carteiras/créditos e vínculos de ownership; dashboard deixa de ter banco de domínio
 - [ ] **Phase 6: On-chain Asset Identity + Provenance** — Todo perfil, dependente, pet, objeto, documento e QTAG tem Asset local + Asset/registro on-chain e rastreabilidade por eventos na Stellar/Soroban
 - [ ] **Phase 7: Scale + Observability Infrastructure** — Redis, Pino, Sentry, BullMQ — plataforma multi-instância pronta para carga real
@@ -150,12 +150,12 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 ### Phase 4: B2B Admin Operations Console
 
-**Goal**: Quantum Cert tem uma área admin operacional no `qc-dashboard` para cadastrar e administrar clientes/empresas B2B, tenants, ativações, API keys, compras, recebimentos via provider, concessão de créditos e demais fluxos comerciais antes da unificação de identidade
+**Goal**: Quantum Cert tem uma área admin operacional no `qc-dashboard` para cadastrar e administrar clientes/empresas B2B, tenants, ativações, API keys, compras, recebimentos via provider, concessão de créditos, saldo/fila QTAG e demais fluxos comerciais antes da unificação de identidade
 **Mode:** mvp
 **GitHub Milestone**: TBD
 **GitHub Issues**: TBD
 **Depends on**: Phase 3
-**Requirements**: ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-04, ADMIN-05, ADMIN-06, ADMIN-07, ADMIN-08, ADMIN-09, ADMIN-10
+**Requirements**: ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-04, ADMIN-05, ADMIN-06, ADMIN-07, ADMIN-08, ADMIN-09, ADMIN-10, ADMIN-11, ADMIN-12, ADMIN-13
 **Success Criteria** (what must be TRUE):
 
 1. O admin operacional é entregue como módulo isolado dentro do `qc-dashboard`, com rotas/admin shell próprios; `qc-admin` fica como extração futura, não como requisito desta fase.
@@ -168,13 +168,18 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 8. Eventos de auditoria registram actor, tenant, ação, timestamp e payload hash/referência para cada operação crítica.
 9. Créditos de uso da aplicação são geridos por ledger próprio, separado de saldo financeiro/on-chain; compra de créditos só altera crédito disponível após pagamento confirmado.
 10. Recebimentos não custodiam wallet do cliente diretamente; Transfero é candidata preferencial para anchor/provider de recebimentos, mas a implementação final fica a definir atrás de uma interface de provider.
+11. Compra de TAG física gera saldo/entitlement de QTAG disponível, separado de créditos de registro e exibido ao cliente.
+12. Ao usar uma QTAG, o usuário deve selecionar um Asset existente; o sistema reserva/consome uma unidade de saldo QTAG e cria pedido de emissão/gravação vinculado ao Asset.
+13. A fila admin operacional mostra QTAGs pendentes de emissão, gravação, QA, falha/retry, despacho e tracking; a TAG só fica ativa após confirmação de gravação/commissioning físico, não na compra.
 
 **Plans**: TBD
-**Cross-repo note:** `qc-dashboard` implementa a interface; `qc-backend` define os contratos, autorização, tenant/API-key/credit ledger, purchase/payment intents, provider adapter e auditoria; `qc-business` define regras comerciais, planos, pricing, compras, política de concessão de créditos e escolha final do provider de recebimento.
+**Cross-repo note:** `qc-dashboard` implementa a interface; `qc-backend` define os contratos, autorização, tenant/API-key/credit ledger, QTAG entitlement ledger, QTAG fulfillment queue, purchase/payment intents, provider adapter e auditoria; `qc-record-module` executa gravação/commissioning físico; `qc-business` define regras comerciais, planos, pricing, compras, política de concessão de créditos/TAGs e escolha final do provider de recebimento.
 
 **Placement decision:** começar no `qc-dashboard` porque reduz duplicação e usa a autenticação/experiência operacional atual. Separar em `qc-admin` só quando houver necessidade real de deploy separado, SSO interno, boundary de compliance, marca própria ou escala de manutenção.
 
 **Wallet/credits decision:** "Wallet" na aplicação deve ser tratado como conta operacional/financeira + carteira de créditos, não como custódia direta da wallet blockchain do cliente. Para compra de créditos, o fluxo alvo é `PurchaseOrder`/`PaymentIntent` -> confirmação por provider externo -> `CreditLedgerEntry(PURCHASED)` -> créditos disponíveis. Transfero entra como candidata preferencial para anchor de recebimentos, mas a integração final e o contrato exato ficam marcados como implementação a definir.
+
+**QTAG purchase/fulfillment decision:** QTAG física é entitlement/saldo separado de créditos. Comprar TAG não ativa chip nem cria vínculo físico final; apenas aumenta `availableQTags`. O uso acontece quando o cliente escolhe qual Asset deve receber a TAG. Nesse momento uma unidade é reservada/consumida, um pedido de emissão é criado, e a fila operacional conduz gravação, QA e despacho. A ativação da TAG acontece somente após `commissioning.confirm(success=true)` ou evento operacional equivalente definido no plano.
 
 ### Phase 5: Unified Tenant Identity + Data Backfill
 
@@ -213,7 +218,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 **GitHub Milestone**: TBD
 **GitHub Issues**: TBD
 **Depends on**: Phase 5
-**Requirements**: OCHAIN-01, OCHAIN-02, OCHAIN-03, OCHAIN-04, OCHAIN-05
+**Requirements**: OCHAIN-01, OCHAIN-02, OCHAIN-03, OCHAIN-04, OCHAIN-05, OCHAIN-06
 **Success Criteria** (what must be TRUE):
 
 1. Todo caminho de criação de perfil, dependente, pet, objeto, documento ou QTAG passa pelo Asset Engine e cria um Asset local tenant-scoped antes de qualquer publicação.
@@ -221,6 +226,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 3. Eventos aprovados de lifecycle, ownership, delegação, QTAG, scan, documento e incidente são registrados na chain como trilha ordenada, com hash do payload e referência ao evento anterior quando aplicável.
 4. A API pública e o dashboard exibem uma visão única: dados públicos do app + prova on-chain + link Stellar Expert/contrato, sem divergência entre timeline local e timeline on-chain confirmada.
 5. Backfill cria registros on-chain faltantes para assets existentes, em fila idempotente, com relatório de pendências, retries e conflitos.
+6. Uma QTAG/Device tem Asset próprio e vínculo obrigatório ao Asset protegido; eventos de emissão, commissioning, despacho, ativação e scan ficam rastreáveis na timeline/prova pública.
 
 **Plans**: TBD
 **Cross-repo note:** Esta fase depende da identidade/ownership canônica da Phase 5. O `qc-dashboard` consome a prova unificada; `qc-record-module` deve parear QTAG físico com Asset existente sem expor internals de tenant.

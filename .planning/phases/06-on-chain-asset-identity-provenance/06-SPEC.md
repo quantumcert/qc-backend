@@ -9,6 +9,8 @@
 
 Every real-world or digital entity managed by Quantum Cert must be represented as an `Asset` in the application and as an on-chain identity/provenance record. This includes profiles, dependents, pets, objects, documents, QTAGs, devices, and future domain-specific entities.
 
+Physical QTAGs are special: the chip/device must have its own Asset identity, but it can only become active when linked to exactly one protected Asset and after successful physical commissioning.
+
 The application and the chain must expose one coherent visibility layer: the app holds private data and operational workflows; Stellar/Soroban holds public/verifiable identifiers, hashes, status, and event provenance.
 
 ## Current Problem
@@ -36,6 +38,14 @@ Each Asset receives:
 - on-chain identity record;
 - on-chain event trail;
 - explorer/contract proof links.
+
+For QTAGs, the model must additionally preserve:
+
+- `qtagAssetId` for the physical tag/device identity;
+- `protectedAssetId` for the Asset the tag protects;
+- fulfillment/order reference from Phase 4;
+- `EncodingSession`/`Device` references after physical commissioning starts;
+- status separation between purchased/reserved/in fulfillment and active.
 
 ## On-chain Design Direction
 
@@ -103,6 +113,7 @@ At minimum, the on-chain trail must support:
 - lifecycle state changed;
 - document attached/verified;
 - QTAG linked/commissioned/scanned/rejected;
+- QTAG dispatched/activated after confirmed physical commissioning;
 - incident reported/resolved;
 - escrow locked/released/cancelled when later phases enable escrow.
 
@@ -153,6 +164,7 @@ Flat legacy fields from document verification should remain compatible until cli
 5. Existing assets are backfilled idempotently.
 6. The dashboard renders one unified proof/timeline for local and on-chain data.
 7. Failures go to retry/blocked states; an asset is not shown as fully certified while required on-chain registration is pending or failed.
+8. A QTAG/Device Asset is linked to exactly one protected Asset before activation, and on-chain provenance records `QTAG_LINKED`, `QTAG_COMMISSIONED`, dispatch/activation and scan/rejection events.
 
 ## Reference Notes
 
