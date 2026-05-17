@@ -1,11 +1,16 @@
 import prisma from '../../config/prisma';
+import { randomUUID } from 'crypto';
 import {
+    AssetStatus,
+    EventStatus,
     PlanTier,
     Prisma,
     TenantMembershipRole,
     TenantStatus,
 } from '@prisma/client';
 import { AdminActorContext, DiamondFacets, ResourceTypes } from '../../types';
+import { AnchorQueueService } from '../AnchorQueueService';
+import { AssetAnchoringService } from '../AssetAnchoringService';
 import { AdminAuthorizationFacet } from './AdminAuthorizationFacet';
 
 type CommercialProfileInput = {
@@ -77,6 +82,29 @@ const ADMIN_TENANT_ACTIONS = {
     TENANT_ARCHIVED: 'TENANT_ARCHIVED',
 } as const;
 
+const TENANT_PROFILE_ASSET_KIND = 'TENANT_PROFILE';
+const TENANT_PROFILE_EVENT_ORIGIN = 'SYSTEM_TENANT_PROFILE';
+const TENANT_PROFILE_PUBLIC_DATA_KEYS = ['assetKind', 'tenant'];
+
+const TENANT_PROFILE_ASSET_SELECT = {
+    id: true,
+    tenantId: true,
+    externalId: true,
+    publicUrl: true,
+    status: true,
+    createdAt: true,
+    updatedAt: true,
+} satisfies Prisma.AssetSelect;
+
+const TENANT_PROFILE_ANCHOR_EVENT_SELECT = {
+    id: true,
+    status: true,
+    dltTxId: true,
+    signatureHash: true,
+    createdAt: true,
+    updatedAt: true,
+} satisfies Prisma.EventLogSelect;
+
 export class AdminTenantOperationsFacet {
     static async listTenants(actor: AdminActorContext, params: TenantListParams = {}) {
         this.ensurePlatformActor(actor);
@@ -120,7 +148,7 @@ export class AdminTenantOperationsFacet {
             throw new AdminTenantError('TENANT_NOT_FOUND', `Tenant "${tenantId}" not found.`);
         }
 
-        return tenant;
+        return this.attachTenantProfileAsset(tenant);
     }
 
     static async createTenant(actor: AdminActorContext, params: CreateTenantParams) {
@@ -137,7 +165,7 @@ export class AdminTenantOperationsFacet {
         profileData.contactEmail ??= params.contactEmail;
         profileData.legalName ??= params.name;
 
-        return prisma.$transaction(async (tx) => {
+        const result = await prisma.$transaction(async (tx) => {
             const tenant = await tx.tenant.create({
                 data: {
                     name: params.name.trim(),
@@ -158,6 +186,14 @@ export class AdminTenantOperationsFacet {
                 },
             });
 
+            const profileAsset = await this.upsertTenantProfileAsset(tx, {
+                tenant,
+                commercialProfile,
+                actor,
+                reason,
+                eventType: 'TENANT_PROFILE_CREATED',
+            });
+
             await this.createAdminAuditLog(tx, {
                 tenantId: tenant.id,
                 actor,
@@ -175,8 +211,13 @@ export class AdminTenantOperationsFacet {
             return {
                 ...tenant,
                 commercialProfile,
+                profileAsset,
             };
         });
+
+        AnchorQueueService.processQueue({ tenantId: result.id }).catch(console.error);
+
+        return result;
     }
 
     static async updateCommercialProfile(
@@ -191,21 +232,39 @@ export class AdminTenantOperationsFacet {
         const tenantData = buildTenantUpdateData(params);
         const profileData = buildCommercialProfileData(params.commercialProfile);
 
-        return prisma.$transaction(async (tx) => {
+        const result = await prisma.$transaction(async (tx) => {
+            let tenant;
+
             if (Object.keys(tenantData).length > 0) {
-                await tx.tenant.update({
+                tenant = await tx.tenant.update({
                     where: { id: tenantId },
                     data: tenantData,
                 });
+            } else {
+                tenant = await tx.tenant.findUnique({
+                    where: { id: tenantId },
+                });
             }
 
-            await tx.tenantCommercialProfile.upsert({
+            if (!tenant) {
+                throw new AdminTenantError('TENANT_NOT_FOUND', `Tenant "${tenantId}" not found.`);
+            }
+
+            const commercialProfile = await tx.tenantCommercialProfile.upsert({
                 where: { tenantId },
                 create: {
                     tenantId,
                     ...profileData,
                 },
                 update: profileData,
+            });
+
+            const profileAsset = await this.upsertTenantProfileAsset(tx, {
+                tenant,
+                commercialProfile,
+                actor,
+                reason,
+                eventType: 'TENANT_PROFILE_UPDATED',
             });
 
             await this.createAdminAuditLog(tx, {
@@ -222,11 +281,20 @@ export class AdminTenantOperationsFacet {
                 userAgent: params.userAgent,
             });
 
-            return tx.tenant.findUnique({
+            const updatedTenant = await tx.tenant.findUnique({
                 where: { id: tenantId },
                 include: TENANT_INCLUDE,
             });
+
+            return updatedTenant ? {
+                ...updatedTenant,
+                profileAsset,
+            } : updatedTenant;
         });
+
+        AnchorQueueService.processQueue({ tenantId }).catch(console.error);
+
+        return result;
     }
 
     static async submitForReview(actor: AdminActorContext, tenantId: string, context: TenantMutationContext) {
@@ -373,6 +441,109 @@ export class AdminTenantOperationsFacet {
             },
         });
     }
+
+    private static async attachTenantProfileAsset<T extends { id: string }>(tenant: T) {
+        const profileAsset = await prisma.asset.findUnique({
+            where: {
+                tenantId_externalId: {
+                    tenantId: tenant.id,
+                    externalId: buildTenantProfileExternalId(tenant.id),
+                },
+            },
+            select: TENANT_PROFILE_ASSET_SELECT,
+        });
+
+        if (!profileAsset) {
+            return {
+                ...tenant,
+                profileAsset: null,
+            };
+        }
+
+        const lastAnchorEvent = await prisma.eventLog.findFirst({
+            where: {
+                tenantId: tenant.id,
+                assetId: profileAsset.id,
+                origin: TENANT_PROFILE_EVENT_ORIGIN,
+            },
+            orderBy: { createdAt: 'desc' },
+            select: TENANT_PROFILE_ANCHOR_EVENT_SELECT,
+        });
+
+        return {
+            ...tenant,
+            profileAsset: {
+                ...profileAsset,
+                lastAnchorEvent,
+            },
+        };
+    }
+
+    private static async upsertTenantProfileAsset(
+        tx: any,
+        params: {
+            tenant: any;
+            commercialProfile: any;
+            actor: AdminActorContext;
+            reason: string;
+            eventType: 'TENANT_PROFILE_CREATED' | 'TENANT_PROFILE_UPDATED';
+        }
+    ) {
+        const externalId = buildTenantProfileExternalId(params.tenant.id);
+        const assetId = randomUUID();
+        const metadata = buildTenantProfileAssetMetadata(params.tenant, params.commercialProfile);
+
+        const profileAsset = await tx.asset.upsert({
+            where: {
+                tenantId_externalId: {
+                    tenantId: params.tenant.id,
+                    externalId,
+                },
+            },
+            create: {
+                id: assetId,
+                tenantId: params.tenant.id,
+                externalId,
+                status: AssetStatus.ACTIVE,
+                metadata,
+                publicDataKeys: TENANT_PROFILE_PUBLIC_DATA_KEYS,
+                publicUrl: buildPublicAssetUrl(assetId),
+            },
+            update: {
+                status: AssetStatus.ACTIVE,
+                metadata,
+                publicDataKeys: TENANT_PROFILE_PUBLIC_DATA_KEYS,
+            },
+        });
+
+        const payload = buildTenantProfileEventPayload({
+            eventType: params.eventType,
+            tenant: params.tenant,
+            commercialProfile: params.commercialProfile,
+            profileAsset,
+            actor: params.actor,
+            reason: params.reason,
+        });
+
+        const lastAnchorEvent = await tx.eventLog.create({
+            data: {
+                assetId: profileAsset.id,
+                tenantId: params.tenant.id,
+                origin: TENANT_PROFILE_EVENT_ORIGIN,
+                issuerId: params.actor.actorUserId,
+                status: EventStatus.APPROVED,
+                payload,
+                signatureHash: AssetAnchoringService.signatureHash(payload),
+                dltTxId: null,
+            },
+            select: TENANT_PROFILE_ANCHOR_EVENT_SELECT,
+        });
+
+        return {
+            ...profileAsset,
+            lastAnchorEvent,
+        };
+    }
 }
 
 function buildTenantWhere(params: TenantListParams): Prisma.TenantWhereInput {
@@ -469,6 +640,84 @@ function normalizePage(value?: number): number {
 function normalizeLimit(value?: number): number {
     if (!Number.isFinite(value) || !value || value < 1) return 20;
     return Math.min(Math.floor(value), 100);
+}
+
+function buildTenantProfileExternalId(tenantId: string): string {
+    return `tenant-profile:${tenantId}`;
+}
+
+function buildPublicAssetUrl(assetId: string): string {
+    const baseUrl = process.env.PUBLIC_URL_BASE || 'https://api.domain.com';
+    return `${baseUrl}/v1/public/asset/${assetId}`;
+}
+
+function buildTenantProfileAssetMetadata(tenant: any, commercialProfile: any): Prisma.InputJsonObject {
+    return {
+        assetKind: TENANT_PROFILE_ASSET_KIND,
+        schemaVersion: 1,
+        tenant: {
+            id: tenant.id,
+            name: tenant.name,
+            slug: tenant.slug,
+            contactEmail: tenant.contactEmail,
+            status: tenant.status,
+            isActive: tenant.isActive,
+            planTier: tenant.planTier,
+        },
+        commercialProfile: normalizeCommercialProfileSnapshot(commercialProfile),
+        profileUpdatedAt: toIsoString(commercialProfile?.updatedAt),
+    };
+}
+
+function buildTenantProfileEventPayload(params: {
+    eventType: 'TENANT_PROFILE_CREATED' | 'TENANT_PROFILE_UPDATED';
+    tenant: any;
+    commercialProfile: any;
+    profileAsset: any;
+    actor: AdminActorContext;
+    reason: string;
+}): Prisma.InputJsonObject {
+    return {
+        eventType: params.eventType,
+        schemaVersion: 1,
+        tenantId: params.tenant.id,
+        profileAssetId: params.profileAsset.id,
+        profileAssetExternalId: params.profileAsset.externalId,
+        tenant: {
+            id: params.tenant.id,
+            name: params.tenant.name,
+            slug: params.tenant.slug,
+            status: params.tenant.status,
+            planTier: params.tenant.planTier,
+        },
+        commercialProfile: normalizeCommercialProfileSnapshot(params.commercialProfile),
+        reason: params.reason,
+        updatedByActorId: params.actor.actorUserId,
+        actorTenantId: params.actor.actorTenantId ?? null,
+        recordedAt: new Date().toISOString(),
+    };
+}
+
+function normalizeCommercialProfileSnapshot(commercialProfile: any): Prisma.InputJsonObject {
+    return {
+        legalName: commercialProfile?.legalName ?? null,
+        taxId: commercialProfile?.taxId ?? null,
+        taxIdType: commercialProfile?.taxIdType ?? null,
+        contactName: commercialProfile?.contactName ?? null,
+        contactEmail: commercialProfile?.contactEmail ?? null,
+        contactPhone: commercialProfile?.contactPhone ?? null,
+        billingOwner: commercialProfile?.billingOwner ?? null,
+        commercialPlan: commercialProfile?.commercialPlan ?? null,
+        limits: normalizeJsonObject(commercialProfile?.limits),
+        whiteLabel: normalizeJsonObject(commercialProfile?.whiteLabel),
+        internalNotes: commercialProfile?.internalNotes ?? null,
+    };
+}
+
+function toIsoString(value?: Date | string | null): string {
+    if (value instanceof Date) return value.toISOString();
+    if (typeof value === 'string' && value.length > 0) return value;
+    return new Date().toISOString();
 }
 
 export class AdminTenantError extends Error {

@@ -31,7 +31,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 - [x] **Phase 1: Core Gap Closure + Production Hardening** _(4/4 plans complete)_ — Fechar falhas de segurança críticas e conectar features inacessíveis antes de qualquer expansão
 - [ ] **Phase 2: Document Verification + QTAG Production** _(3/3 plans complete; human UAT pending)_ — Verificação pública de documentos e NFC commissioning funcionando em produção
 - [x] **Phase 3: Pluggable DLT Workers — Stellar/Soroban Priority** _(complete; UAT passed; PRs merged)_ — Adapter Stellar para hackathon + infraestrutura multi-chain
-- [ ] **Phase 4: B2B Admin Operations Console** _(5/7 plans complete; in progress)_ — Área admin no `qc-dashboard` para cadastrar empresas/tenants, ativações, API keys, compras, recebimentos via provider, concessão de créditos, saldo/fila QTAG, Tenant Quantum, backfill e operação comercial B2B
+- [ ] **Phase 4: B2B Admin Operations Console** _(5/7 plans complete; in progress)_ — Área admin no `qc-dashboard` para cadastrar empresas/tenants, editar perfil com Asset canônico/ancoragem, ativações, API keys, compras, recebimentos via provider, concessão de créditos, saldo/fila QTAG, Tenant Quantum, backfill e operação comercial B2B
 - [ ] **Phase 5: B2B Tenant External Readiness** — Tenants B2B externos operam com admins, operadores, API keys, créditos, QTAGs, auditoria e boundaries white-label/públicos próprios após Tenant Quantum/backfill da Phase 4
 - [ ] **Phase 6: On-chain Asset Identity + Provenance** — Todo perfil, dependente, pet, objeto, documento e QTAG tem Asset local + Asset/registro on-chain e rastreabilidade por eventos na Stellar/Soroban
 - [ ] **Phase 7: Scale + Observability Infrastructure** — Redis, Pino, Sentry, BullMQ — plataforma multi-instância pronta para carga real
@@ -160,6 +160,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 1. O admin operacional é entregue como módulo isolado dentro do `qc-dashboard`, com rotas/admin shell próprios; `qc-admin` fica como extração futura, não como requisito desta fase.
 2. Platform Admin Quantum consegue cadastrar cliente/empresa B2B, criar o Tenant correspondente, preencher perfil comercial, contatos, plano, limites e status.
+2a. Perfil do tenant é editável no admin e cada criação/alteração mantém um `Asset` canônico `tenant-profile:<tenantId>` com `EventLog` aprovado e `signatureHash` pronto para ancoragem.
 3. Platform Admin consegue ativar, suspender e arquivar tenants com fluxo auditável.
 4. Platform Admin consegue criar, rotacionar e revogar API keys por tenant, com secret hasheado, prefixo visível, escopos, expiração e auditoria; API keys só autenticam quando o tenant está `ACTIVE`.
 5. A área admin contempla compras, ativações, recebimentos, concessão/revogação/ajuste de créditos e histórico operacional por tenant.
@@ -209,6 +210,8 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 **Wallet/credits decision:** "Wallet" na aplicação deve ser tratado como conta operacional/financeira + carteira de créditos, não como custódia direta da wallet blockchain do cliente. Para compra de créditos, o fluxo alvo é `PurchaseOrder`/`PaymentIntent` -> confirmação por provider externo -> `CreditLedgerEntry(PURCHASED)` -> créditos disponíveis. Transfero entra como candidata preferencial para anchor de recebimentos, mas a integração final e o contrato exato ficam marcados como implementação a definir.
 
 **QTAG purchase/fulfillment decision:** QTAG física é entitlement/saldo separado de créditos. Comprar TAG não ativa chip nem cria vínculo físico final; apenas aumenta `availableQTags`. O uso acontece quando o cliente escolhe qual Asset deve receber a TAG. Nesse momento uma unidade é reservada/consumida, um pedido de emissão é criado, e a fila operacional conduz gravação, QA e despacho. A ativação da TAG acontece somente após `commissioning.confirm(success=true)` ou evento operacional equivalente definido no plano.
+
+**Tenant profile Asset decision:** A Fase 4 já cria o primeiro bridge operacional da visão "tudo é Asset": o perfil comercial do tenant deve ser editável no admin, materializado como `Asset` local com `externalId` determinístico `tenant-profile:<tenantId>` e registrado em `EventLog` aprovado para entrar na fila de ancoragem. A Fase 6 continua responsável por generalizar o modelo para perfis B2C, dependentes, pets, objetos, documentos e QTAGs.
 
 ### Phase 5: B2B Tenant External Readiness
 

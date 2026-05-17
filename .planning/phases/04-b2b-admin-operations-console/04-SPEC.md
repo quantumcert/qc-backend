@@ -53,6 +53,7 @@ Quantum platform admins can operate across tenants:
 - create and edit B2B client/company records;
 - set tenant status: draft, pending review, active, suspended, archived;
 - configure legal/commercial profile: company name, CNPJ/tax ID, contacts, billing owner, plan, limits, white-label metadata;
+- edit tenant profile through the admin UI and keep a canonical tenant-profile `Asset` with an approved anchoring event for every profile creation/update;
 - activate/deactivate tenant access;
 - create, rotate, revoke and audit API keys;
 - approve purchases or commercial orders;
@@ -169,6 +170,7 @@ The planning phase must define API contracts for:
 - platform admin tenant CRUD;
 - tenant activation workflow;
 - tenant plan/limit/commercial profile management;
+- tenant profile Asset upsert and anchoring event generation, using a deterministic `externalId` per tenant profile and the same `EventLog`/anchor queue used by normal assets;
 - API key lifecycle with prefix display, hashed secret storage, expiration, rotation and revocation;
 - purchase/order records or integration placeholders;
 - payment intent and payment event records;
@@ -189,6 +191,7 @@ Minimum `qc-dashboard` admin UI:
 - tenant/company list with status filters;
 - create/edit company form;
 - tenant detail page with status, plan, limits, usage, credits, API keys, purchases and audit timeline;
+- editable tenant profile panel showing the canonical profile Asset/external id/public URL state;
 - QTAG balance panel showing available, reserved/in fulfillment, active/dispatched and failed/cancelled quantities;
 - activation review/action panel;
 - API key management panel with create, rotate and revoke flows;
@@ -202,6 +205,7 @@ Minimum `qc-dashboard` admin UI:
 Add or confirm canonical backend storage for:
 
 - tenant commercial profile;
+- canonical tenant profile Asset with deterministic `externalId`, profile metadata and approved event log for blockchain anchoring;
 - tenant activation status and activation timestamps;
 - API key metadata, hashed secret, prefix, scopes, expiration and revoked metadata;
 - tenant plan/limit fields;
@@ -224,6 +228,7 @@ Add or confirm canonical backend storage for:
 
 1. A Quantum platform admin can create a B2B client/company from the admin area without direct DB access.
 2. A created B2B client becomes a backend `Tenant` with status, commercial profile, limits and activation state.
+2a. Every tenant profile create/update creates or updates a canonical profile `Asset` and appends an approved `EventLog` with `signatureHash` so the same profile mutation is visible to the application and anchor queue.
 3. A platform admin can create, rotate and revoke API keys, and only key prefix/metadata are visible after creation. API keys authenticate only while the tenant is `ACTIVE`; suspension blocks usage without automatic revocation.
 4. A platform admin can grant or adjust credits with a mandatory reason and auditable ledger entry.
 5. Purchases/activation/receivable records are visible on the tenant detail page and are linked to the tenant.
@@ -248,5 +253,5 @@ Add or confirm canonical backend storage for:
 - Full invoicing/accounting integration.
 - Public self-service B2B signup without platform review.
 - Final white-label public verification UI.
-- On-chain asset identity/provenance.
+- Generalized on-chain asset identity/provenance for every entity type; tenant profile Asset anchoring is in scope here as the operational bridge for Phase 4.
 - Final Transfero/provider integration contract; this remains implementation to define during planning with `qc-business`.

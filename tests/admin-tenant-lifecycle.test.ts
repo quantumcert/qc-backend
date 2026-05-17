@@ -6,6 +6,9 @@ const {
   mockTenant,
   mockTenantCommercialProfile,
   mockAdminAuditLog,
+  mockAsset,
+  mockEventLog,
+  mockProcessQueue,
   mockTransaction,
 } = vi.hoisted(() => {
   const mockTenant = {
@@ -22,16 +25,30 @@ const {
   const mockAdminAuditLog = {
     create: vi.fn(),
   };
+  const mockAsset = {
+    findUnique: vi.fn(),
+    upsert: vi.fn(),
+  };
+  const mockEventLog = {
+    create: vi.fn(),
+    findFirst: vi.fn(),
+  };
+  const mockProcessQueue = vi.fn();
   const mockTransaction = vi.fn(async (callback) => callback({
     tenant: mockTenant,
     tenantCommercialProfile: mockTenantCommercialProfile,
     adminAuditLog: mockAdminAuditLog,
+    asset: mockAsset,
+    eventLog: mockEventLog,
   }));
 
   return {
     mockTenant,
     mockTenantCommercialProfile,
     mockAdminAuditLog,
+    mockAsset,
+    mockEventLog,
+    mockProcessQueue,
     mockTransaction,
   };
 });
@@ -41,7 +58,15 @@ vi.mock('../src/config/prisma', () => ({
     tenant: mockTenant,
     tenantCommercialProfile: mockTenantCommercialProfile,
     adminAuditLog: mockAdminAuditLog,
+    asset: mockAsset,
+    eventLog: mockEventLog,
     $transaction: mockTransaction,
+  },
+}));
+
+vi.mock('../src/services/AnchorQueueService', () => ({
+  AnchorQueueService: {
+    processQueue: mockProcessQueue,
   },
 }));
 
@@ -73,7 +98,28 @@ describe('AdminTenantOperationsFacet', () => {
       tenant: mockTenant,
       tenantCommercialProfile: mockTenantCommercialProfile,
       adminAuditLog: mockAdminAuditLog,
+      asset: mockAsset,
+      eventLog: mockEventLog,
     }));
+    mockAsset.upsert.mockResolvedValue({
+      id: 'asset-tenant-profile',
+      tenantId: 'tenant-b2b',
+      externalId: 'tenant-profile:tenant-b2b',
+      publicUrl: 'https://api.domain.com/v1/public/asset/asset-tenant-profile',
+      status: 'ACTIVE',
+      createdAt: new Date('2026-05-17T00:00:00.000Z'),
+      updatedAt: new Date('2026-05-17T00:00:00.000Z'),
+    });
+    mockEventLog.create.mockResolvedValue({
+      id: 'event-tenant-profile',
+      status: 'APPROVED',
+      dltTxId: null,
+      signatureHash: 'hash-profile',
+      createdAt: new Date('2026-05-17T12:01:00.000Z'),
+      updatedAt: new Date('2026-05-17T12:01:00.000Z'),
+    });
+    mockEventLog.findFirst.mockResolvedValue(null);
+    mockProcessQueue.mockResolvedValue({ processed: 0, items: [] });
   });
 
   it('creates a draft tenant with normalized commercial profile and admin audit', async () => {
@@ -140,6 +186,136 @@ describe('AdminTenantOperationsFacet', () => {
         reason: 'cadastrar cliente b2b aprovado',
       }),
     }));
+  });
+
+  it('anchors tenant profile edits through a canonical profile asset event', async () => {
+    mockTenant.findUnique
+      .mockResolvedValueOnce({ id: 'tenant-b2b' })
+      .mockResolvedValueOnce({
+        id: 'tenant-b2b',
+        name: 'Cliente B2B Atualizado',
+        slug: 'cliente-b2b',
+        contactEmail: 'ops@cliente.com',
+        planTier: PlanTier.ENTERPRISE,
+        status: TenantStatus.ACTIVE,
+        isActive: true,
+        commercialProfile: {
+          id: 'profile-b2b',
+          tenantId: 'tenant-b2b',
+          legalName: 'Cliente B2B Atualizado Ltda',
+          taxId: '12345678000199',
+          contactEmail: 'comercial@cliente.com',
+        },
+        _count: { apiKeys: 1, assets: 2, tenantUsers: 3 },
+      });
+    mockTenant.update.mockResolvedValue({
+      id: 'tenant-b2b',
+      name: 'Cliente B2B Atualizado',
+      slug: 'cliente-b2b',
+      contactEmail: 'ops@cliente.com',
+      planTier: PlanTier.ENTERPRISE,
+      status: TenantStatus.ACTIVE,
+      isActive: true,
+    });
+    mockTenantCommercialProfile.upsert.mockResolvedValue({
+      id: 'profile-b2b',
+      tenantId: 'tenant-b2b',
+      legalName: 'Cliente B2B Atualizado Ltda',
+      taxId: '12345678000199',
+      contactEmail: 'comercial@cliente.com',
+      contactPhone: '+55 11 99999-0000',
+      billingOwner: 'Financeiro',
+      commercialPlan: 'Enterprise',
+      limits: {},
+      whiteLabel: {},
+      internalNotes: 'Contrato revisado',
+      updatedAt: new Date('2026-05-17T12:00:00.000Z'),
+    });
+
+    const result = await AdminTenantOperationsFacet.updateCommercialProfile(
+      platformActor,
+      'tenant-b2b',
+      {
+        name: 'Cliente B2B Atualizado',
+        contactEmail: 'OPS@Cliente.com',
+        planTier: PlanTier.ENTERPRISE,
+        commercialProfile: {
+          legalName: 'Cliente B2B Atualizado Ltda',
+          taxId: '12.345.678/0001-99',
+          contactEmail: 'COMERCIAL@Cliente.com',
+          contactPhone: '+55 11 99999-0000',
+          billingOwner: 'Financeiro',
+          commercialPlan: 'Enterprise',
+          internalNotes: 'Contrato revisado',
+        },
+        reason: 'atualizar dados societarios e comerciais',
+      }
+    );
+
+    expect(mockAsset.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      where: {
+        tenantId_externalId: {
+          tenantId: 'tenant-b2b',
+          externalId: 'tenant-profile:tenant-b2b',
+        },
+      },
+      create: expect.objectContaining({
+        tenantId: 'tenant-b2b',
+        externalId: 'tenant-profile:tenant-b2b',
+        status: 'ACTIVE',
+        metadata: expect.objectContaining({
+          assetKind: 'TENANT_PROFILE',
+          tenant: expect.objectContaining({
+            id: 'tenant-b2b',
+            name: 'Cliente B2B Atualizado',
+            slug: 'cliente-b2b',
+          }),
+          commercialProfile: expect.objectContaining({
+            legalName: 'Cliente B2B Atualizado Ltda',
+            taxId: '12345678000199',
+            contactEmail: 'comercial@cliente.com',
+          }),
+        }),
+        publicDataKeys: ['assetKind', 'tenant'],
+      }),
+      update: expect.objectContaining({
+        metadata: expect.objectContaining({
+          assetKind: 'TENANT_PROFILE',
+        }),
+        publicDataKeys: ['assetKind', 'tenant'],
+      }),
+    }));
+    expect(mockEventLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        assetId: 'asset-tenant-profile',
+        tenantId: 'tenant-b2b',
+        origin: 'SYSTEM_TENANT_PROFILE',
+        issuerId: 'user-platform',
+        status: 'APPROVED',
+        payload: expect.objectContaining({
+          eventType: 'TENANT_PROFILE_UPDATED',
+          schemaVersion: 1,
+          tenantId: 'tenant-b2b',
+          profileAssetId: 'asset-tenant-profile',
+          updatedByActorId: 'user-platform',
+        }),
+        signatureHash: expect.any(String),
+        dltTxId: null,
+      }),
+    }));
+    expect(mockProcessQueue).toHaveBeenCalledWith({ tenantId: 'tenant-b2b' });
+    expect(result).toMatchObject({
+      id: 'tenant-b2b',
+      profileAsset: {
+        id: 'asset-tenant-profile',
+        externalId: 'tenant-profile:tenant-b2b',
+        lastAnchorEvent: {
+          id: 'event-tenant-profile',
+          status: 'APPROVED',
+          dltTxId: null,
+        },
+      },
+    });
   });
 
   it('transitions tenant status through review, active, suspended and archived with audit', async () => {
