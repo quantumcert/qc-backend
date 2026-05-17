@@ -31,7 +31,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 - [x] **Phase 1: Core Gap Closure + Production Hardening** _(4/4 plans complete)_ — Fechar falhas de segurança críticas e conectar features inacessíveis antes de qualquer expansão
 - [ ] **Phase 2: Document Verification + QTAG Production** _(3/3 plans complete; human UAT pending)_ — Verificação pública de documentos e NFC commissioning funcionando em produção
 - [x] **Phase 3: Pluggable DLT Workers — Stellar/Soroban Priority** _(complete; UAT passed; PRs merged)_ — Adapter Stellar para hackathon + infraestrutura multi-chain
-- [ ] **Phase 4: B2B Admin Operations Console** _(5/7 plans complete; in progress)_ — Área admin no `qc-dashboard` para cadastrar empresas/tenants, editar perfil com Asset canônico/ancoragem, administrar usuários/equipe por tenant, ativações, API keys, compras, recebimentos via provider, concessão de créditos, saldo/fila QTAG, Tenant Quantum, backfill e operação comercial B2B
+- [ ] **Phase 4: B2B Admin Operations Console** _(7/7 plans complete; human UAT pending)_ — Área admin no `qc-dashboard` para cadastrar empresas/tenants, editar perfil com Asset canônico/ancoragem, administrar usuários/equipe por tenant, ativações, API keys, compras, recebimentos via provider, concessão de créditos, saldo/fila QTAG, Tenant Quantum, backfill e operação comercial B2B
 - [ ] **Phase 5: B2B Tenant External Readiness** — Tenants B2B externos operam com admins, operadores, API keys, créditos, QTAGs, auditoria e boundaries white-label/públicos próprios após Tenant Quantum/backfill da Phase 4
 - [ ] **Phase 6: On-chain Asset Identity + Provenance** — Todo perfil, dependente, pet, objeto, documento e QTAG tem Asset local + Asset/registro on-chain e rastreabilidade por eventos na Stellar/Soroban
 - [ ] **Phase 7: Scale + Observability Infrastructure** — Redis, Pino, Sentry, BullMQ — plataforma multi-instância pronta para carga real
@@ -200,11 +200,13 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 **Wave 4** _(blocked on schema, credit ledger and QTAG ledger)_
 
-- [ ] 04-06-PLAN.md — Tenant Quantum, complete B2C backfill, Platform Admin tenant-user contracts, ownership/credits/QTAG reconciliation and dashboard B2C cutover: ADMIN-08, ADMIN-09, ID-01, ID-02, ID-03, ID-04, ID-05, ID-06
+- [x] 04-06-PLAN.md — Tenant Quantum, complete B2C backfill, Platform Admin tenant-user contracts, ownership/credits/QTAG reconciliation and dashboard B2C cutover: ADMIN-08, ADMIN-09, ID-01, ID-02, ID-03, ID-04, ID-05, ID-06 — DONE 2026-05-17
 
 **Wave 5** _(blocked on operational slices)_
 
-- [ ] 04-07-PLAN.md — Platform queues, Platform Admin tenant-user UI, Tenant Admin constrained view, cross-repo verification and UAT closure: ADMIN-01..13, ID-01..06
+- [x] 04-07-PLAN.md — Platform queues, Platform Admin tenant-user UI, Tenant Admin constrained view, cross-repo verification and UAT closure: ADMIN-01..13, ID-01..06 — DONE 2026-05-17
+
+**Completion note:** Implementation and automated validation are complete. Human UAT remains pending for approved backfill execution, provider/Transfero contract validation and physical QTAG commissioning with `qc-record-module`.
 
 **Cross-repo note:** `qc-dashboard` implementa a interface; `qc-backend` define os contratos, autorização, tenant/API-key/credit ledger, QTAG entitlement ledger, QTAG fulfillment queue, purchase/payment intents, provider adapter e auditoria; `qc-record-module` executa gravação/commissioning físico; `qc-business` define regras comerciais, planos, pricing, compras, política de concessão de créditos/TAGs e escolha final do provider de recebimento.
 
@@ -394,7 +396,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 | 1. Core Gap Closure + Production Hardening          | [M#1](https://github.com/quantumcert/qc-backend/milestone/1) | #5, #7, #8 | 4/4            | Complete          | 2026-05-09 |
 | 2. Document Verification + QTAG Production          | [M#2](https://github.com/quantumcert/qc-backend/milestone/2) | #12, #2    | 3/3            | Human UAT pending | -          |
 | 3. Pluggable DLT Workers — Stellar/Soroban Priority | [M#3](https://github.com/quantumcert/qc-backend/milestone/3) | #11        | 3/3            | Complete; PRs merged | 2026-05-14 |
-| 4. B2B Admin Operations Console                     | TBD                                                          | TBD        | 1/7            | In progress                  | - |
+| 4. B2B Admin Operations Console                     | TBD                                                          | TBD        | 7/7            | Implementation complete; human UAT pending | - |
 | 5. B2B Tenant External Readiness                    | TBD                                                          | TBD        | 0/?            | Approved after Phase 4 | -      |
 | 6. On-chain Asset Identity + Provenance             | TBD                                                          | TBD        | 0/?            | Approved after Phase 5 | -      |
 | 7. Scale + Observability Infrastructure             | [M#4](https://github.com/quantumcert/qc-backend/milestone/4) | #13        | 0/?            | Deferred behind Phase 5/6 | -    |

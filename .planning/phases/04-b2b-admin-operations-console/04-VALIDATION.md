@@ -1,10 +1,11 @@
 ---
 phase: 04
 slug: b2b-admin-operations-console
-status: in_progress
-nyquist_compliant: false
-wave_0_complete: false
+status: implementation_complete_human_uat_pending
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-05-17
+last_validated: 2026-05-17T10:48:13Z
 ---
 
 # Phase 04 - Validation Strategy
@@ -48,8 +49,10 @@ created: 2026-05-17
 | 04-04-02 | 04 | 2 | ADMIN-10 | T-04-06 | Payment event processing deduplicates provider events before crediting | unit/integration | `npm test -- --run tests/payment-provider-boundary.test.ts` | yes | green |
 | 04-05-01 | 05 | 2 | ADMIN-11, ADMIN-12, ADMIN-13 | T-04-07 | QTAG reservation/activation cannot consume entitlement twice | unit/integration | `npm test -- --run tests/qtag-fulfillment.test.ts` | yes | green |
 | 04-05-02 | 05 | 2 | ADMIN-12, ADMIN-13 | T-04-08 | Commissioning confirm validates tenant/session/UID and links `Asset.deviceId` | unit/integration | `npm test -- --run tests/commissioning.test.ts` | yes | green |
-| 04-06-01 | 06 | 3 | ID-01, ID-02, ID-03, ID-04, ID-05, ID-06 | T-04-09 | Backfill maps B2C users under Tenant Quantum idempotently and cuts over B2C domain writes | integration | `npm test -- --run tests/tenant-backfill.test.ts` | no | pending |
-| 04-07-01 | 07 | 3 | ADMIN-01, ADMIN-04, ADMIN-05, ADMIN-11, ADMIN-13 | T-04-10 | Dashboard admin procedures enforce platform/tenant scoping server-side | integration | `cd ../qc-dashboard && pnpm test -- admin` | yes | green |
+| 04-06-01 | 06 | 3 | ID-01, ID-02, ID-03, ID-04, ID-05, ID-06 | T-04-09 | Backfill maps B2C users under Tenant Quantum idempotently and cuts over B2C domain writes | integration | `npm test -- --run tests/tenant-backfill.test.ts tests/tenant-user-contracts.test.ts` | yes | green |
+| 04-07-01 | 07 | 5 | ADMIN-01, ADMIN-04, ADMIN-05, ADMIN-11, ADMIN-13 | T-04-10 | Dashboard admin procedures enforce platform/tenant scoping server-side | integration | `cd ../qc-dashboard && pnpm exec vitest run server/admin-e2e.test.ts server/admin.tenant-scope.test.ts` | yes | green |
+| 04-07-02 | 07 | 5 | ADMIN-01, ADMIN-07, ADMIN-08 | T-04-10 | Tenant Admin cannot read another tenant by passing arbitrary tenantId | integration | `cd ../qc-dashboard && pnpm exec vitest run server/admin.tenant-scope.test.ts` | yes | green |
+| 04-07-03 | 07 | 5 | ID-01, ID-02, ID-03, ID-04 | T-04-09 | Dashboard profile identity sync uses canonical backend user/profile Asset contract | integration | `cd ../qc-dashboard && pnpm exec vitest run server/profileIdentityAnchoring.test.ts` | yes | green |
 
 *Status: pending / green / red / flaky*
 
@@ -83,13 +86,39 @@ created: 2026-05-17
 
 ---
 
+## Execution Evidence - 2026-05-17
+
+### Backend
+
+- `npm test -- --run` - passed, 54 files, 385 tests.
+- `npm run build` - passed.
+- Scope enforcement regression fixed in legacy route tests by adding explicit mocked API key scopes:
+  - `tests/asset-controller.test.ts` -> `assets:write`
+  - `tests/curation-routes.test.ts` -> `events:write`
+  - `tests/transfer-rest.test.ts` -> `transfers:write`
+
+### Dashboard
+
+- `pnpm exec vitest run server/admin-e2e.test.ts server/admin.tenant-scope.test.ts` - passed, 4 tests.
+- `pnpm exec vitest run server/profileIdentityAnchoring.test.ts server/admin.tenant-scope.test.ts` - passed, 25 tests.
+- `pnpm test` - passed, 40 files, 172 tests, 3 skipped.
+- `pnpm check` - passed.
+
+### Browser Smoke
+
+- `/admin/platform/tenants/:tenantId` -> aba `Team` sem sobreposicao do ultimo select.
+- `/admin/tenant` -> visão Tenant Admin carrega dados somente do tenant resolvido pelo contexto.
+- `/admin/platform/queues/activations` -> fila de ativações renderiza filtros, estado vazio e paginação sem overflow horizontal.
+
+---
+
 ## Validation Sign-Off
 
-- [ ] All tasks have automated verify commands or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all missing test files
-- [ ] No watch-mode flags in verification commands
-- [ ] Feedback latency target is under 180 seconds per targeted check
-- [ ] `nyquist_compliant: true` set in frontmatter after Wave 0 stubs exist and first targeted checks pass
+- [x] All tasks have automated verify commands or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all missing test files
+- [x] No watch-mode flags in verification commands
+- [x] Feedback latency target is under 180 seconds per targeted check
+- [x] `nyquist_compliant: true` set in frontmatter after Wave 0 stubs exist and first targeted checks pass
 
-**Approval:** pending
+**Approval:** implementation complete; human UAT pending for real backfill approval, Transfero/provider contract and physical QTAG commissioning.
