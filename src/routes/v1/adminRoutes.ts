@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { AdminApiKeyController } from '../../controllers/AdminApiKeyController';
 import { AdminTenantController } from '../../controllers/AdminTenantController';
 import { requireAdminReason, requirePlatformAdmin } from '../../middleware/platformAdminAuth';
 
@@ -33,6 +34,25 @@ router.post(
     '/platform/tenants/:tenantId/archive',
     requireAdminReason,
     AdminTenantController.archive
+);
+router.get(
+    '/platform/tenants/:tenantId/api-keys',
+    AdminApiKeyController.list
+);
+router.post(
+    '/platform/tenants/:tenantId/api-keys/initial',
+    requireAdminReason,
+    AdminApiKeyController.createInitial
+);
+router.post(
+    '/platform/tenants/:tenantId/api-keys/:apiKeyId/rotate',
+    requireAdminReason,
+    AdminApiKeyController.rotate
+);
+router.post(
+    '/platform/tenants/:tenantId/api-keys/:apiKeyId/revoke',
+    requireAdminReason,
+    AdminApiKeyController.revoke
 );
 
 export default router;

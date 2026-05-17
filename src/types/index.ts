@@ -90,6 +90,7 @@ export const DiamondFacets = {
     API_KEY_MANAGEMENT: 'ApiKeyManagementFacet',
     RATE_LIMITER: 'RateLimiterFacet',
     ADMIN_TENANT_OPERATIONS: 'AdminTenantOperationsFacet',
+    ADMIN_API_KEY_OPERATIONS: 'AdminApiKeyOperationsFacet',
 
     // Phase 2: Asset Engine & Zero-Knowledge Security
     ASSET_REGISTRY: 'AssetRegistryFacet',
