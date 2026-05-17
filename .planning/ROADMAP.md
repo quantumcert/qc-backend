@@ -31,7 +31,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 - [x] **Phase 1: Core Gap Closure + Production Hardening** _(4/4 plans complete)_ — Fechar falhas de segurança críticas e conectar features inacessíveis antes de qualquer expansão
 - [ ] **Phase 2: Document Verification + QTAG Production** _(3/3 plans complete; human UAT pending)_ — Verificação pública de documentos e NFC commissioning funcionando em produção
 - [x] **Phase 3: Pluggable DLT Workers — Stellar/Soroban Priority** _(complete; UAT passed; PRs merged)_ — Adapter Stellar para hackathon + infraestrutura multi-chain
-- [ ] **Phase 4: B2B Admin Operations Console** _(7 plans ready)_ — Área admin no `qc-dashboard` para cadastrar empresas/tenants, ativações, API keys, compras, recebimentos via provider, concessão de créditos, saldo/fila QTAG, Tenant Quantum, backfill e operação comercial B2B
+- [ ] **Phase 4: B2B Admin Operations Console** _(2/7 plans complete; in progress)_ — Área admin no `qc-dashboard` para cadastrar empresas/tenants, ativações, API keys, compras, recebimentos via provider, concessão de créditos, saldo/fila QTAG, Tenant Quantum, backfill e operação comercial B2B
 - [ ] **Phase 5: B2B Tenant External Readiness** — Tenants B2B externos operam com admins, operadores, API keys, créditos, QTAGs, auditoria e boundaries white-label/publicos próprios após Tenant Quantum/backfill da Phase 4
 - [ ] **Phase 6: On-chain Asset Identity + Provenance** — Todo perfil, dependente, pet, objeto, documento e QTAG tem Asset local + Asset/registro on-chain e rastreabilidade por eventos na Stellar/Soroban
 - [ ] **Phase 7: Scale + Observability Infrastructure** — Redis, Pino, Sentry, BullMQ — plataforma multi-instância pronta para carga real
@@ -183,7 +183,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 **Wave 1** _(blocked on Wave 0)_
 
-- [ ] 04-02-PLAN.md — Platform admin tenant lifecycle, commercial profile, activation/suspension and dashboard tenant hub: ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-07, ADMIN-08
+- [x] 04-02-PLAN.md — Platform admin tenant lifecycle, commercial profile, activation/suspension and dashboard tenant hub: ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-07, ADMIN-08 — DONE 2026-05-17
 
 **Wave 2** _(blocked on Wave 1 for tenant contracts; plans can run in parallel)_
 

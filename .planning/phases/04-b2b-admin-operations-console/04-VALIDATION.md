@@ -41,7 +41,7 @@ created: 2026-05-17
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
 | 04-01-01 | 01 | 0 | ADMIN-01, ADMIN-07, ADMIN-08 | T-04-01 | Platform Admin and Tenant Admin are distinct server-side roles | unit/integration | `npm test -- --run tests/admin-authorization.test.ts` | yes | green |
-| 04-02-01 | 02 | 1 | ADMIN-02, ADMIN-03 | T-04-02 | Tenant status changes require platform authorization and audit | unit/integration | `npm test -- --run tests/admin-tenant-lifecycle.test.ts` | no | pending |
+| 04-02-01 | 02 | 1 | ADMIN-02, ADMIN-03 | T-04-02 | Tenant status changes require platform authorization and audit | unit/integration | `npm test -- --run tests/admin-tenant-lifecycle.test.ts` | yes | green |
 | 04-03-01 | 03 | 1 | ADMIN-04, ADMIN-08 | T-04-03 | API key raw secret is one-time only; active keys list has prefix/metadata only | unit/integration | `npm test -- --run tests/admin-api-keys.test.ts` | no | pending |
 | 04-03-02 | 03 | 1 | ADMIN-04, ADMIN-08 | T-04-04 | API request audit stores no raw API key or sensitive payload | unit/integration | `npm test -- --run tests/api-request-audit.test.ts` | no | pending |
 | 04-04-01 | 04 | 2 | ADMIN-05, ADMIN-06, ADMIN-09, ADMIN-10 | T-04-05 | Credit ledger reserves, consumes and releases idempotently | unit/integration | `npm test -- --run tests/credit-ledger.test.ts` | no | pending |
@@ -49,7 +49,7 @@ created: 2026-05-17
 | 04-05-01 | 05 | 2 | ADMIN-11, ADMIN-12, ADMIN-13 | T-04-07 | QTAG reservation/activation cannot consume entitlement twice | unit/integration | `npm test -- --run tests/qtag-fulfillment.test.ts` | no | pending |
 | 04-05-02 | 05 | 2 | ADMIN-12, ADMIN-13 | T-04-08 | Commissioning confirm validates tenant/session/UID and links `Asset.deviceId` | unit/integration | `npm test -- --run tests/commissioning.test.ts` | yes | pending |
 | 04-06-01 | 06 | 3 | ID-01, ID-02, ID-03, ID-04, ID-05, ID-06 | T-04-09 | Backfill maps B2C users under Tenant Quantum idempotently and cuts over B2C domain writes | integration | `npm test -- --run tests/tenant-backfill.test.ts` | no | pending |
-| 04-07-01 | 07 | 3 | ADMIN-01, ADMIN-04, ADMIN-05, ADMIN-11, ADMIN-13 | T-04-10 | Dashboard admin procedures enforce platform/tenant scoping server-side | integration | `cd ../qc-dashboard && pnpm test -- admin` | no | pending |
+| 04-07-01 | 07 | 3 | ADMIN-01, ADMIN-04, ADMIN-05, ADMIN-11, ADMIN-13 | T-04-10 | Dashboard admin procedures enforce platform/tenant scoping server-side | integration | `cd ../qc-dashboard && pnpm test -- admin` | yes | green |
 
 *Status: pending / green / red / flaky*
 
@@ -58,14 +58,14 @@ created: 2026-05-17
 ## Wave 0 Requirements
 
 - [x] `tests/admin-authorization.test.ts` - Platform Admin vs Tenant Admin server authorization stubs
-- [ ] `tests/admin-tenant-lifecycle.test.ts` - tenant status/profile audit stubs
+- [x] `tests/admin-tenant-lifecycle.test.ts` - tenant status/profile audit stubs
 - [ ] `tests/admin-api-keys.test.ts` - initial issue/list/rotate/revoke stubs
 - [ ] `tests/api-request-audit.test.ts` - request audit sanitization stubs
 - [ ] `tests/credit-ledger.test.ts` - reserve/consume/release/grant/adjust stubs
 - [ ] `tests/payment-provider-boundary.test.ts` - provider event idempotency stubs
 - [ ] `tests/qtag-fulfillment.test.ts` - QTAG entitlement/fulfillment stubs
 - [x] `tests/tenant-backfill.test.ts` - Tenant Quantum migration dry-run/execute stubs
-- [ ] `../qc-dashboard/server/admin.*.test.ts` or equivalent - dashboard admin tRPC authorization stubs
+- [x] `../qc-dashboard/server/admin.*.test.ts` or equivalent - dashboard admin tRPC authorization stubs
 
 ---
 
