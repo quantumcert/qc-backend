@@ -23,11 +23,11 @@
 
 ### qc-backend
 
-- Pendente de commit neste resumo.
+- `d23a7fb feat(04-05): add qtag fulfillment ledger`
 
 ### qc-dashboard
 
-- Pendente de commit neste resumo.
+- `7084524 feat(04-05): add admin qtag queue`
 
 ## Verificação
 
