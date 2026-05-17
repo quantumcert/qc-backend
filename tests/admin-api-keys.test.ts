@@ -9,6 +9,7 @@ import { AdminActorContext } from '../src/types';
 const {
   mockTenant,
   mockApiKey,
+  mockApiRequestAudit,
   mockAdminAuditLog,
   mockTransaction,
 } = vi.hoisted(() => {
@@ -25,6 +26,10 @@ const {
   const mockAdminAuditLog = {
     create: vi.fn(),
   };
+  const mockApiRequestAudit = {
+    findMany: vi.fn(),
+    count: vi.fn(),
+  };
   const mockTransaction = vi.fn(async (callback) => callback({
     apiKey: mockApiKey,
     adminAuditLog: mockAdminAuditLog,
@@ -33,6 +38,7 @@ const {
   return {
     mockTenant,
     mockApiKey,
+    mockApiRequestAudit,
     mockAdminAuditLog,
     mockTransaction,
   };
@@ -42,6 +48,7 @@ vi.mock('../src/config/prisma', () => ({
   default: {
     tenant: mockTenant,
     apiKey: mockApiKey,
+    apiRequestAudit: mockApiRequestAudit,
     adminAuditLog: mockAdminAuditLog,
     $transaction: mockTransaction,
   },
@@ -270,5 +277,57 @@ describe('AdminApiKeyOperationsFacet', () => {
 
     expect(mockApiKey.create).not.toHaveBeenCalled();
     expect(mockAdminAuditLog.create).not.toHaveBeenCalled();
+  });
+
+  it('lists sanitized API request audit records for a tenant', async () => {
+    const createdAt = new Date('2026-01-03T00:00:00.000Z');
+    mockTenant.findUnique.mockResolvedValue({ id: 'tenant-b2b' });
+    mockApiRequestAudit.findMany.mockResolvedValue([
+      {
+        id: 'audit-1',
+        tenantId: 'tenant-b2b',
+        apiKeyId: 'api-key-1',
+        keyPrefix: 'qc_test_prefix01',
+        role: ApiKeyRole.OPERATOR,
+        method: 'POST',
+        path: '/api/v1/diamond',
+        selector: 'asset.create',
+        statusCode: 201,
+        latencyMs: 34,
+        correlationId: 'corr-audit',
+        sanitizedError: null,
+        ipAddress: '127.0.0.1',
+        userAgent: 'vitest',
+        createdAt,
+      },
+    ]);
+    mockApiRequestAudit.count.mockResolvedValue(1);
+
+    const result = await AdminApiKeyOperationsFacet.listRequestAudit(platformActor, 'tenant-b2b', {
+      selector: 'asset.create',
+      statusFrom: 200,
+      statusTo: 299,
+      correlationId: 'corr-audit',
+    });
+
+    expect(result.requests).toHaveLength(1);
+    expect(result.requests[0]).toMatchObject({
+      id: 'audit-1',
+      selector: 'asset.create',
+      statusCode: 201,
+      correlationId: 'corr-audit',
+    });
+    expect(mockApiRequestAudit.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        tenantId: 'tenant-b2b',
+        selector: 'asset.create',
+        correlationId: 'corr-audit',
+        statusCode: { gte: 200, lte: 299 },
+      }),
+      select: expect.not.objectContaining({
+        body: expect.anything(),
+        headers: expect.anything(),
+      }),
+    }));
   });
 });

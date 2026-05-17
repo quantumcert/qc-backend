@@ -24,6 +24,20 @@ const listApiKeysSchema = z.object({
     limit: z.coerce.number().int().min(1).max(100).optional(),
 });
 
+const requestAuditListSchema = z.object({
+    page: z.coerce.number().int().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional(),
+    apiKeyId: z.string().trim().min(1).optional(),
+    keyPrefix: z.string().trim().min(1).optional(),
+    selector: z.string().trim().min(1).optional(),
+    correlationId: z.string().trim().min(1).optional(),
+    statusCode: z.coerce.number().int().min(100).max(599).optional(),
+    statusFrom: z.coerce.number().int().min(100).max(599).optional(),
+    statusTo: z.coerce.number().int().min(100).max(599).optional(),
+    from: z.string().datetime().optional().transform((value) => value ? new Date(value) : undefined),
+    to: z.string().datetime().optional().transform((value) => value ? new Date(value) : undefined),
+});
+
 const createInitialApiKeySchema = z.object({
     label: z.string().trim().min(1).max(100),
     role: z.nativeEnum(ApiKeyRole).optional(),
@@ -130,6 +144,25 @@ export class AdminApiKeyController {
             });
         } catch (error) {
             return respondWithAdminApiKeyError(error, res, '[AdminApiKeyController.revoke]');
+        }
+    }
+
+    static async listRequestAudit(req: AuthenticatedRequest, res: Response) {
+        try {
+            const query = requestAuditListSchema.parse(req.query);
+            const result = await AdminApiKeyOperationsFacet.listRequestAudit(
+                req.adminActor!,
+                req.params.tenantId,
+                query
+            );
+
+            return res.json({
+                success: true,
+                data: result,
+                meta: buildMeta(),
+            });
+        } catch (error) {
+            return respondWithAdminApiKeyError(error, res, '[AdminApiKeyController.listRequestAudit]');
         }
     }
 }

@@ -36,6 +36,10 @@ router.post(
     AdminTenantController.archive
 );
 router.get(
+    '/platform/tenants/:tenantId/request-audit',
+    AdminApiKeyController.listRequestAudit
+);
+router.get(
     '/platform/tenants/:tenantId/api-keys',
     AdminApiKeyController.list
 );

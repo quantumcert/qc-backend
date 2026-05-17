@@ -33,6 +33,20 @@ type ListApiKeyParams = {
     limit?: number;
 };
 
+type ListRequestAuditParams = {
+    page?: number;
+    limit?: number;
+    apiKeyId?: string;
+    keyPrefix?: string;
+    selector?: string;
+    correlationId?: string;
+    statusCode?: number;
+    statusFrom?: number;
+    statusTo?: number;
+    from?: Date;
+    to?: Date;
+};
+
 const ADMIN_API_KEY_ACTIONS = {
     API_KEY_INITIAL_CREATED: 'API_KEY_INITIAL_CREATED',
     API_KEY_ROTATED: 'API_KEY_ROTATED',
@@ -57,6 +71,24 @@ const API_KEY_SELECT = {
     lastRotatedAt: true,
     createdAt: true,
 } satisfies Prisma.ApiKeySelect;
+
+const API_REQUEST_AUDIT_SELECT = {
+    id: true,
+    tenantId: true,
+    apiKeyId: true,
+    keyPrefix: true,
+    role: true,
+    method: true,
+    path: true,
+    selector: true,
+    statusCode: true,
+    latencyMs: true,
+    correlationId: true,
+    sanitizedError: true,
+    ipAddress: true,
+    userAgent: true,
+    createdAt: true,
+} satisfies Prisma.ApiRequestAuditSelect;
 
 export class AdminApiKeyOperationsFacet {
     static async createInitialApiKey(
@@ -312,6 +344,41 @@ export class AdminApiKeyOperationsFacet {
         return apiKey;
     }
 
+    static async listRequestAudit(
+        actor: AdminActorContext,
+        tenantId: string,
+        params: ListRequestAuditParams = {}
+    ) {
+        this.ensurePlatformActor(actor);
+        await this.ensureTenantExists(tenantId);
+
+        const page = normalizePage(params.page);
+        const limit = normalizeLimit(params.limit);
+        const skip = (page - 1) * limit;
+        const where = buildRequestAuditWhere(tenantId, params);
+
+        const [requests, total] = await Promise.all([
+            prisma.apiRequestAudit.findMany({
+                where,
+                skip,
+                take: limit,
+                select: API_REQUEST_AUDIT_SELECT,
+                orderBy: { createdAt: 'desc' },
+            }),
+            prisma.apiRequestAudit.count({ where }),
+        ]);
+
+        return {
+            requests,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit),
+            },
+        };
+    }
+
     private static ensurePlatformActor(actor?: AdminActorContext) {
         if (!actor?.actorUserId) {
             throw new AdminApiKeyOperationsError('ADMIN_ACTOR_REQUIRED', 'Platform admin actor is required.');
@@ -412,6 +479,33 @@ function normalizePage(value?: number): number {
 function normalizeLimit(value?: number): number {
     if (!Number.isFinite(value) || !value || value < 1) return 20;
     return Math.min(Math.floor(value), 100);
+}
+
+function buildRequestAuditWhere(
+    tenantId: string,
+    params: ListRequestAuditParams
+): Prisma.ApiRequestAuditWhereInput {
+    const where: Prisma.ApiRequestAuditWhereInput = { tenantId };
+
+    if (params.apiKeyId) where.apiKeyId = params.apiKeyId;
+    if (params.keyPrefix) where.keyPrefix = params.keyPrefix;
+    if (params.selector) where.selector = params.selector;
+    if (params.correlationId) where.correlationId = params.correlationId;
+    if (params.statusCode) where.statusCode = params.statusCode;
+    if (params.statusFrom || params.statusTo) {
+        where.statusCode = {
+            ...(params.statusFrom ? { gte: params.statusFrom } : {}),
+            ...(params.statusTo ? { lte: params.statusTo } : {}),
+        };
+    }
+    if (params.from || params.to) {
+        where.createdAt = {
+            ...(params.from ? { gte: params.from } : {}),
+            ...(params.to ? { lte: params.to } : {}),
+        };
+    }
+
+    return where;
 }
 
 export class AdminApiKeyOperationsError extends Error {
