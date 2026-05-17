@@ -192,7 +192,7 @@ Minimum `qc-dashboard` admin UI:
 
 - admin shell separated from normal user navigation;
 - tenant/company list with status filters;
-- create/edit company form;
+- create/edit company form with editable slug suggested from the typed company name;
 - tenant detail page with status, plan, limits, usage, credits, API keys, purchases and audit timeline;
 - editable tenant profile panel showing the canonical profile Asset/external id/public URL state;
 - QTAG balance panel showing available, reserved/in fulfillment, active/dispatched and failed/cancelled quantities;

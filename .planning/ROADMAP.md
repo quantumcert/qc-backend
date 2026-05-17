@@ -159,7 +159,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 **Success Criteria** (what must be TRUE):
 
 1. O admin operacional é entregue como módulo isolado dentro do `qc-dashboard`, com rotas/admin shell próprios; `qc-admin` fica como extração futura, não como requisito desta fase.
-2. Platform Admin Quantum consegue cadastrar cliente/empresa B2B, criar o Tenant correspondente, preencher perfil comercial, contatos, plano, limites e status.
+2. Platform Admin Quantum consegue cadastrar cliente/empresa B2B, criar o Tenant correspondente com slug sugerido automaticamente a partir do nome e editavel, preencher perfil comercial, contatos, plano, limites e status.
 2a. Perfil do tenant é editável no admin e cada criação/alteração mantém um `Asset` canônico `tenant-profile:<tenantId>` com `EventLog` aprovado e `signatureHash` pronto para ancoragem.
 3. Platform Admin consegue ativar, suspender e arquivar tenants com fluxo auditável.
 4. Platform Admin consegue criar, rotacionar e revogar API keys por tenant, com secret hasheado, prefixo visível, escopos canônicos selecionáveis por checkbox, expiração e auditoria; API keys só autenticam quando o tenant está `ACTIVE` e chamadas Diamond são bloqueadas quando a chave não possui o escopo exigido pelo selector.
