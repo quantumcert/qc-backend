@@ -1,8 +1,8 @@
 ---
 phase: 04-b2b-admin-operations-console
-status: ready_for_human_uat
+status: partial_ship_approved_with_external_blockers
 created: 2026-05-17
-last_updated: 2026-05-17T11:12:24Z
+last_updated: 2026-05-17T16:51:32Z
 owner: Quantum Cert Platform Admin
 ---
 
@@ -24,6 +24,16 @@ Validar o console operacional B2B, Tenant Quantum, backfill B2C, usuários/equip
   - aba `Team` sem sobreposição do último select;
   - `/admin/tenant` carregando dados do tenant resolvido pelo contexto;
   - `/admin/platform/queues/activations` carregando fila, filtros e paginação.
+
+## Resultado da UAT Técnica para Ship
+
+A Fase 4 está aprovada para PR/ship com pendências externas registradas. O escopo implementado e automatizado está verde; os itens abaixo seguem como bloqueios operacionais ou decisões fora do código:
+
+- backfill real: exige aprovação humana do relatório/dry-run e da fonte de dados alvo antes de execução;
+- QTAG físico: exige writer/tag real e integração atualizada do `qc-record-module`;
+- recebíveis reais: contrato final Transfero/provider pertence a `qc-business`.
+
+Esses itens devem constar no PR como UAT pendente/externa, sem bloquear a publicação do branch de implementação.
 
 ## Checklist de UAT
 
