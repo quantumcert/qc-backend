@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { AdminApiKeyController } from '../../controllers/AdminApiKeyController';
 import { AdminCreditController } from '../../controllers/AdminCreditController';
+import { AdminQTagController } from '../../controllers/AdminQTagController';
 import { AdminTenantController } from '../../controllers/AdminTenantController';
 import { requireAdminReason, requirePlatformAdmin } from '../../middleware/platformAdminAuth';
 
@@ -75,6 +76,38 @@ router.get(
 router.get(
     '/platform/payments/events',
     AdminCreditController.listPaymentEvents
+);
+router.get(
+    '/platform/tenants/:tenantId/qtags/summary',
+    AdminQTagController.getSummary
+);
+router.get(
+    '/platform/tenants/:tenantId/qtags/ledger',
+    AdminQTagController.listLedger
+);
+router.post(
+    '/platform/tenants/:tenantId/qtags/grants',
+    requireAdminReason,
+    AdminQTagController.grant
+);
+router.post(
+    '/platform/tenants/:tenantId/qtags/reservations',
+    requireAdminReason,
+    AdminQTagController.reserve
+);
+router.post(
+    '/platform/tenants/:tenantId/qtags/fulfillment/:orderId/release',
+    requireAdminReason,
+    AdminQTagController.release
+);
+router.post(
+    '/platform/tenants/:tenantId/qtags/fulfillment/:orderId/status',
+    requireAdminReason,
+    AdminQTagController.transitionStatus
+);
+router.get(
+    '/platform/qtags/fulfillment',
+    AdminQTagController.listQueue
 );
 router.get(
     '/platform/tenants/:tenantId/api-keys',

@@ -94,6 +94,7 @@ export const DiamondFacets = {
     ADMIN_API_KEY_OPERATIONS: 'AdminApiKeyOperationsFacet',
     CREDIT_LEDGER: 'CreditLedgerFacet',
     RECEIVABLES_PROVIDER: 'ReceivablesProviderFacet',
+    QTAG_FULFILLMENT: 'QTagFulfillmentFacet',
 
     // Phase 2: Asset Engine & Zero-Knowledge Security
     ASSET_REGISTRY: 'AssetRegistryFacet',
@@ -171,6 +172,8 @@ export const ResourceTypes = {
     CREDIT_LEDGER_ENTRY: 'CreditLedgerEntry',
     PURCHASE_ORDER: 'PurchaseOrder',
     PAYMENT_EVENT: 'PaymentEvent',
+    QTAG_LEDGER_ENTRY: 'QTagLedgerEntry',
+    QTAG_FULFILLMENT_ORDER: 'QTagFulfillmentOrder',
     ASSET: 'Asset',
     OWNER: 'Owner',
     DEVICE: 'Device',
