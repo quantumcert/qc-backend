@@ -26,11 +26,11 @@
 
 ### qc-backend
 
-- Pendente de commit neste resumo.
+- `9b9a48d feat(04-04): add credit ledger and receivables boundary`
 
 ### qc-dashboard
 
-- Pendente de commit neste resumo.
+- `5b14df0 feat(04-04): add admin credits and payments queue`
 
 ## Verificação
 
