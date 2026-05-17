@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase 04 Plan 05 complete — Plan 06 ready
-last_updated: "2026-05-17T08:06:00Z"
+status: Phase 04 Plan 06 complete — Plan 07 ready
+last_updated: "2026-05-17T10:24:39Z"
 progress:
   total_phases: 9
   completed_phases: 3
   total_plans: 17
-  completed_plans: 15
+  completed_plans: 16
   percent: 41
 ---
 
@@ -24,20 +24,20 @@ _Initialized: 2026-05-08_
 
 **Workspace Scope**: Produto multi-repo — `qc-backend`, `qc-dashboard`, `qc-home`, `qc-record-module`; decisões de negócio em `qc-business`.
 
-**Current Focus**: Phase 4 — B2B Admin Operations Console (Plan 05 complete; Plan 06 ready)
+**Current Focus**: Phase 4 — B2B Admin Operations Console (Plan 06 complete; Plan 07 ready)
 
 ---
 
 ## Current Position
 
 Phase: 04 (b2b-admin-operations-console) — IN_PROGRESS
-Plan: 06 of 07 ready
+Plan: 07 of 07 ready
 | Field | Value |
 |-------|-------|
 | Milestone | TBD |
 | Phase | 4 — B2B Admin Operations Console |
-| Plan | 06 of 07 ready |
-| Status | Plan 05 completed on 2026-05-17; QTAG entitlement/fulfillment is complete and Tenant Quantum/backfill/cutover is next |
+| Plan | 07 of 07 ready |
+| Status | Plan 06 completed on 2026-05-17; Tenant Quantum, canonical users, backfill engine and admin Team UI are complete; UAT admin cross-repo is next |
 
 **Progress**:
 
@@ -45,7 +45,7 @@ Plan: 06 of 07 ready
 Phase 1 [██████████] 100% (Plan 01: SEC-01/02/03 | Plan 02: SEC-04/05/06 | Plan 03: CORE-01/02/03/04 | Plan 04: CORE-05/06)
 Phase 2 [██████████] 100% (3/3 plans complete; backend verified; physical QTAG UAT blocked)
 Phase 3 [██████████] 100% (3/3 plans complete; Stellar UAT passed; PRs merged)
-Phase 4 [███████   ] 71% (5/7 plans complete; Plan 06 Tenant Quantum/backfill/cutover ready)
+Phase 4 [█████████ ] 86% (6/7 plans complete; Plan 07 UAT admin cross-repo ready)
 Phase 5 [          ] 0% (B2B Tenant External Readiness — approved after Phase 4)
 Phase 6 [          ] 0% (On-chain Asset Identity + Provenance — approved after Phase 5)
 Phase 7 [          ] 0% (Scale + Observability — deferred behind identity/on-chain transition)
@@ -71,7 +71,7 @@ Phase 9 [          ] 0% (Specialized Domain Facets)
 | Requirements total (v1) | 73                         |
 | Requirements mapped     | 73/73                      |
 | Plans written           | 17                         |
-| Plans complete          | 12                         |
+| Plans complete          | 16                         |
 
 ---
 
@@ -87,7 +87,7 @@ Phase 9 [          ] 0% (Specialized Domain Facets)
 | Phase 04 P03 | planned  | 3 tasks | 12 files |
 | Phase 04 P04 | planned  | 3 tasks | 12 files |
 | Phase 04 P05 | planned  | 3 tasks | 10 files |
-| Phase 04 P06 | planned  | 3 tasks | 10 files |
+| Phase 04 P06 | completed | 3 tasks | 15 files |
 | Phase 04 P07 | planned  | 3 tasks | 10 files |
 
 ## Accumulated Context
@@ -166,7 +166,7 @@ Phase 9 [          ] 0% (Specialized Domain Facets)
 
 **Phase 3 merge**: 2026-05-16 — backend PR #23 and dashboard PR #23 merged to `main`.
 
-**Next action**: Execute Phase 4 Plan 06 — `.planning/phases/04-b2b-admin-operations-console/04-06-PLAN.md`.
+**Next action**: Execute Phase 4 Plan 07 — `.planning/phases/04-b2b-admin-operations-console/04-07-PLAN.md`.
 
 **Context for next session**:
 
@@ -178,6 +178,7 @@ Phase 9 [          ] 0% (Specialized Domain Facets)
 - Phase 5 approved 2026-05-17: focus B2B external tenant readiness after Phase 4, including tenant admins/operators, API consumption, white-label/public boundaries and pilot cutover; B2C Tenant Quantum/backfill is not Phase 5 scope.
 - Phase 6 approved 2026-05-17: every profile/dependent/pet/object/document/QTAG must be represented as local Asset plus on-chain Asset/registry proof with event provenance.
 - Phase 4 Plan 02 completed 2026-05-17: backend `/api/v1/admin/platform/tenants` lifecycle/profile routes, `AdminTenantOperationsFacet`, admin audit, dashboard `adminRouter`, `QCBackendClient.admin.tenants.*`, and `/admin/platform/tenants` + `/admin/platform/tenants/:tenantId` UI are implemented and verified.
+- Phase 4 Plan 06 completed 2026-05-17: backend `TenantUserFacet`, `/api/v1/users`, Platform Admin tenant-user routes, `TenantQuantumBackfillFacet`, `backfill-tenant-quantum.ts`, dashboard `QCBackendClient.users/admin.tenantUsers`, profile sync via canonical user upsert, and Tenant Detail `Team` tab are implemented and verified.
 - Fase 4 Plano 03 concluído em 2026-05-17: ciclo de vida admin de API keys no backend, request audit sanitizado, aba API Keys no dashboard, `/admin/platform/audit` e invariante canônico de seed da Quantum Cert foram implementados e verificados. `dev@localhost` resolve como Platform Admin e `Quantum Cert` aparece na listagem admin com slug `quantum-cert-platform`.
 - Fase 4 Plano 04 concluído em 2026-05-17: ledger operacional de créditos, boundary genérico de recebíveis, provider fake/local, webhook deduplicado, rotas admin de créditos/pagamentos, aba Credits no Tenant Detail e fila `/admin/platform/queues/payments` foram implementados e verificados. Créditos continuam separados de `UserWallet`; Transfero permanece candidata/TBD.
 - Fase 4 Plano 05 concluído em 2026-05-17: ledger QTAG, reserva por Asset, fulfillment order, link de commissioning com `fulfillmentOrderId`, atualização de `Asset.deviceId`, rotas admin QTAG, aba QTAGs e fila `/admin/platform/queues/qtags` foram implementados e verificados.
