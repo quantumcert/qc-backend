@@ -130,7 +130,7 @@ describe('AdminTenantOperationsFacet', () => {
     mockTenant.findUnique.mockResolvedValue(null);
     mockTenant.create.mockResolvedValue({
       id: 'tenant-b2b',
-      name: 'Cliente B2B',
+      name: 'CLIENTE B2B',
       slug: 'cliente-b2b',
       contactEmail: 'ops@cliente.com',
       planTier: PlanTier.PROFESSIONAL,
@@ -169,6 +169,7 @@ describe('AdminTenantOperationsFacet', () => {
     });
     expect(mockTenant.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
+        name: 'CLIENTE B2B',
         slug: 'cliente-b2b',
         contactEmail: 'ops@cliente.com',
         targetChain: 'STELLAR',
@@ -178,7 +179,7 @@ describe('AdminTenantOperationsFacet', () => {
     }));
     expect(mockAsset.upsert).toHaveBeenCalledWith(expect.objectContaining({
       create: expect.objectContaining({
-        externalId: 'Cliente B2B',
+        externalId: 'CLIENTE B2B',
         publicUrl: expect.stringMatching(
           /^https:\/\/consulta\.quantumcert\.com\.br\/public\/verify\/[0-9a-f-]+$/
         ),
@@ -280,7 +281,7 @@ describe('AdminTenantOperationsFacet', () => {
       .mockResolvedValueOnce({ id: 'tenant-b2b' })
       .mockResolvedValueOnce({
         id: 'tenant-b2b',
-        name: 'Cliente B2B Atualizado',
+        name: 'CLIENTE B2B ATUALIZADO',
         slug: 'cliente-b2b',
         contactEmail: 'ops@cliente.com',
         planTier: PlanTier.ENTERPRISE,
@@ -297,7 +298,7 @@ describe('AdminTenantOperationsFacet', () => {
       });
     mockTenant.update.mockResolvedValue({
       id: 'tenant-b2b',
-      name: 'Cliente B2B Atualizado',
+      name: 'CLIENTE B2B ATUALIZADO',
       slug: 'cliente-b2b',
       contactEmail: 'ops@cliente.com',
       planTier: PlanTier.ENTERPRISE,
@@ -345,6 +346,11 @@ describe('AdminTenantOperationsFacet', () => {
       }
     );
 
+    expect(mockTenant.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        name: 'CLIENTE B2B ATUALIZADO',
+      }),
+    }));
     expect(mockAsset.upsert).toHaveBeenCalledWith(expect.objectContaining({
       where: {
         tenantId_externalId: {
@@ -354,13 +360,13 @@ describe('AdminTenantOperationsFacet', () => {
       },
       create: expect.objectContaining({
         tenantId: 'tenant-b2b',
-        externalId: 'Cliente B2B Atualizado',
+        externalId: 'CLIENTE B2B ATUALIZADO',
         status: 'ACTIVE',
         metadata: expect.objectContaining({
           assetKind: 'TENANT_PROFILE',
           tenant: expect.objectContaining({
             id: 'tenant-b2b',
-            name: 'Cliente B2B Atualizado',
+            name: 'CLIENTE B2B ATUALIZADO',
             slug: 'cliente-b2b',
           }),
           commercialProfile: expect.objectContaining({
@@ -375,7 +381,7 @@ describe('AdminTenantOperationsFacet', () => {
         publicDataKeys: ['assetKind', 'tenant'],
       }),
       update: expect.objectContaining({
-        externalId: 'Cliente B2B Atualizado',
+        externalId: 'CLIENTE B2B ATUALIZADO',
         metadata: expect.objectContaining({
           assetKind: 'TENANT_PROFILE',
         }),
@@ -395,7 +401,7 @@ describe('AdminTenantOperationsFacet', () => {
           schemaVersion: 1,
           tenantId: 'tenant-b2b',
           profileAssetId: 'asset-tenant-profile',
-          profileAssetExternalId: 'Cliente B2B Atualizado',
+          profileAssetExternalId: 'CLIENTE B2B ATUALIZADO',
           updatedByActorId: 'user-platform',
           tenantKeyType: 'CNPJ',
           tenantKeyValue: '12345678000199',
@@ -410,7 +416,7 @@ describe('AdminTenantOperationsFacet', () => {
       id: 'tenant-b2b',
       profileAsset: {
         id: 'asset-tenant-profile',
-        externalId: 'Cliente B2B Atualizado',
+        externalId: 'CLIENTE B2B ATUALIZADO',
         lastAnchorEvent: {
           id: 'event-tenant-profile',
           status: 'APPROVED',

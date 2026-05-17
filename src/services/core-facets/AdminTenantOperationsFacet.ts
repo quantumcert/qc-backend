@@ -165,6 +165,7 @@ export class AdminTenantOperationsFacet {
         this.ensurePlatformActor(actor);
         const reason = AdminAuthorizationFacet.requireReason(params.reason || actor.reason);
         const slug = normalizeSlug(params.slug);
+        const tenantName = normalizeTenantName(params.name);
         const targetChain = normalizeTargetChain(params.targetChain);
 
         const existingTenant = await prisma.tenant.findUnique({ where: { slug } });
@@ -174,13 +175,13 @@ export class AdminTenantOperationsFacet {
 
         const profileData = buildCommercialProfileData(params.commercialProfile);
         profileData.contactEmail ??= params.contactEmail;
-        profileData.legalName ??= params.name;
+        profileData.legalName ??= tenantName;
         await this.ensureTaxIdAvailable(profileData.taxId);
 
         const result = await prisma.$transaction(async (tx) => {
             const tenant = await tx.tenant.create({
                 data: {
-                    name: params.name.trim(),
+                    name: tenantName,
                     slug,
                     contactEmail: params.contactEmail.trim().toLowerCase(),
                     planTier: params.planTier || PlanTier.FREE,
@@ -635,7 +636,7 @@ function buildTenantWhere(params: TenantListParams): Prisma.TenantWhereInput {
 function buildTenantUpdateData(params: UpdateCommercialProfileParams): Prisma.TenantUpdateInput {
     const data: Prisma.TenantUpdateInput = {};
 
-    if (params.name !== undefined) data.name = params.name.trim();
+    if (params.name !== undefined) data.name = normalizeTenantName(params.name);
     if (params.contactEmail !== undefined) data.contactEmail = params.contactEmail.trim().toLowerCase();
     if (params.planTier !== undefined) data.planTier = params.planTier;
     if (params.targetChain !== undefined) data.targetChain = normalizeTargetChain(params.targetChain);
@@ -691,6 +692,15 @@ function normalizeNullableString(value?: string | null): string | null {
     if (value === undefined || value === null) return null;
     const normalized = value.trim();
     return normalized || null;
+}
+
+function normalizeTenantName(value: string): string {
+    const normalized = normalizeNullableString(value);
+    if (!normalized) {
+        throw new AdminTenantError('INVALID_TENANT_NAME', 'Tenant name is required.');
+    }
+
+    return normalized.toLocaleUpperCase('pt-BR');
 }
 
 function normalizeJsonObject(value: unknown): Prisma.InputJsonValue {
