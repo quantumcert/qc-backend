@@ -13,6 +13,7 @@ import walletRoutes from './v1/walletRoutes';
 import circuitBreakerRoutes from './v1/circuitBreakerRoutes';
 import agentRoutes from './v1/agentRoutes';
 import contributionRoutes from './v1/contributionRoutes';
+import adminRoutes from './v1/adminRoutes';
 import { DiamondProxy } from '../diamond/DiamondProxy';
 import { requireApiKey } from '../middleware/apiKeyAuth';
 
@@ -65,6 +66,11 @@ router.use('/v1/agent', agentRoutes);
 // CURATION LAYER — CORE-06: Authenticated contribution review
 // ═══════════════════════════════════════════════════════════
 router.use('/v1/contributions', contributionRoutes);
+
+// ═══════════════════════════════════════════════════════════
+// PHASE 4: Platform Admin Operations
+// ═══════════════════════════════════════════════════════════
+router.use('/v1/admin', adminRoutes);
 
 /**
  * @openapi

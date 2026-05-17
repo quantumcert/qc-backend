@@ -77,4 +77,8 @@ export const FacetRegistry: Record<string, FacetFunction> = {
     // ERE CYCLE (ERecycleFacet)
     'erecycle.recordWaste': (ctx: any, payload: any) => ERecycleFacet.recordWaste(ctx, payload),
     'erecycle.issueCredit': (ctx: any, payload: any) => ERecycleFacet.issueCredit(ctx, payload),
+
+    // Platform Admin selectors are intentionally not exposed here.
+    // /v1/diamond is tenant API-key scoped; Phase 4 admin operations require
+    // Platform Admin actor resolution via /v1/admin/platform/* routes.
 };
