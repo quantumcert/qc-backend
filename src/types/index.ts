@@ -96,6 +96,8 @@ export const DiamondFacets = {
     CREDIT_LEDGER: 'CreditLedgerFacet',
     RECEIVABLES_PROVIDER: 'ReceivablesProviderFacet',
     QTAG_FULFILLMENT: 'QTagFulfillmentFacet',
+    TENANT_USER: 'TenantUserFacet',
+    TENANT_QUANTUM_BACKFILL: 'TenantQuantumBackfillFacet',
 
     // Phase 2: Asset Engine & Zero-Knowledge Security
     ASSET_REGISTRY: 'AssetRegistryFacet',
@@ -180,6 +182,9 @@ export const ResourceTypes = {
     DEVICE: 'Device',
     DEVICE_TAP_LOG: 'DeviceTapLog',
     AGENT: 'AGENT',
+    TENANT_USER: 'TenantUser',
+    TENANT_MEMBERSHIP: 'TenantMembership',
+    MIGRATION_RUN: 'MigrationRun',
 } as const;
 
 // ─── PHASE 2: NFC TAP RESULT ────────────────────────────

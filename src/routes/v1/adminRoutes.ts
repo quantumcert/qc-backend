@@ -3,6 +3,7 @@ import { AdminApiKeyController } from '../../controllers/AdminApiKeyController';
 import { AdminCreditController } from '../../controllers/AdminCreditController';
 import { AdminQTagController } from '../../controllers/AdminQTagController';
 import { AdminTenantController } from '../../controllers/AdminTenantController';
+import { TenantUserController } from '../../controllers/TenantUserController';
 import { requireAdminReason, requirePlatformAdmin } from '../../middleware/platformAdminAuth';
 
 const router = Router();
@@ -12,6 +13,42 @@ router.use(requirePlatformAdmin);
 router.get('/platform/tenants', AdminTenantController.list);
 router.post('/platform/tenants', requireAdminReason, AdminTenantController.create);
 router.get('/platform/tenants/:tenantId', AdminTenantController.get);
+router.get(
+    '/platform/tenants/:tenantId/users',
+    TenantUserController.adminList
+);
+router.post(
+    '/platform/tenants/:tenantId/users',
+    requireAdminReason,
+    TenantUserController.adminCreate
+);
+router.get(
+    '/platform/tenants/:tenantId/users/:userId',
+    TenantUserController.adminGet
+);
+router.patch(
+    '/platform/tenants/:tenantId/users/:userId',
+    requireAdminReason,
+    TenantUserController.adminUpdate
+);
+router.post(
+    '/platform/tenants/:tenantId/users/:userId/status',
+    requireAdminReason,
+    TenantUserController.adminStatus
+);
+router.post(
+    '/platform/tenants/:tenantId/users/:userId/role',
+    requireAdminReason,
+    TenantUserController.adminRole
+);
+router.get(
+    '/platform/tenants/:tenantId/users/:userId/assets',
+    TenantUserController.adminAssets
+);
+router.get(
+    '/platform/tenants/:tenantId/users/:userId/profile-asset',
+    TenantUserController.adminProfileAsset
+);
 router.patch(
     '/platform/tenants/:tenantId/profile',
     requireAdminReason,
