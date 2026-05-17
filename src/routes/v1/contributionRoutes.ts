@@ -12,6 +12,7 @@ import { Router } from 'express';
 import { ContributionController } from '../../controllers/ContributionController';
 import { requireApiKey } from '../../middleware/apiKeyAuth';
 import { requireOperator } from '../../middleware/rbacGuard';
+import { requireApiKeyScope } from '../../middleware/apiKeyScopeGuard';
 import { tenantRateLimiter } from '../../middleware/rateLimiter';
 
 const router = Router();
@@ -103,6 +104,6 @@ const router = Router();
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/:id/review', requireApiKey, tenantRateLimiter, requireOperator, ContributionController.review);
+router.post('/:id/review', requireApiKey, tenantRateLimiter, requireOperator, requireApiKeyScope('events:write'), ContributionController.review);
 
 export default router;

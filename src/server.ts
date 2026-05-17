@@ -62,7 +62,17 @@ app.use(cors({
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Requested-With'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-API-Key',
+    'X-Requested-With',
+    'X-Correlation-Id',
+    'X-Request-Id',
+    'X-Admin-User-Id',
+    'X-Admin-Tenant-Id',
+    'X-Admin-Reason',
+  ],
   exposedHeaders: [
     'X-Total-Count',
     'X-RateLimit-Limit-Minute',

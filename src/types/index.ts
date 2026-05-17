@@ -7,9 +7,9 @@
 // ═══════════════════════════════════════════════════════════
 
 import { Request } from 'express';
-import { ApiKeyRole, PlanTier, TapVerdict } from '@prisma/client';
+import { ApiKeyRole, PlanTier, TapVerdict, TenantMembershipRole } from '@prisma/client';
 
-export { ApiKeyRole, PlanTier, TapVerdict };
+export { ApiKeyRole, PlanTier, TapVerdict, TenantMembershipRole };
 
 // ─── AUTHENTICATED REQUEST (API Key) ────────────────────
 // Extended Request carrying resolved Tenant + API Key context.
@@ -17,8 +17,24 @@ export interface AuthenticatedRequest extends Request {
     tenantId?: string;
     apiKeyId?: string;
     apiKeyRole?: ApiKeyRole;
+    apiKeyScopes?: string[];
     apiKeyPrefix?: string;
     agentId?: string; // set by requireAgentSignature when request comes from a machine identity
+    adminActor?: AdminActorContext;
+    adminScope?: AdminScope;
+    correlationId?: string;
+    apiRequestAuditError?: string;
+}
+
+export type AdminScope = 'PLATFORM' | 'TENANT';
+
+export interface AdminActorContext {
+    actorUserId: string;
+    actorTenantId: string;
+    tenantId?: string;
+    role: TenantMembershipRole;
+    reason?: string;
+    correlationId?: string;
 }
 
 // ─── PUBLIC REQUEST ─────────────────────────────────────
@@ -75,6 +91,13 @@ export const DiamondFacets = {
     TENANT_MANAGEMENT: 'TenantManagementFacet',
     API_KEY_MANAGEMENT: 'ApiKeyManagementFacet',
     RATE_LIMITER: 'RateLimiterFacet',
+    ADMIN_TENANT_OPERATIONS: 'AdminTenantOperationsFacet',
+    ADMIN_API_KEY_OPERATIONS: 'AdminApiKeyOperationsFacet',
+    CREDIT_LEDGER: 'CreditLedgerFacet',
+    RECEIVABLES_PROVIDER: 'ReceivablesProviderFacet',
+    QTAG_FULFILLMENT: 'QTagFulfillmentFacet',
+    TENANT_USER: 'TenantUserFacet',
+    TENANT_QUANTUM_BACKFILL: 'TenantQuantumBackfillFacet',
 
     // Phase 2: Asset Engine & Zero-Knowledge Security
     ASSET_REGISTRY: 'AssetRegistryFacet',
@@ -149,11 +172,19 @@ export const ResourceTypes = {
     TENANT: 'Tenant',
     API_KEY: 'ApiKey',
     RATE_LIMIT: 'RateLimitCounter',
+    CREDIT_LEDGER_ENTRY: 'CreditLedgerEntry',
+    PURCHASE_ORDER: 'PurchaseOrder',
+    PAYMENT_EVENT: 'PaymentEvent',
+    QTAG_LEDGER_ENTRY: 'QTagLedgerEntry',
+    QTAG_FULFILLMENT_ORDER: 'QTagFulfillmentOrder',
     ASSET: 'Asset',
     OWNER: 'Owner',
     DEVICE: 'Device',
     DEVICE_TAP_LOG: 'DeviceTapLog',
     AGENT: 'AGENT',
+    TENANT_USER: 'TenantUser',
+    TENANT_MEMBERSHIP: 'TenantMembership',
+    MIGRATION_RUN: 'MigrationRun',
 } as const;
 
 // ─── PHASE 2: NFC TAP RESULT ────────────────────────────

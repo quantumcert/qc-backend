@@ -6,7 +6,7 @@
 // Each key is bound to a Tenant with an RBAC role (ADMIN/OPERATOR/READER).
 //
 // Security Model:
-//   - Raw keys are NEVER stored. Only SHA-256 hashes are persisted.
+//   - Raw keys are NEVER stored. Only bcrypt hashes are persisted.
 //   - Key format: qc_{env}_{32 random hex chars}
 //   - The raw key is returned ONCE at creation time.
 //
@@ -15,10 +15,19 @@
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import prisma from '../../config/prisma';
-import { ApiKeyRole } from '@prisma/client';
+import { ApiKeyRole, TenantStatus } from '@prisma/client';
 import { AuditActions, ResourceTypes, DiamondFacets } from '../../types';
+import { resolveEffectiveApiKeyScopes } from '../../security/apiKeyScopes';
 
 export class ApiKeyManagementFacet {
+    static async buildKeyMaterial() {
+        const env = process.env.NODE_ENV === 'production' ? 'live' : 'test';
+        const rawKey = `qc_${env}_${crypto.randomBytes(32).toString('hex')}`;
+        const keyHash = await bcrypt.hash(rawKey, 10);
+        const keyPrefix = rawKey.substring(0, 16);
+
+        return { rawKey, keyHash, keyPrefix };
+    }
 
     // ─── GENERATE API KEY ─────────────────────────────────
     // Creates a new API key for a tenant with the specified RBAC role.
@@ -42,16 +51,13 @@ export class ApiKeyManagementFacet {
             throw new ApiKeyError('TENANT_NOT_FOUND', `Tenant "${tenantId}" not found.`);
         }
 
-        if (!tenant.isActive) {
+        if (!tenant.isActive || tenant.status !== TenantStatus.ACTIVE) {
             throw new ApiKeyError('TENANT_INACTIVE', `Cannot generate API key for inactive tenant.`);
         }
 
-        // Generate cryptographically secure key
-        const env = process.env.NODE_ENV === 'production' ? 'live' : 'test';
-        const rawKey = `qc_${env}_${crypto.randomBytes(32).toString('hex')}`;
-        // RED TEAM HOTFIX 5: Anti-Rainbow Tables (bcrypt instead of plain SHA-256)
-        const keyHash = await bcrypt.hash(rawKey, 10);
-        const keyPrefix = rawKey.substring(0, 16); // "qc_test_a1b2c3d4" or "qc_live_a1b2c3d4"
+        // Generate cryptographically secure key. Raw key is returned once only.
+        const { rawKey, keyHash, keyPrefix } = await this.buildKeyMaterial();
+        const scopes = resolveEffectiveApiKeyScopes(undefined, role);
 
         // Transactional creation: ApiKey + Audit Log
         const apiKey = await prisma.$transaction(async (tx) => {
@@ -62,6 +68,7 @@ export class ApiKeyManagementFacet {
                     keyPrefix,
                     label,
                     role,
+                    scopes,
                     expiresAt,
                 },
             });
@@ -76,6 +83,7 @@ export class ApiKeyManagementFacet {
                     resourceId: newKey.id,
                     metadata: {
                         role,
+                        scopes,
                         label,
                         hasExpiration: !!expiresAt,
                         facet: DiamondFacets.API_KEY_MANAGEMENT,
@@ -116,6 +124,7 @@ export class ApiKeyManagementFacet {
                         id: true,
                         slug: true,
                         isActive: true,
+                        status: true,
                         planTier: true,
                         maxRequestsPerMinute: true,
                         maxRequestsPerDay: true,
@@ -148,7 +157,7 @@ export class ApiKeyManagementFacet {
             throw new ApiKeyError('KEY_EXPIRED', 'This API key has expired.');
         }
 
-        if (!apiKey.tenant.isActive) {
+        if (!apiKey.tenant.isActive || apiKey.tenant.status !== TenantStatus.ACTIVE) {
             throw new ApiKeyError('TENANT_INACTIVE', 'The tenant associated with this key is inactive.');
         }
 
@@ -162,6 +171,7 @@ export class ApiKeyManagementFacet {
             apiKeyId: apiKey.id,
             apiKeyPrefix: apiKey.keyPrefix,
             role: apiKey.role,
+            scopes: resolveEffectiveApiKeyScopes(apiKey.scopes, apiKey.role),
             tenant: apiKey.tenant,
         };
     }
@@ -254,12 +264,8 @@ export class ApiKeyManagementFacet {
             throw new ApiKeyError('KEY_NOT_FOUND', 'Active API key not found for this tenant.');
         }
 
-        // Generate new key material
-        const env = process.env.NODE_ENV === 'production' ? 'live' : 'test';
-        const rawKey = `qc_${env}_${crypto.randomBytes(32).toString('hex')}`;
-        // RED TEAM HOTFIX 5: Anti-Rainbow Tables
-        const keyHash = await bcrypt.hash(rawKey, 10);
-        const newKeyPrefix = rawKey.substring(0, 16);
+        const { rawKey, keyHash, keyPrefix: newKeyPrefix } = await this.buildKeyMaterial();
+        const scopes = resolveEffectiveApiKeyScopes(existingKey.scopes, existingKey.role);
 
         const result = await prisma.$transaction(async (tx) => {
             // Revoke old key
@@ -279,6 +285,7 @@ export class ApiKeyManagementFacet {
                     keyPrefix: newKeyPrefix,
                     label: existingKey.label,
                     role: existingKey.role,
+                    scopes,
                     expiresAt: existingKey.expiresAt,
                 },
             });
@@ -296,6 +303,7 @@ export class ApiKeyManagementFacet {
                         previousKeyPrefix: existingKey.keyPrefix,
                         newKeyPrefix,
                         role: existingKey.role,
+                        scopes,
                         facet: DiamondFacets.API_KEY_MANAGEMENT,
                     },
                     ipAddress,
@@ -339,6 +347,7 @@ export class ApiKeyManagementFacet {
                 keyPrefix: true,
                 label: true,
                 role: true,
+                scopes: true,
                 isActive: true,
                 revokedAt: true,
                 lastUsedAt: true,

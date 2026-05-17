@@ -10,6 +10,7 @@ import { AssetController } from '../../controllers/AssetController';
 import { TransferController } from '../../controllers/TransferController';
 import { requireApiKey, optionalApiKey } from '../../middleware/apiKeyAuth';
 import { requireOperator, requireReader } from '../../middleware/rbacGuard';
+import { requireApiKeyScope } from '../../middleware/apiKeyScopeGuard';
 import { tenantRateLimiter } from '../../middleware/rateLimiter';
 import { requireIdempotency } from '../../middleware/idempotencyGuard';
 const router = Router();
@@ -66,7 +67,7 @@ const router = Router();
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/', requireApiKey, requireIdempotency, tenantRateLimiter, requireOperator, AssetController.create);
+router.post('/', requireApiKey, requireIdempotency, tenantRateLimiter, requireOperator, requireApiKeyScope('assets:write'), AssetController.create);
 
 /**
  * @openapi
@@ -114,7 +115,7 @@ router.post('/', requireApiKey, requireIdempotency, tenantRateLimiter, requireOp
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/', requireApiKey, tenantRateLimiter, requireReader, AssetController.list);
+router.get('/', requireApiKey, tenantRateLimiter, requireReader, requireApiKeyScope('assets:read'), AssetController.list);
 
 /**
  * @openapi
@@ -150,7 +151,7 @@ router.get('/', requireApiKey, tenantRateLimiter, requireReader, AssetController
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/:id', requireApiKey, tenantRateLimiter, requireReader, AssetController.getById);
+router.get('/:id', requireApiKey, tenantRateLimiter, requireReader, requireApiKeyScope('assets:read'), AssetController.getById);
 
 /**
  * @openapi
@@ -202,7 +203,7 @@ router.get('/:id', requireApiKey, tenantRateLimiter, requireReader, AssetControl
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.patch('/:id/owners', requireApiKey, requireIdempotency, tenantRateLimiter, requireOperator, AssetController.addOwner);
+router.patch('/:id/owners', requireApiKey, requireIdempotency, tenantRateLimiter, requireOperator, requireApiKeyScope('assets:write'), AssetController.addOwner);
 
 /**
  * @openapi
@@ -259,7 +260,7 @@ router.patch('/:id/owners', requireApiKey, requireIdempotency, tenantRateLimiter
  *         description: Asset não pode ser transferido no estado atual
  */
 router.patch('/:assetId/transfer',
-  requireApiKey, requireIdempotency, tenantRateLimiter, requireOperator,
+  requireApiKey, requireIdempotency, tenantRateLimiter, requireOperator, requireApiKeyScope('transfers:write'),
   TransferController.initiateTransfer);
 
 export default router;

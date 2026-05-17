@@ -1,0 +1,183 @@
+import { Router } from 'express';
+import { AdminApiKeyController } from '../../controllers/AdminApiKeyController';
+import { AdminCreditController } from '../../controllers/AdminCreditController';
+import { AdminQTagController } from '../../controllers/AdminQTagController';
+import { AdminTenantController } from '../../controllers/AdminTenantController';
+import { TenantUserController } from '../../controllers/TenantUserController';
+import { requireAdminReason, requirePlatformAdmin, requireTenantAdmin } from '../../middleware/platformAdminAuth';
+
+const router = Router();
+
+const ownTenantAdmin = requireTenantAdmin((req) => req.params.tenantId);
+
+router.get('/tenant/:tenantId', ownTenantAdmin, AdminTenantController.get);
+router.get('/tenant/:tenantId/api-keys', ownTenantAdmin, AdminApiKeyController.list);
+router.get('/tenant/:tenantId/request-audit', ownTenantAdmin, AdminApiKeyController.listRequestAudit);
+router.get('/tenant/:tenantId/credits/summary', ownTenantAdmin, AdminCreditController.getCreditSummary);
+router.get('/tenant/:tenantId/purchase-orders', ownTenantAdmin, AdminCreditController.listPurchaseOrders);
+router.get('/tenant/:tenantId/qtags/summary', ownTenantAdmin, AdminQTagController.getSummary);
+
+router.use(requirePlatformAdmin);
+
+router.get('/platform/tenants', AdminTenantController.list);
+router.post('/platform/tenants', requireAdminReason, AdminTenantController.create);
+router.get('/platform/tenants/:tenantId', AdminTenantController.get);
+router.get(
+    '/platform/tenants/:tenantId/users',
+    TenantUserController.adminList
+);
+router.post(
+    '/platform/tenants/:tenantId/users',
+    requireAdminReason,
+    TenantUserController.adminCreate
+);
+router.get(
+    '/platform/tenants/:tenantId/users/:userId',
+    TenantUserController.adminGet
+);
+router.patch(
+    '/platform/tenants/:tenantId/users/:userId',
+    requireAdminReason,
+    TenantUserController.adminUpdate
+);
+router.post(
+    '/platform/tenants/:tenantId/users/:userId/status',
+    requireAdminReason,
+    TenantUserController.adminStatus
+);
+router.post(
+    '/platform/tenants/:tenantId/users/:userId/role',
+    requireAdminReason,
+    TenantUserController.adminRole
+);
+router.get(
+    '/platform/tenants/:tenantId/users/:userId/assets',
+    TenantUserController.adminAssets
+);
+router.get(
+    '/platform/tenants/:tenantId/users/:userId/profile-asset',
+    TenantUserController.adminProfileAsset
+);
+router.patch(
+    '/platform/tenants/:tenantId/profile',
+    requireAdminReason,
+    AdminTenantController.updateCommercialProfile
+);
+router.post(
+    '/platform/tenants/:tenantId/review',
+    requireAdminReason,
+    AdminTenantController.submitForReview
+);
+router.post(
+    '/platform/tenants/:tenantId/activate',
+    requireAdminReason,
+    AdminTenantController.activate
+);
+router.post(
+    '/platform/tenants/:tenantId/suspend',
+    requireAdminReason,
+    AdminTenantController.suspend
+);
+router.post(
+    '/platform/tenants/:tenantId/archive',
+    requireAdminReason,
+    AdminTenantController.archive
+);
+router.get(
+    '/platform/tenants/:tenantId/request-audit',
+    AdminApiKeyController.listRequestAudit
+);
+router.get(
+    '/platform/tenants/:tenantId/credits/summary',
+    AdminCreditController.getCreditSummary
+);
+router.get(
+    '/platform/tenants/:tenantId/credits/ledger',
+    AdminCreditController.listCreditLedger
+);
+router.post(
+    '/platform/tenants/:tenantId/credits/grants',
+    requireAdminReason,
+    AdminCreditController.grantCredits
+);
+router.post(
+    '/platform/tenants/:tenantId/credits/adjustments',
+    requireAdminReason,
+    AdminCreditController.adjustCredits
+);
+router.post(
+    '/platform/tenants/:tenantId/credits/revocations',
+    requireAdminReason,
+    AdminCreditController.revokeCredits
+);
+router.post(
+    '/platform/tenants/:tenantId/credit-purchases',
+    requireAdminReason,
+    AdminCreditController.createCreditPurchaseIntent
+);
+router.get(
+    '/platform/tenants/:tenantId/purchase-orders',
+    AdminCreditController.listPurchaseOrders
+);
+router.get(
+    '/platform/payments/events',
+    AdminCreditController.listPaymentEvents
+);
+router.get(
+    '/platform/tenants/:tenantId/qtags/summary',
+    AdminQTagController.getSummary
+);
+router.get(
+    '/platform/tenants/:tenantId/qtags/ledger',
+    AdminQTagController.listLedger
+);
+router.post(
+    '/platform/tenants/:tenantId/qtags/grants',
+    requireAdminReason,
+    AdminQTagController.grant
+);
+router.post(
+    '/platform/tenants/:tenantId/qtags/reservations',
+    requireAdminReason,
+    AdminQTagController.reserve
+);
+router.post(
+    '/platform/tenants/:tenantId/qtags/fulfillment/:orderId/release',
+    requireAdminReason,
+    AdminQTagController.release
+);
+router.post(
+    '/platform/tenants/:tenantId/qtags/fulfillment/:orderId/status',
+    requireAdminReason,
+    AdminQTagController.transitionStatus
+);
+router.get(
+    '/platform/qtags/fulfillment',
+    AdminQTagController.listQueue
+);
+router.get(
+    '/platform/tenants/:tenantId/api-keys',
+    AdminApiKeyController.list
+);
+router.post(
+    '/platform/tenants/:tenantId/api-keys',
+    requireAdminReason,
+    AdminApiKeyController.create
+);
+router.post(
+    '/platform/tenants/:tenantId/api-keys/initial',
+    requireAdminReason,
+    AdminApiKeyController.createInitial
+);
+router.post(
+    '/platform/tenants/:tenantId/api-keys/:apiKeyId/rotate',
+    requireAdminReason,
+    AdminApiKeyController.rotate
+);
+router.post(
+    '/platform/tenants/:tenantId/api-keys/:apiKeyId/revoke',
+    requireAdminReason,
+    AdminApiKeyController.revoke
+);
+
+export default router;

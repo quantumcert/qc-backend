@@ -1,6 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-const { mockEncodingSession, mockDevice, mockEventLog, mockKmsGetTenantSecretHex, mockKmsWrapUserKey } = vi.hoisted(() => {
+const {
+  mockEncodingSession,
+  mockDevice,
+  mockEventLog,
+  mockAsset,
+  mockQTagFulfillmentOrder,
+  mockQTagLedgerEntry,
+  mockKmsGetTenantSecretHex,
+  mockKmsWrapUserKey,
+} = vi.hoisted(() => {
   const mockEncodingSession = {
     create: vi.fn(),
     findUnique: vi.fn(),
@@ -12,9 +21,30 @@ const { mockEncodingSession, mockDevice, mockEventLog, mockKmsGetTenantSecretHex
   const mockEventLog = {
     create: vi.fn(),
   };
+  const mockAsset = {
+    update: vi.fn(),
+  };
+  const mockQTagFulfillmentOrder = {
+    findUnique: vi.fn(),
+    update: vi.fn(),
+  };
+  const mockQTagLedgerEntry = {
+    findUnique: vi.fn(),
+    findMany: vi.fn(),
+    create: vi.fn(),
+  };
   const mockKmsGetTenantSecretHex = vi.fn();
   const mockKmsWrapUserKey = vi.fn();
-  return { mockEncodingSession, mockDevice, mockEventLog, mockKmsGetTenantSecretHex, mockKmsWrapUserKey };
+  return {
+    mockEncodingSession,
+    mockDevice,
+    mockEventLog,
+    mockAsset,
+    mockQTagFulfillmentOrder,
+    mockQTagLedgerEntry,
+    mockKmsGetTenantSecretHex,
+    mockKmsWrapUserKey,
+  };
 });
 
 vi.mock('../src/config/prisma', () => ({
@@ -22,6 +52,9 @@ vi.mock('../src/config/prisma', () => ({
     encodingSession: mockEncodingSession,
     device: mockDevice,
     eventLog: mockEventLog,
+    asset: mockAsset,
+    qTagFulfillmentOrder: mockQTagFulfillmentOrder,
+    qTagLedgerEntry: mockQTagLedgerEntry,
   },
 }));
 
@@ -56,6 +89,14 @@ describe('CommissioningFacet.start', () => {
     vi.clearAllMocks();
     mockKmsGetTenantSecretHex.mockResolvedValue('f'.repeat(4610));
     mockKmsWrapUserKey.mockImplementation((k: string) => `wrapped:${k}`);
+    mockQTagFulfillmentOrder.findUnique.mockResolvedValue({
+      id: 'qtag-order-1',
+      tenantId: 'tenant-1',
+      assetId: 'asset-1',
+      status: 'READY_FOR_ENCODING',
+      attempts: 1,
+    });
+    mockQTagFulfillmentOrder.update.mockResolvedValue({ id: 'qtag-order-1' });
   });
 
   afterEach(() => {
@@ -187,10 +228,71 @@ describe('CommissioningFacet.start', () => {
     const createCall = mockEncodingSession.create.mock.calls[0][0];
     expect(createCall.data.ntagUID).toBe('04aabbccddee11');
   });
+
+  it('links EncodingSession to fulfillment order and increments attempt', async () => {
+    mockEncodingSession.create.mockResolvedValue({
+      id: 'session-fulfillment',
+      layoutB64: Buffer.alloc(144).toString('base64'),
+      sdmMacKeyId: 'wrapped:aabb',
+      sdmEncKeyId: 'wrapped:ccdd',
+    });
+    mockEventLog.create.mockResolvedValue({ id: 'log-fulfillment' });
+
+    await CommissioningFacet.start(ctx, {
+      assetId: 'asset-1',
+      fulfillmentOrderId: 'qtag-order-1',
+      ntagUID: '04AABBCCDDEE11',
+      stationId: 'station-1',
+      operatorId: 'operator-1',
+      metadata: {},
+    });
+
+    expect(mockEncodingSession.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        fulfillmentOrderId: 'qtag-order-1',
+        attemptNo: 2,
+        stationId: 'station-1',
+        operatorId: 'operator-1',
+      }),
+    }));
+    expect(mockQTagFulfillmentOrder.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'qtag-order-1' },
+      data: expect.objectContaining({
+        status: 'ENCODING_IN_PROGRESS',
+        attempts: { increment: 1 },
+      }),
+    }));
+  });
 });
 
 describe('CommissioningFacet.confirm', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockQTagFulfillmentOrder.findUnique.mockResolvedValue({
+      id: 'qtag-order-1',
+      tenantId: 'tenant-1',
+      userId: null,
+      assetId: 'asset-1',
+      status: 'ENCODING_IN_PROGRESS',
+    });
+    mockQTagFulfillmentOrder.update.mockResolvedValue({ id: 'qtag-order-1', status: 'ACTIVATED' });
+    mockQTagLedgerEntry.findUnique.mockResolvedValue(null);
+    mockQTagLedgerEntry.findMany.mockResolvedValue([
+      {
+        entryType: 'RESERVED',
+        quantity: 1,
+        availableDelta: -1,
+        reservedDelta: 1,
+      },
+    ]);
+    mockQTagLedgerEntry.create.mockResolvedValue({
+      id: 'qtag-consume-1',
+      entryType: 'CONSUMED',
+      quantity: 1,
+      availableDelta: 0,
+      reservedDelta: -1,
+    });
+  });
 
   it('marks session COMPLETED and upserts Device on success=true', async () => {
     mockEncodingSession.findUnique.mockResolvedValue({
@@ -217,6 +319,47 @@ describe('CommissioningFacet.confirm', () => {
     expect(mockEncodingSession.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: 'COMPLETED' }) })
     );
+  });
+
+  it('links Asset.deviceId and consumes reserved QTAG when fulfillment succeeds', async () => {
+    mockEncodingSession.findUnique.mockResolvedValue({
+      id: 'session-fulfillment',
+      tenantId: 'tenant-1',
+      assetId: 'asset-1',
+      fulfillmentOrderId: 'qtag-order-1',
+      ntagUID: '04aabbccddee11',
+      status: 'IN_PROGRESS',
+      sdmMacKeyId: 'wrapped:aabb',
+      sdmEncKeyId: 'wrapped:ccdd',
+    });
+    mockEncodingSession.update.mockResolvedValue({ id: 'session-fulfillment', status: 'COMPLETED' });
+    mockDevice.upsert.mockResolvedValue({ id: 'device-1' });
+    mockAsset.update.mockResolvedValue({ id: 'asset-1', deviceId: 'device-1' });
+
+    const result = await CommissioningFacet.confirm(ctx, {
+      sessionId: 'session-fulfillment',
+      success: true,
+      bytesWritten: 144,
+      ntagUID: '04aabbccddee11',
+    });
+
+    expect(result.status).toBe('COMPLETED');
+    expect(mockAsset.update).toHaveBeenCalledWith({
+      where: { id: 'asset-1' },
+      data: { deviceId: 'device-1' },
+    });
+    expect(mockQTagLedgerEntry.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        fulfillmentOrderId: 'qtag-order-1',
+        entryType: 'CONSUMED',
+        reservedDelta: -1,
+        idempotencyKey: 'qtag-consume:qtag-order-1',
+      }),
+    }));
+    expect(mockQTagFulfillmentOrder.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: 'qtag-order-1' },
+      data: expect.objectContaining({ status: 'ACTIVATED' }),
+    }));
   });
 
   it('marks session FAILED and skips Device upsert on success=false', async () => {

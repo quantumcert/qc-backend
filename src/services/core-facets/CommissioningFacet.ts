@@ -1,8 +1,10 @@
 import crypto from 'node:crypto';
 import prisma from '../../config/prisma';
+import { QTagFulfillmentStatus } from '@prisma/client';
 import { KMSService } from '../KMSService';
 import { QuantumSignerService } from '../QuantumSignerService';
 import { QTagCryptoService } from '../QTagCryptoService';
+import { QTagFulfillmentFacet } from './QTagFulfillmentFacet';
 
 interface SecureContext {
   tenantId: string;
@@ -14,6 +16,9 @@ interface StartPayload {
   assetId: string;
   ntagUID: string;
   metadata: Record<string, unknown>;
+  fulfillmentOrderId?: string;
+  stationId?: string;
+  operatorId?: string;
 }
 
 interface ConfirmPayload {
@@ -41,6 +46,30 @@ export class CommissioningFacet {
     }
 
     const uid = ntagUID.toLowerCase();
+    let fulfillmentOrder: any = null;
+    if (payload.fulfillmentOrderId) {
+      fulfillmentOrder = await (prisma as any).qTagFulfillmentOrder.findUnique({
+        where: { id: payload.fulfillmentOrderId },
+      });
+
+      if (
+        !fulfillmentOrder
+        || fulfillmentOrder.tenantId !== ctx.tenantId
+        || fulfillmentOrder.assetId !== assetId
+      ) {
+        throw new Error('Fulfillment order not found for asset');
+      }
+
+      const allowedStatuses = [
+        QTagFulfillmentStatus.REQUESTED,
+        QTagFulfillmentStatus.READY_FOR_ENCODING,
+        QTagFulfillmentStatus.ENCODING_FAILED,
+      ];
+      if (!allowedStatuses.includes(fulfillmentOrder.status)) {
+        throw new Error('Fulfillment order is not ready for encoding');
+      }
+    }
+
     const kms = KMSService.getInstance();
     const signer = QuantumSignerService.getInstance();
     const metadataJson = JSON.stringify(metadata);
@@ -99,13 +128,29 @@ export class CommissioningFacet {
       data: {
         tenantId: ctx.tenantId,
         assetId,
+        fulfillmentOrderId: payload.fulfillmentOrderId,
         ntagUID: uid,
         status: 'IN_PROGRESS',
+        attemptNo: fulfillmentOrder ? (fulfillmentOrder.attempts || 0) + 1 : 1,
+        stationId: payload.stationId,
+        operatorId: payload.operatorId || ctx.apiKeyId,
         layoutB64,
         sdmMacKeyId,
         sdmEncKeyId,
       },
     });
+
+    if (fulfillmentOrder) {
+      await (prisma as any).qTagFulfillmentOrder.update({
+        where: { id: fulfillmentOrder.id },
+        data: {
+          status: QTagFulfillmentStatus.ENCODING_IN_PROGRESS,
+          attempts: { increment: 1 },
+          claimedByActorId: payload.operatorId || ctx.apiKeyId,
+          lastError: null,
+        },
+      });
+    }
 
     return {
       sessionId: session.id,
@@ -121,7 +166,7 @@ export class CommissioningFacet {
    * Confirms physical write completion. Marks session COMPLETED and upserts Device.
    */
   static async confirm(ctx: SecureContext, payload: ConfirmPayload) {
-    const { sessionId, success, ntagUID } = payload;
+    const { sessionId, success, ntagUID, bytesWritten } = payload;
 
     const session = await (prisma as any).encodingSession.findUnique({
       where: { id: sessionId },
@@ -129,6 +174,14 @@ export class CommissioningFacet {
 
     if (!session || session.tenantId !== ctx.tenantId) {
       throw new Error('Session not found');
+    }
+
+    if (session.ntagUID && session.ntagUID !== ntagUID.toLowerCase()) {
+      throw new Error('ntagUID does not match session');
+    }
+
+    if (success && bytesWritten < 144) {
+      throw new Error('Incomplete QTAG write');
     }
 
     const newStatus = success ? 'COMPLETED' : 'FAILED';
@@ -142,7 +195,7 @@ export class CommissioningFacet {
     });
 
     if (success) {
-      await (prisma as any).device.upsert({
+      const device = await (prisma as any).device.upsert({
         where: { uid: ntagUID.toLowerCase() },
         create: {
           uid: ntagUID.toLowerCase(),
@@ -154,6 +207,50 @@ export class CommissioningFacet {
           sdmMacKeyId: session.sdmMacKeyId,
           sdmEncKeyId: session.sdmEncKeyId,
           isActive: true,
+        },
+      });
+
+      if (session.fulfillmentOrderId) {
+        const order = await (prisma as any).qTagFulfillmentOrder.findUnique({
+          where: { id: session.fulfillmentOrderId },
+        });
+
+        if (
+          !order
+          || order.tenantId !== ctx.tenantId
+          || order.assetId !== session.assetId
+        ) {
+          throw new Error('Fulfillment order not found for session');
+        }
+
+        await (prisma as any).asset.update({
+          where: { id: session.assetId },
+          data: { deviceId: device.id },
+        });
+
+        await QTagFulfillmentFacet.consumeReservation(prisma as any, {
+          tenantId: ctx.tenantId,
+          fulfillmentOrderId: session.fulfillmentOrderId,
+          assetId: session.assetId,
+          userId: order.userId,
+          reason: 'QTAG ativada após gravação física confirmada.',
+        });
+
+        await (prisma as any).qTagFulfillmentOrder.update({
+          where: { id: session.fulfillmentOrderId },
+          data: {
+            status: QTagFulfillmentStatus.ACTIVATED,
+            activatedAt: new Date(),
+            lastError: null,
+          },
+        });
+      }
+    } else if (session.fulfillmentOrderId) {
+      await (prisma as any).qTagFulfillmentOrder.update({
+        where: { id: session.fulfillmentOrderId },
+        data: {
+          status: QTagFulfillmentStatus.ENCODING_FAILED,
+          lastError: 'Encoding station reported failure',
         },
       });
     }

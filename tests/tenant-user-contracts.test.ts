@@ -1,0 +1,254 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  TenantMembershipRole,
+  TenantStatus,
+  TenantUserRole,
+  TenantUserStatus,
+} from '@prisma/client';
+import { AdminActorContext } from '../src/types';
+
+const {
+  mockTenant,
+  mockTenantUser,
+  mockTenantMembership,
+  mockExternalIdentity,
+  mockAsset,
+  mockEventLog,
+  mockAdminAuditLog,
+  mockProcessQueue,
+  mockTransaction,
+} = vi.hoisted(() => {
+  const mockTenant = {
+    findUnique: vi.fn(),
+    upsert: vi.fn(),
+    update: vi.fn(),
+  };
+  const mockTenantUser = {
+    findUnique: vi.fn(),
+    findFirst: vi.fn(),
+    findMany: vi.fn(),
+    count: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+  };
+  const mockTenantMembership = {
+    upsert: vi.fn(),
+    updateMany: vi.fn(),
+  };
+  const mockExternalIdentity = {
+    upsert: vi.fn(),
+  };
+  const mockAsset = {
+    findUnique: vi.fn(),
+    findMany: vi.fn(),
+    count: vi.fn(),
+    upsert: vi.fn(),
+  };
+  const mockEventLog = {
+    create: vi.fn(),
+    findFirst: vi.fn(),
+  };
+  const mockAdminAuditLog = {
+    create: vi.fn(),
+  };
+  const mockProcessQueue = vi.fn();
+  const mockTransaction = vi.fn(async (callback) => callback({
+    tenant: mockTenant,
+    tenantUser: mockTenantUser,
+    tenantMembership: mockTenantMembership,
+    externalIdentity: mockExternalIdentity,
+    asset: mockAsset,
+    eventLog: mockEventLog,
+    adminAuditLog: mockAdminAuditLog,
+  }));
+
+  return {
+    mockTenant,
+    mockTenantUser,
+    mockTenantMembership,
+    mockExternalIdentity,
+    mockAsset,
+    mockEventLog,
+    mockAdminAuditLog,
+    mockProcessQueue,
+    mockTransaction,
+  };
+});
+
+vi.mock('../src/config/prisma', () => ({
+  default: {
+    tenant: mockTenant,
+    tenantUser: mockTenantUser,
+    tenantMembership: mockTenantMembership,
+    externalIdentity: mockExternalIdentity,
+    asset: mockAsset,
+    eventLog: mockEventLog,
+    adminAuditLog: mockAdminAuditLog,
+    $transaction: mockTransaction,
+  },
+}));
+
+vi.mock('../src/services/AnchorQueueService', () => ({
+  AnchorQueueService: {
+    processQueue: mockProcessQueue,
+  },
+}));
+
+import { TenantUserFacet } from '../src/services/core-facets/TenantUserFacet';
+
+const platformActor: AdminActorContext = {
+  actorUserId: 'tenant-user-platform-admin',
+  actorTenantId: 'tenant-quantum',
+  role: TenantMembershipRole.PLATFORM_ADMIN,
+  reason: 'fase 4 usuarios canonicos',
+  correlationId: 'corr-tenant-users',
+};
+
+describe('TenantUserFacet canonical contracts', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockTransaction.mockImplementation(async (callback) => callback({
+      tenant: mockTenant,
+      tenantUser: mockTenantUser,
+      tenantMembership: mockTenantMembership,
+      externalIdentity: mockExternalIdentity,
+      asset: mockAsset,
+      eventLog: mockEventLog,
+      adminAuditLog: mockAdminAuditLog,
+    }));
+    mockTenant.findUnique.mockResolvedValue({
+      id: 'tenant-quantum',
+      slug: 'quantum-cert-platform',
+      activatedAt: new Date('2026-05-17T00:00:00.000Z'),
+    });
+    mockTenant.upsert.mockResolvedValue({
+      id: 'tenant-quantum',
+      slug: 'quantum-cert-platform',
+      status: TenantStatus.ACTIVE,
+      targetChain: 'STELLAR',
+    });
+    mockTenantUser.findUnique.mockResolvedValue(null);
+    mockTenantUser.findFirst.mockResolvedValue(null);
+    mockAsset.findUnique.mockResolvedValue(null);
+    mockAsset.upsert.mockImplementation(async ({ create }) => ({
+      id: create.id,
+      tenantId: create.tenantId,
+      externalId: create.externalId,
+      publicUrl: create.publicUrl,
+      status: create.status,
+    }));
+    mockEventLog.create.mockResolvedValue({
+      id: 'event-profile',
+      status: 'APPROVED',
+      dltTxId: null,
+      signatureHash: 'profile-hash',
+      createdAt: new Date('2026-05-17T01:00:00.000Z'),
+      updatedAt: new Date('2026-05-17T01:00:00.000Z'),
+    });
+    mockProcessQueue.mockResolvedValue({ processed: 0 });
+  });
+
+  it('guarantees Quantum Cert as the immutable platform tenant on Stellar', async () => {
+    const tenant = await TenantUserFacet.ensureTenantQuantum();
+
+    expect(tenant).toMatchObject({
+      slug: 'quantum-cert-platform',
+      status: TenantStatus.ACTIVE,
+      targetChain: 'STELLAR',
+    });
+    expect(mockTenant.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      where: { slug: 'quantum-cert-platform' },
+      update: expect.objectContaining({
+        name: 'Quantum Cert',
+        status: TenantStatus.ACTIVE,
+        targetChain: 'STELLAR',
+        isActive: true,
+      }),
+    }));
+  });
+
+  it('upserts B2C users under Tenant Quantum with CPF in profile asset transaction payload', async () => {
+    mockTenantUser.create.mockResolvedValue({
+      id: 'tenant-user-1',
+      tenantId: 'tenant-quantum',
+      legacyDashboardUserId: '42',
+      legacyOpenId: 'dev@localhost',
+      email: 'dev@localhost',
+      phone: null,
+      document: '34888015864',
+      documentType: 'CPF',
+      displayName: 'Developer User',
+      role: TenantUserRole.MEMBER,
+      status: TenantUserStatus.ACTIVE,
+      guardianId: null,
+      profile: {},
+      metadata: {},
+    });
+
+    const result = await TenantUserFacet.upsertB2CUser({
+      legacyDashboardUserId: 42,
+      legacyOpenId: 'dev@localhost',
+      email: 'DEV@LOCALHOST',
+      cpf: '348.880.158-64',
+      displayName: 'Developer User',
+      source: 'test-backfill',
+    });
+
+    expect(result).toMatchObject({
+      id: 'tenant-user-1',
+      tenantId: 'tenant-quantum',
+      profileAsset: expect.objectContaining({
+        status: 'ACTIVE',
+      }),
+    });
+    expect(mockTenantUser.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        tenantId: 'tenant-quantum',
+        legacyDashboardUserId: '42',
+        legacyOpenId: 'dev@localhost',
+        email: 'dev@localhost',
+        document: '34888015864',
+        documentType: 'CPF',
+      }),
+    }));
+    expect(mockTenantMembership.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: expect.objectContaining({
+        tenantId: 'tenant-quantum',
+        userId: 'tenant-user-1',
+        role: TenantMembershipRole.MEMBER,
+      }),
+    }));
+    expect(mockEventLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        tenantId: 'tenant-quantum',
+        origin: 'SYSTEM_TENANT_USER_PROFILE',
+        payload: expect.objectContaining({
+          document: expect.objectContaining({
+            documentType: 'CPF',
+            documentValue: '34888015864',
+          }),
+        }),
+      }),
+    }));
+  });
+
+  it('lists tenant users for Platform Admin with tenant-scoped pagination', async () => {
+    mockTenantUser.findMany.mockResolvedValue([{ id: 'tenant-user-1' }]);
+    mockTenantUser.count.mockResolvedValue(1);
+
+    const result = await TenantUserFacet.listTenantUsers(platformActor, 'tenant-quantum', {
+      search: 'dev',
+      page: 1,
+      limit: 10,
+    });
+
+    expect(result.pagination).toMatchObject({ page: 1, limit: 10, total: 1 });
+    expect(mockTenantUser.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        tenantId: 'tenant-quantum',
+        OR: expect.any(Array),
+      }),
+      take: 10,
+    }));
+  });
+});

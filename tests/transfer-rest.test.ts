@@ -15,6 +15,7 @@ vi.mock('../src/middleware/apiKeyAuth', () => ({
     req.tenantId = 'tenant-1';
     req.apiKeyId = 'key-1';
     req.apiKeyRole = req.headers['x-role-override'] ?? 'OPERATOR';
+    req.apiKeyScopes = ['transfers:write'];
     req.apiKeyPrefix = 'qc_test';
     next();
   },

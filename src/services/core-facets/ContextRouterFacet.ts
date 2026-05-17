@@ -8,6 +8,18 @@ export class ContextRouterFacet {
             include: {
                 owners: { where: { revokedAt: null } },
                 device: true,
+                tenant: {
+                    select: {
+                        name: true,
+                        slug: true,
+                        commercialProfile: {
+                            select: {
+                                legalName: true,
+                                whiteLabel: true,
+                            },
+                        },
+                    },
+                },
                 events: { where: { status: 'APPROVED' }, orderBy: { createdAt: 'desc' } }
             }
         });

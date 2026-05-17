@@ -28,6 +28,7 @@ const envSchema = z.object({
   NODE_ENV: z
     .enum(['development', 'production', 'test'])
     .default('development'),
+  PUBLIC_CONSULTATION_URL_BASE: z.string().url().optional(),
 
   // Quantum Cert
   QUANTUM_CERT_SECRET: z.string().optional(),
@@ -81,6 +82,7 @@ function loadEnv() {
       NODE_ENV:
         (process.env.NODE_ENV as 'development' | 'production' | 'test') ||
         'development',
+      PUBLIC_CONSULTATION_URL_BASE: process.env.PUBLIC_CONSULTATION_URL_BASE,
       QUANTUM_CERT_SECRET: process.env.QUANTUM_CERT_SECRET,
       X402_ENABLED: process.env.X402_ENABLED || 'false',
       X402_PROVIDER: process.env.X402_PROVIDER,
