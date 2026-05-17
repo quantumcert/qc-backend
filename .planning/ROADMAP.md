@@ -179,7 +179,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 **Wave 0**
 
-- [ ] 04-01-PLAN.md — Canonical schema, Platform/Tenant Admin authorization, Tenant Quantum/backfill foundation: ADMIN-01, ADMIN-07, ADMIN-08, ID-01, ID-02
+- [x] 04-01-PLAN.md — Canonical schema, Platform/Tenant Admin authorization, Tenant Quantum/backfill foundation: ADMIN-01, ADMIN-07, ADMIN-08, ID-01, ID-02 — DONE 2026-05-17
 
 **Wave 1** _(blocked on Wave 0)_
 
@@ -376,7 +376,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 | 1. Core Gap Closure + Production Hardening          | [M#1](https://github.com/quantumcert/qc-backend/milestone/1) | #5, #7, #8 | 4/4            | Complete          | 2026-05-09 |
 | 2. Document Verification + QTAG Production          | [M#2](https://github.com/quantumcert/qc-backend/milestone/2) | #12, #2    | 3/3            | Human UAT pending | -          |
 | 3. Pluggable DLT Workers — Stellar/Soroban Priority | [M#3](https://github.com/quantumcert/qc-backend/milestone/3) | #11        | 3/3            | Complete; PRs merged | 2026-05-14 |
-| 4. B2B Admin Operations Console                     | TBD                                                          | TBD        | 0/7            | Planned; ready for execution | - |
+| 4. B2B Admin Operations Console                     | TBD                                                          | TBD        | 1/7            | In progress                  | - |
 | 5. B2B Tenant External Readiness                    | TBD                                                          | TBD        | 0/?            | Approved after Phase 4 | -      |
 | 6. On-chain Asset Identity + Provenance             | TBD                                                          | TBD        | 0/?            | Approved after Phase 5 | -      |
 | 7. Scale + Observability Infrastructure             | [M#4](https://github.com/quantumcert/qc-backend/milestone/4) | #13        | 0/?            | Deferred behind Phase 5/6 | -    |

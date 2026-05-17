@@ -1,7 +1,7 @@
 ---
 phase: 04
 slug: b2b-admin-operations-console
-status: draft
+status: in_progress
 nyquist_compliant: false
 wave_0_complete: false
 created: 2026-05-17
@@ -40,7 +40,7 @@ created: 2026-05-17
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 04-01-01 | 01 | 0 | ADMIN-01, ADMIN-07, ADMIN-08 | T-04-01 | Platform Admin and Tenant Admin are distinct server-side roles | unit/integration | `npm test -- --run tests/admin-authorization.test.ts` | no | pending |
+| 04-01-01 | 01 | 0 | ADMIN-01, ADMIN-07, ADMIN-08 | T-04-01 | Platform Admin and Tenant Admin are distinct server-side roles | unit/integration | `npm test -- --run tests/admin-authorization.test.ts` | yes | green |
 | 04-02-01 | 02 | 1 | ADMIN-02, ADMIN-03 | T-04-02 | Tenant status changes require platform authorization and audit | unit/integration | `npm test -- --run tests/admin-tenant-lifecycle.test.ts` | no | pending |
 | 04-03-01 | 03 | 1 | ADMIN-04, ADMIN-08 | T-04-03 | API key raw secret is one-time only; active keys list has prefix/metadata only | unit/integration | `npm test -- --run tests/admin-api-keys.test.ts` | no | pending |
 | 04-03-02 | 03 | 1 | ADMIN-04, ADMIN-08 | T-04-04 | API request audit stores no raw API key or sensitive payload | unit/integration | `npm test -- --run tests/api-request-audit.test.ts` | no | pending |
@@ -57,14 +57,14 @@ created: 2026-05-17
 
 ## Wave 0 Requirements
 
-- [ ] `tests/admin-authorization.test.ts` - Platform Admin vs Tenant Admin server authorization stubs
+- [x] `tests/admin-authorization.test.ts` - Platform Admin vs Tenant Admin server authorization stubs
 - [ ] `tests/admin-tenant-lifecycle.test.ts` - tenant status/profile audit stubs
 - [ ] `tests/admin-api-keys.test.ts` - initial issue/list/rotate/revoke stubs
 - [ ] `tests/api-request-audit.test.ts` - request audit sanitization stubs
 - [ ] `tests/credit-ledger.test.ts` - reserve/consume/release/grant/adjust stubs
 - [ ] `tests/payment-provider-boundary.test.ts` - provider event idempotency stubs
 - [ ] `tests/qtag-fulfillment.test.ts` - QTAG entitlement/fulfillment stubs
-- [ ] `tests/tenant-backfill.test.ts` - Tenant Quantum migration dry-run/execute stubs
+- [x] `tests/tenant-backfill.test.ts` - Tenant Quantum migration dry-run/execute stubs
 - [ ] `../qc-dashboard/server/admin.*.test.ts` or equivalent - dashboard admin tRPC authorization stubs
 
 ---
