@@ -2,7 +2,7 @@
 phase: 04-b2b-admin-operations-console
 status: ready_for_human_uat
 created: 2026-05-17
-last_updated: 2026-05-17T10:48:13Z
+last_updated: 2026-05-17T11:12:24Z
 owner: Quantum Cert Platform Admin
 ---
 
@@ -14,7 +14,7 @@ Validar o console operacional B2B, Tenant Quantum, backfill B2C, usuários/equip
 
 ## Evidência Automatizada Já Coletada
 
-- `qc-backend`: `npm test -- --run` passou com 54 arquivos e 385 testes.
+- `qc-backend`: `npm test -- --run` passou com 54 arquivos e 389 testes.
 - `qc-backend`: `npm run build` passou.
 - `qc-dashboard`: `pnpm test` passou com 40 arquivos, 172 testes e 3 ignorados.
 - `qc-dashboard`: `pnpm check` passou.

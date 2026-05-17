@@ -22,7 +22,7 @@
 
 ### qc-backend
 
-- `npm test -- --run` - passou, 54 arquivos e 385 testes.
+- `npm test -- --run` - passou, 54 arquivos e 389 testes.
 - `npm run build` - passou.
 - `npm test -- --run tests/admin-tenant-lifecycle.test.ts tests/admin-api-keys.test.ts tests/credit-ledger.test.ts` - passou, 28 testes.
 - `npm test -- --run tests/qtag-fulfillment.test.ts tests/payment-provider-boundary.test.ts` - passou, 9 testes.

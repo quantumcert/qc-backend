@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Phase 04 implementation complete — human UAT pending
-last_updated: "2026-05-17T10:48:13Z"
+last_updated: "2026-05-17T11:12:24Z"
 progress:
   total_phases: 9
   completed_phases: 3
@@ -71,7 +71,7 @@ Phase 9 [          ] 0% (Specialized Domain Facets)
 | Requirements total (v1) | 73                         |
 | Requirements mapped     | 73/73                      |
 | Plans written           | 17                         |
-| Plans complete          | 16                         |
+| Plans complete          | 17                         |
 
 ---
 
@@ -184,4 +184,4 @@ Phase 9 [          ] 0% (Specialized Domain Facets)
 - Fase 4 Plano 05 concluído em 2026-05-17: ledger QTAG, reserva por Asset, fulfillment order, link de commissioning com `fulfillmentOrderId`, atualização de `Asset.deviceId`, rotas admin QTAG, aba QTAGs e fila `/admin/platform/queues/qtags` foram implementados e verificados.
 - Fase 4 atualização cross-cutting em 2026-05-17: aba Perfil do tenant no dashboard ficou editável e o backend passou a manter `Asset` canônico `tenant-profile:<tenantId>` + `EventLog` aprovado com `signatureHash` para cada criação/alteração de perfil comercial.
 - Fase 4 atualização cross-cutting em 2026-05-17: escopos de API key passaram a ser catálogo canônico com defaults por role, validação dashboard/backend, seleção por checkbox na criação e enforcement por selector no `DiamondProxy`.
-- Fase 4 Plano 07 concluído em 2026-05-17: dashboard adicionou `/admin/tenant`, fila de ativações, smoke operacional admin, testes de isolamento own-tenant, correção de layout da aba `Team`, UAT humana documentada e validação completa verde (`qc-backend` 54 arquivos/385 testes + build; `qc-dashboard` 40 arquivos/172 testes + check).
+- Fase 4 Plano 07 concluído em 2026-05-17: dashboard adicionou `/admin/tenant`, fila de ativações, smoke operacional admin, testes de isolamento own-tenant, correção de layout da aba `Team`, UAT humana documentada e validação completa verde (`qc-backend` 54 arquivos/389 testes + build; `qc-dashboard` 40 arquivos/172 testes + check).

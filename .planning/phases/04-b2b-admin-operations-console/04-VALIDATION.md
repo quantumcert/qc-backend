@@ -5,7 +5,7 @@ status: implementation_complete_human_uat_pending
 nyquist_compliant: true
 wave_0_complete: true
 created: 2026-05-17
-last_validated: 2026-05-17T10:48:13Z
+last_validated: 2026-05-17T11:12:24Z
 ---
 
 # Phase 04 - Validation Strategy
@@ -90,7 +90,7 @@ last_validated: 2026-05-17T10:48:13Z
 
 ### Backend
 
-- `npm test -- --run` - passed, 54 files, 385 tests.
+- `npm test -- --run` - passed, 54 files, 389 tests.
 - `npm run build` - passed.
 - `npm test -- --run tests/admin-tenant-lifecycle.test.ts tests/admin-api-keys.test.ts tests/credit-ledger.test.ts` - passed, 28 tests.
 - `npm test -- --run tests/qtag-fulfillment.test.ts tests/payment-provider-boundary.test.ts` - passed, 9 tests.
@@ -113,6 +113,7 @@ last_validated: 2026-05-17T10:48:13Z
 - `/admin/platform/tenants/:tenantId` -> aba `Team` sem sobreposicao do ultimo select.
 - `/admin/tenant` -> visão Tenant Admin carrega dados somente do tenant resolvido pelo contexto.
 - `/admin/platform/queues/activations` -> fila de ativações renderiza filtros, estado vazio e paginação sem overflow horizontal.
+- `gsd-sdk query audit-uat --raw` -> 0 outstanding verification debt items.
 
 ---
 
