@@ -12,6 +12,7 @@ import {
 const { mockTenantUser } = vi.hoisted(() => ({
   mockTenantUser: {
     findUnique: vi.fn(),
+    findFirst: vi.fn(),
   },
 }));
 
@@ -25,6 +26,11 @@ import {
   AdminAuthorizationError,
   AdminAuthorizationFacet,
 } from '../src/services/core-facets/AdminAuthorizationFacet';
+import {
+  getPlatformTenantContactEmail,
+  getPlatformTenantName,
+  getPlatformTenantSlug,
+} from '../src/config/platformTenant';
 import { requireAdminReason, requirePlatformAdmin } from '../src/middleware/platformAdminAuth';
 import { AuthenticatedRequest } from '../src/types';
 
@@ -43,11 +49,32 @@ describe('Phase 4 admin schema foundation', () => {
     expect(TenantUserRole.PLATFORM_ADMIN).toBe('PLATFORM_ADMIN');
     expect(TenantMembershipRole.TENANT_ADMIN).toBe('TENANT_ADMIN');
   });
+
+  it('keeps Quantum Cert as the immutable platform tenant identity', () => {
+    const previousSlug = process.env.QUANTUM_TENANT_SLUG;
+    const previousName = process.env.QUANTUM_TENANT_NAME;
+    const previousEmail = process.env.QUANTUM_TENANT_CONTACT_EMAIL;
+
+    process.env.QUANTUM_TENANT_SLUG = 'wrong-tenant';
+    process.env.QUANTUM_TENANT_NAME = 'Wrong Tenant';
+    process.env.QUANTUM_TENANT_CONTACT_EMAIL = 'wrong@example.com';
+
+    expect(getPlatformTenantSlug()).toBe('quantum-cert-platform');
+    expect(getPlatformTenantName()).toBe('Quantum Cert');
+    expect(getPlatformTenantContactEmail()).toBe('platform@quantumcert.com');
+
+    if (previousSlug === undefined) delete process.env.QUANTUM_TENANT_SLUG;
+    else process.env.QUANTUM_TENANT_SLUG = previousSlug;
+    if (previousName === undefined) delete process.env.QUANTUM_TENANT_NAME;
+    else process.env.QUANTUM_TENANT_NAME = previousName;
+    if (previousEmail === undefined) delete process.env.QUANTUM_TENANT_CONTACT_EMAIL;
+    else process.env.QUANTUM_TENANT_CONTACT_EMAIL = previousEmail;
+  });
 });
 
 describe('AdminAuthorizationFacet', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   it('resolves Quantum Platform Admin from canonical membership', async () => {
@@ -111,6 +138,40 @@ describe('AdminAuthorizationFacet', () => {
 
     expect(mockTenantUser.findUnique).toHaveBeenNthCalledWith(2, expect.objectContaining({
       where: { legacyOpenId: 'dashboard-openid-platform' },
+    }));
+  });
+
+  it('resolves local dashboard Platform Admin from email openId', async () => {
+    mockTenantUser.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null);
+    mockTenantUser.findFirst.mockResolvedValue({
+      id: 'user-platform-email',
+      tenantId: 'tenant-quantum',
+      status: TenantUserStatus.ACTIVE,
+      memberships: [
+        {
+          tenantId: 'tenant-quantum',
+          role: TenantMembershipRole.PLATFORM_ADMIN,
+          status: TenantMembershipStatus.ACTIVE,
+          tenant: { id: 'tenant-quantum', slug: 'quantum-cert-platform' },
+        },
+      ],
+    });
+
+    const actor = await AdminAuthorizationFacet.requirePlatformAdmin({
+      actorUserId: 'dev@localhost',
+    });
+
+    expect(actor).toMatchObject({
+      actorUserId: 'user-platform-email',
+      role: TenantMembershipRole.PLATFORM_ADMIN,
+    });
+    expect(mockTenantUser.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      where: {
+        email: 'dev@localhost',
+        status: TenantUserStatus.ACTIVE,
+      },
     }));
   });
 

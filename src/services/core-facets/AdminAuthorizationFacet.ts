@@ -51,6 +51,13 @@ export class AdminAuthorizationFacet {
             || await prisma.tenantUser.findUnique({
                 where: { legacyOpenId: actorUserId },
                 include: actorInclude,
+            }) as TenantUserWithMemberships | null
+            || await prisma.tenantUser.findFirst({
+                where: {
+                    email: actorUserId,
+                    status: TenantUserStatus.ACTIVE,
+                },
+                include: actorInclude,
             }) as TenantUserWithMemberships | null;
 
         if (!actor || actor.status !== TenantUserStatus.ACTIVE) {

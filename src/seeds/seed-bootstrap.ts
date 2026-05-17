@@ -111,52 +111,60 @@ async function main() {
 
     // ─── Step 2: Create Canonical Platform Admin User ─────
     const platformAdminOpenId = process.env.QUANTUM_PLATFORM_ADMIN_OPEN_ID || 'dev-user-001';
-    const platformAdminEmail = process.env.QUANTUM_PLATFORM_ADMIN_EMAIL || 'dev@local.host';
+    const platformAdminEmail = process.env.QUANTUM_PLATFORM_ADMIN_EMAIL || 'dev@localhost';
     const platformAdminName = process.env.QUANTUM_PLATFORM_ADMIN_NAME || 'Quantum Platform Admin';
-
-    const platformAdminUser = await prisma.tenantUser.upsert({
-        where: { legacyOpenId: platformAdminOpenId },
-        create: {
-            tenantId: platformTenant.id,
-            legacyOpenId: platformAdminOpenId,
-            email: platformAdminEmail,
-            displayName: platformAdminName,
-            role: 'PLATFORM_ADMIN',
-            status: 'ACTIVE',
-            metadata: {
-                source: 'bootstrap-seed',
-            },
-        },
-        update: {
-            tenantId: platformTenant.id,
-            email: platformAdminEmail,
-            displayName: platformAdminName,
-            role: 'PLATFORM_ADMIN',
-            status: 'ACTIVE',
-        },
+    const platformAdminIdentities = buildPlatformAdminIdentities({
+        openId: platformAdminOpenId,
+        email: platformAdminEmail,
+        name: platformAdminName,
     });
 
-    await prisma.tenantMembership.upsert({
-        where: {
-            tenantId_userId: {
+    for (const identity of platformAdminIdentities) {
+        const platformAdminUser = await prisma.tenantUser.upsert({
+            where: { legacyOpenId: identity.openId },
+            create: {
+                tenantId: platformTenant.id,
+                legacyOpenId: identity.openId,
+                email: identity.email,
+                displayName: identity.name,
+                role: 'PLATFORM_ADMIN',
+                status: 'ACTIVE',
+                metadata: {
+                    source: 'bootstrap-seed',
+                    localPlatformAlias: identity.openId !== platformAdminOpenId,
+                },
+            },
+            update: {
+                tenantId: platformTenant.id,
+                email: identity.email,
+                displayName: identity.name,
+                role: 'PLATFORM_ADMIN',
+                status: 'ACTIVE',
+            },
+        });
+
+        await prisma.tenantMembership.upsert({
+            where: {
+                tenantId_userId: {
+                    tenantId: platformTenant.id,
+                    userId: platformAdminUser.id,
+                },
+            },
+            create: {
                 tenantId: platformTenant.id,
                 userId: platformAdminUser.id,
+                role: 'PLATFORM_ADMIN',
+                status: 'ACTIVE',
+                reason: 'bootstrap platform admin',
             },
-        },
-        create: {
-            tenantId: platformTenant.id,
-            userId: platformAdminUser.id,
-            role: 'PLATFORM_ADMIN',
-            status: 'ACTIVE',
-            reason: 'bootstrap platform admin',
-        },
-        update: {
-            role: 'PLATFORM_ADMIN',
-            status: 'ACTIVE',
-            reason: 'bootstrap platform admin',
-        },
-    });
-    console.log(`  ✅ Platform Admin user linked: ${platformAdminOpenId}`);
+            update: {
+                role: 'PLATFORM_ADMIN',
+                status: 'ACTIVE',
+                reason: 'bootstrap platform admin',
+            },
+        });
+    }
+    console.log(`  ✅ Platform Admin users linked: ${platformAdminIdentities.map((item) => item.openId).join(', ')}`);
 
     // ─── Step 3: Create Admin API Key ─────────────────────
     // Check if there's already an active ADMIN key
@@ -230,6 +238,28 @@ async function main() {
     console.log('');
     console.log('═══════════════════════════════════════════════════════════');
     console.log('');
+}
+
+function buildPlatformAdminIdentities(primary: { openId: string; email: string; name: string }) {
+    const configuredAliases = (process.env.QUANTUM_PLATFORM_ADMIN_ALIASES || 'dev@localhost,dev@local.host')
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean);
+    const identities = new Map<string, { openId: string; email: string; name: string }>();
+
+    identities.set(primary.openId, primary);
+
+    for (const alias of configuredAliases) {
+        if (!identities.has(alias)) {
+            identities.set(alias, {
+                openId: alias,
+                email: alias.includes('@') ? alias : primary.email,
+                name: primary.name,
+            });
+        }
+    }
+
+    return Array.from(identities.values());
 }
 
 main()
