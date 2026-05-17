@@ -475,16 +475,8 @@ export class AdminTenantOperationsFacet {
         });
     }
 
-    private static async attachTenantProfileAsset<T extends { id: string }>(tenant: T) {
-        const profileAsset = await prisma.asset.findUnique({
-            where: {
-                tenantId_externalId: {
-                    tenantId: tenant.id,
-                    externalId: buildTenantProfileExternalId(tenant.id),
-                },
-            },
-            select: TENANT_PROFILE_ASSET_SELECT,
-        });
+    private static async attachTenantProfileAsset<T extends { id: string; name?: string | null }>(tenant: T) {
+        const profileAsset = await this.findTenantProfileAsset(prisma, tenant, TENANT_PROFILE_ASSET_SELECT);
 
         if (!profileAsset) {
             return {
@@ -522,24 +514,20 @@ export class AdminTenantOperationsFacet {
             eventType: 'TENANT_PROFILE_CREATED' | 'TENANT_PROFILE_UPDATED';
         }
     ) {
-        const externalId = buildTenantProfileExternalId(params.tenant.id);
-        const existingProfileAsset = await tx.asset.findUnique({
-            where: {
-                tenantId_externalId: {
-                    tenantId: params.tenant.id,
-                    externalId,
-                },
-            },
-            select: { id: true },
+        const externalId = buildTenantProfileExternalId(params.tenant);
+        const existingProfileAsset = await this.findTenantProfileAsset(tx, params.tenant, {
+            id: true,
+            externalId: true,
         });
         const assetId = existingProfileAsset?.id ?? randomUUID();
+        const upsertExternalId = existingProfileAsset?.externalId ?? externalId;
         const metadata = buildTenantProfileAssetMetadata(params.tenant, params.commercialProfile);
 
         const profileAsset = await tx.asset.upsert({
             where: {
                 tenantId_externalId: {
                     tenantId: params.tenant.id,
-                    externalId,
+                    externalId: upsertExternalId,
                 },
             },
             create: {
@@ -552,6 +540,7 @@ export class AdminTenantOperationsFacet {
                 publicUrl: buildPublicAssetUrl(assetId),
             },
             update: {
+                externalId,
                 status: AssetStatus.ACTIVE,
                 metadata,
                 publicDataKeys: TENANT_PROFILE_PUBLIC_DATA_KEYS,
@@ -586,6 +575,28 @@ export class AdminTenantOperationsFacet {
             ...profileAsset,
             lastAnchorEvent,
         };
+    }
+
+    private static async findTenantProfileAsset(
+        client: any,
+        tenant: { id: string; name?: string | null },
+        select: any
+    ) {
+        for (const externalId of buildTenantProfileExternalIdCandidates(tenant)) {
+            const profileAsset = await client.asset.findUnique({
+                where: {
+                    tenantId_externalId: {
+                        tenantId: tenant.id,
+                        externalId,
+                    },
+                },
+                select,
+            });
+
+            if (profileAsset) return profileAsset;
+        }
+
+        return null;
     }
 }
 
@@ -696,8 +707,20 @@ function normalizeLimit(value?: number): number {
     return Math.min(Math.floor(value), 100);
 }
 
-function buildTenantProfileExternalId(tenantId: string): string {
+function buildTenantProfileExternalId(tenant: { id: string; name?: string | null }): string {
+    return normalizeNullableString(tenant.name) ?? tenant.id;
+}
+
+function buildLegacyTenantProfileExternalId(tenantId: string): string {
     return `tenant-profile:${tenantId}`;
+}
+
+function buildTenantProfileExternalIdCandidates(tenant: { id: string; name?: string | null }): string[] {
+    const currentExternalId = buildTenantProfileExternalId(tenant);
+    const legacyExternalId = buildLegacyTenantProfileExternalId(tenant.id);
+    return currentExternalId === legacyExternalId
+        ? [currentExternalId]
+        : [currentExternalId, legacyExternalId];
 }
 
 function buildPublicAssetUrl(assetId: string): string {

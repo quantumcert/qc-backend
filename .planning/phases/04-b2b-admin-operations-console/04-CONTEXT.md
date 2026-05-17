@@ -22,6 +22,7 @@ Os requisitos estao travados em `04-SPEC.md`, `REQUIREMENTS.md` (`ADMIN-01` a `A
 - cadastro, edicao, ativacao, suspensao e arquivamento de tenants/clientes B2B;
 - perfil comercial, contatos, plano, limites, white-label metadata e status operacional do tenant;
 - CNPJ/taxId normalizado como chave unica de Tenant B2B, com bloqueio de duplicidade e chave deterministica no Asset/evento de perfil do tenant;
+- perfil do tenant como Asset canonico com `externalId` publico igual ao nome visivel do Tenant, mantendo fallback para registros legados `tenant-profile:<tenantId>`;
 - emissao, rotacao, revogacao e auditoria de API keys;
 - compras, pedidos, payment intents/events e boundary de provider de recebimentos;
 - ledger de creditos B2B separado de wallet financeira;
@@ -48,6 +49,7 @@ Os requisitos estao travados em `04-SPEC.md`, `REQUIREMENTS.md` (`ADMIN-01` a `A
 - **D-01:** O modelo inicial e "Quantum forte": Platform Admin Quantum controla cadastro, ativacao, suspensao, concessoes criticas, API keys e auditoria cross-tenant. Tenant Admin opera apenas dentro do proprio tenant.
 - **D-02:** O fluxo padrao de novo cliente B2B e manual aprovado: Quantum cria ou revisa o tenant, aprova plano/contrato/comercial e so entao libera operacao e chaves.
 - **D-02a:** CNPJ/taxId normalizado e chave unica de Tenant B2B. Duplicidade deve bloquear criacao/edicao e o perfil do tenant deve registrar chave deterministica derivada do CNPJ no Asset/evento de ancoragem.
+- **D-02b:** O `externalId` publico do Asset de perfil do tenant deve ser o nome visivel do Tenant, pois aparece na Consulta Publica. O backend deve reaproveitar/migrar registros legados `tenant-profile:<tenantId>` sem criar Asset duplicado.
 - **D-03:** A primeira API key de um tenant deve ser emitida por Platform Admin Quantum, nao por self-service do tenant.
 - **D-04:** O admin deve listar API keys ativas por tenant, exibir apenas prefixo/metadados, permitir auditoria de rotacao/revogacao e nunca reexibir segredo apos criacao.
 - **D-05:** O admin deve auditar requisicoes feitas por tenants via API key, vinculando tenant, key fingerprint/prefixo, endpoint/selector, status, latencia, correlation id e erro sanitizado, sem gravar segredo nem payload sensivel.

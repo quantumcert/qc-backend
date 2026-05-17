@@ -183,7 +183,7 @@ The planning phase must define API contracts for:
 - tenant activation workflow;
 - tenant plan/limit/commercial profile management;
 - tenant target-chain selection and persistence, defaulting to `STELLAR` and feeding the same `AnchorQueueService` routing used by normal assets;
-- tenant profile Asset upsert and anchoring event generation, using a deterministic `externalId` per tenant profile, `targetChain` metadata, deterministic CNPJ/taxId key metadata and the same `EventLog`/anchor queue used by normal assets;
+- tenant profile Asset upsert and anchoring event generation, using the visible Tenant name as the public `externalId`, preserving lookup/migration from legacy `tenant-profile:<tenantId>` records, `targetChain` metadata, deterministic CNPJ/taxId key metadata and the same `EventLog`/anchor queue used by normal assets;
 - API key lifecycle with multiple active keys per tenant, prefix display, hashed secret storage, expiration, rotation and revocation;
 - canonical API key scope catalog with selector/route mapping and role-based defaults for Reader, Operator and Admin keys;
 - purchase/order records or integration placeholders;
@@ -227,7 +227,7 @@ Add or confirm canonical backend storage for:
 - tenant commercial profile;
 - tenant target chain through `Tenant.targetChain`, with `STELLAR` as default and supported multichain values validated by backend/admin schemas;
 - canonical tenant CNPJ/taxId uniqueness, including backend validation and database constraint on normalized taxId;
-- canonical tenant profile Asset with deterministic `externalId`, profile metadata, CNPJ/taxId key metadata and approved event log for blockchain anchoring;
+- canonical tenant profile Asset with public `externalId` equal to the visible Tenant name, profile metadata, CNPJ/taxId key metadata, legacy `tenant-profile:<tenantId>` fallback and approved event log for blockchain anchoring;
 - tenant activation status and activation timestamps;
 - API key metadata, hashed secret, prefix, scopes, expiration and revoked metadata;
 - selector/route-to-scope policy used at runtime to reject unmapped or unauthorized API-key calls;

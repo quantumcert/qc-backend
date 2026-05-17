@@ -102,15 +102,15 @@ describe('AdminTenantOperationsFacet', () => {
       asset: mockAsset,
       eventLog: mockEventLog,
     }));
-    mockAsset.upsert.mockResolvedValue({
-      id: 'asset-tenant-profile',
-      tenantId: 'tenant-b2b',
-      externalId: 'tenant-profile:tenant-b2b',
-      publicUrl: 'http://localhost:3001/public/verify/asset-tenant-profile',
-      status: 'ACTIVE',
+    mockAsset.upsert.mockImplementation(async ({ create }) => ({
+      id: create.id,
+      tenantId: create.tenantId,
+      externalId: create.externalId,
+      publicUrl: create.publicUrl,
+      status: create.status,
       createdAt: new Date('2026-05-17T00:00:00.000Z'),
       updatedAt: new Date('2026-05-17T00:00:00.000Z'),
-    });
+    }));
     mockEventLog.create.mockResolvedValue({
       id: 'event-tenant-profile',
       status: 'APPROVED',
@@ -178,6 +178,7 @@ describe('AdminTenantOperationsFacet', () => {
     }));
     expect(mockAsset.upsert).toHaveBeenCalledWith(expect.objectContaining({
       create: expect.objectContaining({
+        externalId: 'Cliente B2B',
         publicUrl: expect.stringMatching(
           /^https:\/\/consulta\.quantumcert\.com\.br\/public\/verify\/[0-9a-f-]+$/
         ),
@@ -274,7 +275,7 @@ describe('AdminTenantOperationsFacet', () => {
     expect(mockTransaction).not.toHaveBeenCalled();
   });
 
-  it('anchors tenant profile edits through a canonical profile asset event', async () => {
+  it('anchors tenant profile edits using tenant name as public external id while reusing legacy profile asset', async () => {
     mockTenant.findUnique
       .mockResolvedValueOnce({ id: 'tenant-b2b' })
       .mockResolvedValueOnce({
@@ -303,7 +304,12 @@ describe('AdminTenantOperationsFacet', () => {
       status: TenantStatus.ACTIVE,
       isActive: true,
     });
-    mockAsset.findUnique.mockResolvedValue({ id: 'asset-tenant-profile' });
+    mockAsset.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: 'asset-tenant-profile',
+        externalId: 'tenant-profile:tenant-b2b',
+      });
     mockTenantCommercialProfile.upsert.mockResolvedValue({
       id: 'profile-b2b',
       tenantId: 'tenant-b2b',
@@ -348,7 +354,7 @@ describe('AdminTenantOperationsFacet', () => {
       },
       create: expect.objectContaining({
         tenantId: 'tenant-b2b',
-        externalId: 'tenant-profile:tenant-b2b',
+        externalId: 'Cliente B2B Atualizado',
         status: 'ACTIVE',
         metadata: expect.objectContaining({
           assetKind: 'TENANT_PROFILE',
@@ -369,6 +375,7 @@ describe('AdminTenantOperationsFacet', () => {
         publicDataKeys: ['assetKind', 'tenant'],
       }),
       update: expect.objectContaining({
+        externalId: 'Cliente B2B Atualizado',
         metadata: expect.objectContaining({
           assetKind: 'TENANT_PROFILE',
         }),
@@ -388,6 +395,7 @@ describe('AdminTenantOperationsFacet', () => {
           schemaVersion: 1,
           tenantId: 'tenant-b2b',
           profileAssetId: 'asset-tenant-profile',
+          profileAssetExternalId: 'Cliente B2B Atualizado',
           updatedByActorId: 'user-platform',
           tenantKeyType: 'CNPJ',
           tenantKeyValue: '12345678000199',
@@ -402,7 +410,7 @@ describe('AdminTenantOperationsFacet', () => {
       id: 'tenant-b2b',
       profileAsset: {
         id: 'asset-tenant-profile',
-        externalId: 'tenant-profile:tenant-b2b',
+        externalId: 'Cliente B2B Atualizado',
         lastAnchorEvent: {
           id: 'event-tenant-profile',
           status: 'APPROVED',
