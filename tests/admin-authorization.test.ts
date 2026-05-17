@@ -80,6 +80,40 @@ describe('AdminAuthorizationFacet', () => {
     });
   });
 
+  it('resolves Quantum Platform Admin from legacy dashboard openId during backfill', async () => {
+    mockTenantUser.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: 'user-platform',
+        tenantId: 'tenant-quantum',
+        status: TenantUserStatus.ACTIVE,
+        legacyOpenId: 'dashboard-openid-platform',
+        memberships: [
+          {
+            tenantId: 'tenant-quantum',
+            role: TenantMembershipRole.PLATFORM_ADMIN,
+            status: TenantMembershipStatus.ACTIVE,
+            tenant: { id: 'tenant-quantum', slug: 'quantum' },
+          },
+        ],
+      });
+
+    await expect(
+      AdminAuthorizationFacet.requirePlatformAdmin({
+        actorUserId: 'dashboard-openid-platform',
+        reason: 'admin dashboard action',
+      })
+    ).resolves.toMatchObject({
+      actorUserId: 'user-platform',
+      actorTenantId: 'tenant-quantum',
+      role: TenantMembershipRole.PLATFORM_ADMIN,
+    });
+
+    expect(mockTenantUser.findUnique).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      where: { legacyOpenId: 'dashboard-openid-platform' },
+    }));
+  });
+
   it('allows Tenant Admin only inside its own tenant', async () => {
     mockTenantUser.findUnique.mockResolvedValue({
       id: 'user-tenant-admin',

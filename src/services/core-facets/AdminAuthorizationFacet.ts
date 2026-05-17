@@ -35,18 +35,24 @@ export class AdminAuthorizationFacet {
             throw new AdminAuthorizationError('ADMIN_ACTOR_REQUIRED', 'Admin actor is required.');
         }
 
-        const actor = await prisma.tenantUser.findUnique({
-            where: { id: actorUserId },
-            include: {
-                memberships: {
-                    include: {
-                        tenant: {
-                            select: { id: true, slug: true },
-                        },
+        const actorInclude = {
+            memberships: {
+                include: {
+                    tenant: {
+                        select: { id: true, slug: true },
                     },
                 },
             },
-        }) as TenantUserWithMemberships | null;
+        };
+
+        const actor = await prisma.tenantUser.findUnique({
+            where: { id: actorUserId },
+            include: actorInclude,
+        }) as TenantUserWithMemberships | null
+            || await prisma.tenantUser.findUnique({
+                where: { legacyOpenId: actorUserId },
+                include: actorInclude,
+            }) as TenantUserWithMemberships | null;
 
         if (!actor || actor.status !== TenantUserStatus.ACTIVE) {
             throw new AdminAuthorizationError('ADMIN_ACTOR_NOT_FOUND', 'Active admin actor not found.');
