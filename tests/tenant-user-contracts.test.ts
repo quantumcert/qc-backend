@@ -251,4 +251,106 @@ describe('TenantUserFacet canonical contracts', () => {
       take: 10,
     }));
   });
+
+  it('records tenant user status changes in the profile asset history for on-chain anchoring', async () => {
+    mockTenantUser.findFirst.mockResolvedValue({
+      id: 'tenant-user-1',
+      tenantId: 'tenant-quantum',
+    });
+    mockTenantUser.update.mockResolvedValue({
+      id: 'tenant-user-1',
+      tenantId: 'tenant-quantum',
+      legacyDashboardUserId: '42',
+      legacyOpenId: 'dev@localhost',
+      email: 'dev@localhost',
+      phone: null,
+      document: '34888015864',
+      documentType: 'CPF',
+      displayName: 'Developer User',
+      role: TenantUserRole.MEMBER,
+      status: TenantUserStatus.SUSPENDED,
+      guardianId: null,
+      profile: {},
+      metadata: {},
+    });
+
+    const result = await TenantUserFacet.setTenantUserStatus(
+      platformActor,
+      'tenant-quantum',
+      'tenant-user-1',
+      TenantUserStatus.SUSPENDED,
+      { reason: 'bloqueio operacional' }
+    ) as any;
+
+    expect(result.profileAsset).toEqual(expect.objectContaining({ status: 'ACTIVE' }));
+    expect(mockEventLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        tenantId: 'tenant-quantum',
+        assetId: expect.any(String),
+        origin: 'SYSTEM_TENANT_USER_PROFILE',
+        payload: expect.objectContaining({
+          eventType: 'TENANT_USER_PROFILE_UPDATED',
+          tenantUserId: 'tenant-user-1',
+          profile: expect.objectContaining({
+            status: TenantUserStatus.SUSPENDED,
+          }),
+          reason: 'bloqueio operacional',
+        }),
+        signatureHash: expect.any(String),
+        dltTxId: null,
+      }),
+    }));
+    expect(mockProcessQueue).toHaveBeenCalledWith({ tenantId: 'tenant-quantum' });
+  });
+
+  it('records tenant user role assignments in the profile asset history for on-chain anchoring', async () => {
+    mockTenantUser.findFirst.mockResolvedValue({
+      id: 'tenant-user-1',
+      tenantId: 'tenant-quantum',
+    });
+    mockTenantUser.update.mockResolvedValue({
+      id: 'tenant-user-1',
+      tenantId: 'tenant-quantum',
+      legacyDashboardUserId: '42',
+      legacyOpenId: 'dev@localhost',
+      email: 'dev@localhost',
+      phone: null,
+      document: '34888015864',
+      documentType: 'CPF',
+      displayName: 'Developer User',
+      role: TenantUserRole.TENANT_ADMIN,
+      status: TenantUserStatus.ACTIVE,
+      guardianId: null,
+      profile: {},
+      metadata: {},
+    });
+
+    const result = await TenantUserFacet.assignTenantUserRole(
+      platformActor,
+      'tenant-quantum',
+      'tenant-user-1',
+      TenantUserRole.TENANT_ADMIN,
+      { reason: 'promocao operacional' }
+    ) as any;
+
+    expect(result.profileAsset).toEqual(expect.objectContaining({ status: 'ACTIVE' }));
+    expect(mockEventLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        tenantId: 'tenant-quantum',
+        assetId: expect.any(String),
+        origin: 'SYSTEM_TENANT_USER_PROFILE',
+        payload: expect.objectContaining({
+          eventType: 'TENANT_USER_PROFILE_UPDATED',
+          tenantUserId: 'tenant-user-1',
+          profile: expect.objectContaining({
+            role: TenantUserRole.TENANT_ADMIN,
+          }),
+          reason: 'promocao operacional',
+        }),
+        signatureHash: expect.any(String),
+        dltTxId: null,
+      }),
+    }));
+    expect(mockProcessQueue).toHaveBeenCalledWith({ tenantId: 'tenant-quantum' });
+  });
 });

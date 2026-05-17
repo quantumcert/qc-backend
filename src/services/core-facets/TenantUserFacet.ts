@@ -581,7 +581,7 @@ export class TenantUserFacet {
         const reason = AdminAuthorizationFacet.requireReason(context.reason || actor.reason);
         await this.ensureTenantUserExists(tenantId, userId);
 
-        return prisma.$transaction(async (tx) => {
+        const result = await prisma.$transaction(async (tx) => {
             const user = await tx.tenantUser.update({
                 where: { id: userId },
                 data: { status },
@@ -591,6 +591,14 @@ export class TenantUserFacet {
             await tx.tenantMembership.updateMany({
                 where: { tenantId, userId },
                 data: { status: mapTenantUserStatusToMembershipStatus(status), reason },
+            });
+
+            const profileAsset = await this.upsertTenantUserProfileAsset(tx, {
+                tenantId,
+                user,
+                eventType: 'TENANT_USER_PROFILE_UPDATED',
+                issuerId: actor.actorUserId,
+                reason,
             });
 
             await this.createAdminAuditLog(tx, {
@@ -604,8 +612,11 @@ export class TenantUserFacet {
                 userAgent: context.userAgent,
             });
 
-            return user;
+            return { ...user, profileAsset };
         });
+
+        AnchorQueueService.processQueue({ tenantId }).catch(console.error);
+        return result;
     }
 
     static async assignTenantUserRole(
@@ -619,7 +630,7 @@ export class TenantUserFacet {
         const reason = AdminAuthorizationFacet.requireReason(context.reason || actor.reason);
         await this.ensureTenantUserExists(tenantId, userId);
 
-        return prisma.$transaction(async (tx) => {
+        const result = await prisma.$transaction(async (tx) => {
             const user = await tx.tenantUser.update({
                 where: { id: userId },
                 data: { role },
@@ -644,6 +655,14 @@ export class TenantUserFacet {
                 },
             });
 
+            const profileAsset = await this.upsertTenantUserProfileAsset(tx, {
+                tenantId,
+                user,
+                eventType: 'TENANT_USER_PROFILE_UPDATED',
+                issuerId: actor.actorUserId,
+                reason,
+            });
+
             await this.createAdminAuditLog(tx, {
                 tenantId,
                 actor,
@@ -655,8 +674,11 @@ export class TenantUserFacet {
                 userAgent: context.userAgent,
             });
 
-            return user;
+            return { ...user, profileAsset };
         });
+
+        AnchorQueueService.processQueue({ tenantId }).catch(console.error);
+        return result;
     }
 
     static async listTenantUserAssets(
