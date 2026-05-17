@@ -166,6 +166,24 @@ describe('CreditLedgerFacet', () => {
     }));
   });
 
+  it('permite Tenant Admin consultar apenas o saldo do próprio tenant', async () => {
+    mockCreditLedgerEntry.findMany.mockResolvedValue([
+      ledgerEntryFixture({ entryType: CreditLedgerEntryType.GRANTED, amount: 7, availableDelta: 7 }),
+    ]);
+
+    const balance = await CreditLedgerFacet.getBalance(tenantAdminActor, 'tenant-b2b');
+
+    expect(balance).toMatchObject({
+      tenantId: 'tenant-b2b',
+      available: 7,
+      total: 7,
+    });
+
+    await expect(
+      CreditLedgerFacet.getBalance(tenantAdminActor, 'tenant-other')
+    ).rejects.toMatchObject({ code: 'TENANT_SCOPE_FORBIDDEN' });
+  });
+
   it('reserva, consome e libera créditos com idempotência operacional', async () => {
     mockCreditLedgerEntry.findMany
       .mockResolvedValueOnce([

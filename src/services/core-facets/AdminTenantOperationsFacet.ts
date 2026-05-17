@@ -147,7 +147,7 @@ export class AdminTenantOperationsFacet {
     }
 
     static async getTenant(actor: AdminActorContext, tenantId: string) {
-        this.ensurePlatformActor(actor);
+        this.ensureTenantReaderActor(actor, tenantId);
 
         const tenant = await prisma.tenant.findUnique({
             where: { id: tenantId },
@@ -445,6 +445,24 @@ export class AdminTenantOperationsFacet {
         if (actor.role !== TenantMembershipRole.PLATFORM_ADMIN) {
             throw new AdminTenantError('PLATFORM_ADMIN_REQUIRED', 'Quantum Platform Admin permission is required.');
         }
+    }
+
+    private static ensureTenantReaderActor(actor: AdminActorContext | undefined, tenantId: string) {
+        if (!actor?.actorUserId) {
+            throw new AdminTenantError('ADMIN_ACTOR_REQUIRED', 'Admin actor is required.');
+        }
+
+        if (actor.role === TenantMembershipRole.PLATFORM_ADMIN) return;
+
+        if (
+            actor.role === TenantMembershipRole.TENANT_ADMIN
+            && actor.tenantId === tenantId
+            && actor.actorTenantId === tenantId
+        ) {
+            return;
+        }
+
+        throw new AdminTenantError('TENANT_SCOPE_FORBIDDEN', 'Tenant Admin can read only its own tenant.');
     }
 
     private static async createAdminAuditLog(

@@ -4,9 +4,18 @@ import { AdminCreditController } from '../../controllers/AdminCreditController';
 import { AdminQTagController } from '../../controllers/AdminQTagController';
 import { AdminTenantController } from '../../controllers/AdminTenantController';
 import { TenantUserController } from '../../controllers/TenantUserController';
-import { requireAdminReason, requirePlatformAdmin } from '../../middleware/platformAdminAuth';
+import { requireAdminReason, requirePlatformAdmin, requireTenantAdmin } from '../../middleware/platformAdminAuth';
 
 const router = Router();
+
+const ownTenantAdmin = requireTenantAdmin((req) => req.params.tenantId);
+
+router.get('/tenant/:tenantId', ownTenantAdmin, AdminTenantController.get);
+router.get('/tenant/:tenantId/api-keys', ownTenantAdmin, AdminApiKeyController.list);
+router.get('/tenant/:tenantId/request-audit', ownTenantAdmin, AdminApiKeyController.listRequestAudit);
+router.get('/tenant/:tenantId/credits/summary', ownTenantAdmin, AdminCreditController.getCreditSummary);
+router.get('/tenant/:tenantId/purchase-orders', ownTenantAdmin, AdminCreditController.listPurchaseOrders);
+router.get('/tenant/:tenantId/qtags/summary', ownTenantAdmin, AdminQTagController.getSummary);
 
 router.use(requirePlatformAdmin);
 

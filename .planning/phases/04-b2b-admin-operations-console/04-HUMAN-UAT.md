@@ -19,6 +19,7 @@ Validar o console operacional B2B, Tenant Quantum, backfill B2C, usuários/equip
 - `qc-dashboard`: `pnpm test` passou com 40 arquivos, 172 testes e 3 ignorados.
 - `qc-dashboard`: `pnpm check` passou.
 - `qc-dashboard`: `pnpm exec vitest run server/admin-e2e.test.ts server/admin.tenant-scope.test.ts` passou com 4 testes.
+- `qc-dashboard`: `/admin/tenant` passou a usar rotas backend read-only de Tenant Admin e o actor canônico `TenantUser.id`, validado por `server/admin.tenant-scope.test.ts`.
 - Browser local:
   - aba `Team` sem sobreposição do último select;
   - `/admin/tenant` carregando dados do tenant resolvido pelo contexto;

@@ -212,6 +212,7 @@ function respondWithQTagError(error: unknown, res: Response, logPrefix: string) 
             ADMIN_ACTOR_REQUIRED: 401,
             ADMIN_REASON_REQUIRED: 400,
             PLATFORM_ADMIN_REQUIRED: 403,
+            TENANT_SCOPE_FORBIDDEN: 403,
             TENANT_NOT_FOUND: 404,
             ASSET_NOT_FOUND: 404,
             FULFILLMENT_ORDER_NOT_FOUND: 404,

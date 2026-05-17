@@ -92,6 +92,8 @@ last_validated: 2026-05-17T10:48:13Z
 
 - `npm test -- --run` - passed, 54 files, 385 tests.
 - `npm run build` - passed.
+- `npm test -- --run tests/admin-tenant-lifecycle.test.ts tests/admin-api-keys.test.ts tests/credit-ledger.test.ts` - passed, 28 tests.
+- `npm test -- --run tests/qtag-fulfillment.test.ts tests/payment-provider-boundary.test.ts` - passed, 9 tests.
 - Scope enforcement regression fixed in legacy route tests by adding explicit mocked API key scopes:
   - `tests/asset-controller.test.ts` -> `assets:write`
   - `tests/curation-routes.test.ts` -> `events:write`
@@ -100,6 +102,8 @@ last_validated: 2026-05-17T10:48:13Z
 ### Dashboard
 
 - `pnpm exec vitest run server/admin-e2e.test.ts server/admin.tenant-scope.test.ts` - passed, 4 tests.
+- `pnpm exec vitest run server/admin.tenant-scope.test.ts server/admin-e2e.test.ts` - passed, 4 tests after switching `/admin/tenant` to backend Tenant Admin read-only routes.
+- `pnpm exec vitest run server/admin.qtags.test.ts server/admin.credits.test.ts` - passed, 7 tests.
 - `pnpm exec vitest run server/profileIdentityAnchoring.test.ts server/admin.tenant-scope.test.ts` - passed, 25 tests.
 - `pnpm test` - passed, 40 files, 172 tests, 3 skipped.
 - `pnpm check` - passed.

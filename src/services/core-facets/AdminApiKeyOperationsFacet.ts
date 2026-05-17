@@ -161,7 +161,7 @@ export class AdminApiKeyOperationsFacet {
         tenantId: string,
         params: ListApiKeyParams = {}
     ) {
-        this.ensurePlatformActor(actor);
+        this.ensureTenantReaderActor(actor, tenantId);
         await this.ensureTenantExists(tenantId);
 
         const page = normalizePage(params.page);
@@ -343,7 +343,7 @@ export class AdminApiKeyOperationsFacet {
         tenantId: string,
         params: ListRequestAuditParams = {}
     ) {
-        this.ensurePlatformActor(actor);
+        this.ensureTenantReaderActor(actor, tenantId);
         await this.ensureTenantExists(tenantId);
 
         const page = normalizePage(params.page);
@@ -391,6 +391,24 @@ export class AdminApiKeyOperationsFacet {
         if (actor.role !== TenantMembershipRole.PLATFORM_ADMIN) {
             throw new AdminApiKeyOperationsError('PLATFORM_ADMIN_REQUIRED', 'Quantum Platform Admin permission is required.');
         }
+    }
+
+    private static ensureTenantReaderActor(actor: AdminActorContext | undefined, tenantId: string) {
+        if (!actor?.actorUserId) {
+            throw new AdminApiKeyOperationsError('ADMIN_ACTOR_REQUIRED', 'Admin actor is required.');
+        }
+
+        if (actor.role === TenantMembershipRole.PLATFORM_ADMIN) return;
+
+        if (
+            actor.role === TenantMembershipRole.TENANT_ADMIN
+            && actor.tenantId === tenantId
+            && actor.actorTenantId === tenantId
+        ) {
+            return;
+        }
+
+        throw new AdminApiKeyOperationsError('TENANT_SCOPE_FORBIDDEN', 'Tenant Admin can read only its own tenant.');
     }
 
     private static async ensureTenantExists(tenantId: string) {

@@ -231,6 +231,7 @@ function respondWithAdminCreditError(error: unknown, res: Response, logPrefix: s
             ADMIN_ACTOR_REQUIRED: 401,
             ADMIN_REASON_REQUIRED: 400,
             PLATFORM_ADMIN_REQUIRED: 403,
+            TENANT_SCOPE_FORBIDDEN: 403,
             TENANT_NOT_FOUND: 404,
             INVALID_AMOUNT: 400,
             INVALID_CURRENCY: 400,

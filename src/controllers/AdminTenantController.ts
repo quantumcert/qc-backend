@@ -228,6 +228,7 @@ function respondWithAdminTenantError(error: unknown, res: Response, logPrefix: s
             INVALID_SLUG: 400,
             INVALID_TARGET_CHAIN: 400,
             PLATFORM_ADMIN_REQUIRED: 403,
+            TENANT_SCOPE_FORBIDDEN: 403,
             SLUG_ALREADY_EXISTS: 409,
             TAX_ID_ALREADY_EXISTS: 409,
             TENANT_NOT_FOUND: 404,

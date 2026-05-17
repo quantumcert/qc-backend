@@ -295,6 +295,25 @@ describe('AdminApiKeyOperationsFacet', () => {
     }));
   });
 
+  it('allows Tenant Admin to read only own API key metadata', async () => {
+    mockTenant.findUnique.mockResolvedValue({ id: 'tenant-b2b' });
+    mockApiKey.findMany.mockResolvedValue([apiKeyFixture()]);
+    mockApiKey.count.mockResolvedValue(1);
+
+    const result = await AdminApiKeyOperationsFacet.listTenantApiKeys(
+      tenantAdminActor,
+      'tenant-b2b',
+      {}
+    );
+
+    expect(result.apiKeys).toHaveLength(1);
+    expect(result.apiKeys[0]).not.toHaveProperty('keyHash');
+
+    await expect(
+      AdminApiKeyOperationsFacet.listTenantApiKeys(tenantAdminActor, 'tenant-other', {})
+    ).rejects.toMatchObject({ code: 'TENANT_SCOPE_FORBIDDEN' });
+  });
+
   it('rotates an API key by revoking the old key and returning only the new raw key', async () => {
     mockApiKey.findFirst.mockResolvedValue(apiKeyFixture({
       id: 'api-key-old',
@@ -470,5 +489,28 @@ describe('AdminApiKeyOperationsFacet', () => {
       select: { selector: true },
       orderBy: { selector: 'asc' },
     }));
+  });
+
+  it('allows Tenant Admin to inspect own request audit without raw payloads', async () => {
+    mockTenant.findUnique.mockResolvedValue({ id: 'tenant-b2b' });
+    mockApiRequestAudit.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+    mockApiRequestAudit.count.mockResolvedValue(0);
+
+    await AdminApiKeyOperationsFacet.listRequestAudit(tenantAdminActor, 'tenant-b2b', {
+      selector: 'asset.list',
+    });
+
+    expect(mockApiRequestAudit.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        tenantId: 'tenant-b2b',
+        selector: 'asset.list',
+      }),
+    }));
+
+    await expect(
+      AdminApiKeyOperationsFacet.listRequestAudit(tenantAdminActor, 'tenant-other', {})
+    ).rejects.toMatchObject({ code: 'TENANT_SCOPE_FORBIDDEN' });
   });
 });

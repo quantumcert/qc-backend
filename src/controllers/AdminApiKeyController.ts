@@ -199,6 +199,7 @@ function respondWithAdminApiKeyError(error: unknown, res: Response, logPrefix: s
             INVALID_LABEL: 400,
             INVALID_API_KEY_SCOPE: 400,
             PLATFORM_ADMIN_REQUIRED: 403,
+            TENANT_SCOPE_FORBIDDEN: 403,
             TENANT_NOT_FOUND: 404,
             TENANT_NOT_ACTIVE: 409,
             KEY_NOT_FOUND: 404,

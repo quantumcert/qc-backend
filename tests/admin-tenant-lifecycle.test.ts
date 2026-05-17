@@ -521,6 +521,34 @@ describe('AdminTenantOperationsFacet', () => {
     }));
   });
 
+  it('allows Tenant Admin to read only its own tenant detail', async () => {
+    mockTenant.findUnique.mockResolvedValue({
+      id: 'tenant-customer',
+      name: 'CLIENTE B2B',
+      slug: 'cliente-b2b',
+      contactEmail: 'ops@cliente.com',
+      status: TenantStatus.ACTIVE,
+      isActive: true,
+      commercialProfile: null,
+      _count: { apiKeys: 1, assets: 2, tenantUsers: 3 },
+    });
+    mockAsset.findUnique.mockResolvedValue(null);
+
+    const result = await AdminTenantOperationsFacet.getTenant(
+      tenantAdminActor,
+      'tenant-customer'
+    );
+
+    expect(result).toMatchObject({
+      id: 'tenant-customer',
+      profileAsset: null,
+    });
+
+    await expect(
+      AdminTenantOperationsFacet.getTenant(tenantAdminActor, 'tenant-other')
+    ).rejects.toMatchObject({ code: 'TENANT_SCOPE_FORBIDDEN' });
+  });
+
   it('denies Tenant Admin cross-tenant lifecycle operations', async () => {
     await expect(
       AdminTenantOperationsFacet.listTenants(tenantAdminActor, {})

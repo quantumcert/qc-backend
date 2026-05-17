@@ -63,7 +63,7 @@ export class CreditLedgerFacet {
         tenantId: string,
         params: CreditLedgerScope = {}
     ) {
-        this.ensurePlatformActor(actor);
+        this.ensureTenantReaderActor(actor, tenantId);
         await this.ensureTenantExists(tenantId);
         return this.getBalanceProjection(prisma, tenantId, params.userId);
     }
@@ -73,7 +73,7 @@ export class CreditLedgerFacet {
         tenantId: string,
         params: ListLedgerParams = {}
     ) {
-        this.ensurePlatformActor(actor);
+        this.ensureTenantReaderActor(actor, tenantId);
         await this.ensureTenantExists(tenantId);
 
         const page = normalizePage(params.page);
@@ -429,6 +429,24 @@ export class CreditLedgerFacet {
         if (actor.role !== TenantMembershipRole.PLATFORM_ADMIN) {
             throw new CreditLedgerError('PLATFORM_ADMIN_REQUIRED', 'Quantum Platform Admin permission is required.');
         }
+    }
+
+    private static ensureTenantReaderActor(actor: AdminActorContext | undefined, tenantId: string) {
+        if (!actor?.actorUserId) {
+            throw new CreditLedgerError('ADMIN_ACTOR_REQUIRED', 'Admin actor is required.');
+        }
+
+        if (actor.role === TenantMembershipRole.PLATFORM_ADMIN) return;
+
+        if (
+            actor.role === TenantMembershipRole.TENANT_ADMIN
+            && actor.tenantId === tenantId
+            && actor.actorTenantId === tenantId
+        ) {
+            return;
+        }
+
+        throw new CreditLedgerError('TENANT_SCOPE_FORBIDDEN', 'Tenant Admin can read only its own tenant.');
     }
 
     private static async ensureTenantExists(tenantId: string) {
