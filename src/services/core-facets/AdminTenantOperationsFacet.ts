@@ -9,6 +9,12 @@ import {
     TenantStatus,
 } from '@prisma/client';
 import { AdminActorContext, DiamondFacets, ResourceTypes } from '../../types';
+import {
+    DEFAULT_TENANT_TARGET_CHAIN,
+    isTenantTargetChain,
+    TENANT_TARGET_CHAINS,
+    type TenantTargetChain,
+} from '../../config/tenantChains';
 import { AnchorQueueService } from '../AnchorQueueService';
 import { AssetAnchoringService } from '../AssetAnchoringService';
 import { AdminAuthorizationFacet } from './AdminAuthorizationFacet';
@@ -48,6 +54,7 @@ type CreateTenantParams = TenantMutationContext & {
     slug: string;
     contactEmail: string;
     planTier?: PlanTier;
+    targetChain?: string | null;
     maxRequestsPerMinute?: number | null;
     maxRequestsPerDay?: number | null;
     commercialProfile?: CommercialProfileInput;
@@ -57,6 +64,7 @@ type UpdateCommercialProfileParams = TenantMutationContext & {
     name?: string;
     contactEmail?: string;
     planTier?: PlanTier;
+    targetChain?: string | null;
     maxRequestsPerMinute?: number | null;
     maxRequestsPerDay?: number | null;
     commercialProfile: CommercialProfileInput;
@@ -155,6 +163,7 @@ export class AdminTenantOperationsFacet {
         this.ensurePlatformActor(actor);
         const reason = AdminAuthorizationFacet.requireReason(params.reason || actor.reason);
         const slug = normalizeSlug(params.slug);
+        const targetChain = normalizeTargetChain(params.targetChain);
 
         const existingTenant = await prisma.tenant.findUnique({ where: { slug } });
         if (existingTenant) {
@@ -172,6 +181,7 @@ export class AdminTenantOperationsFacet {
                     slug,
                     contactEmail: params.contactEmail.trim().toLowerCase(),
                     planTier: params.planTier || PlanTier.FREE,
+                    targetChain,
                     maxRequestsPerMinute: params.maxRequestsPerMinute,
                     maxRequestsPerDay: params.maxRequestsPerDay,
                     status: TenantStatus.DRAFT,
@@ -202,6 +212,7 @@ export class AdminTenantOperationsFacet {
                 metadata: {
                     status: TenantStatus.DRAFT,
                     planTier: params.planTier || PlanTier.FREE,
+                    targetChain,
                     facet: DiamondFacets.ADMIN_TENANT_OPERATIONS,
                 },
                 ipAddress: params.ipAddress,
@@ -584,6 +595,7 @@ function buildTenantUpdateData(params: UpdateCommercialProfileParams): Prisma.Te
     if (params.name !== undefined) data.name = params.name.trim();
     if (params.contactEmail !== undefined) data.contactEmail = params.contactEmail.trim().toLowerCase();
     if (params.planTier !== undefined) data.planTier = params.planTier;
+    if (params.targetChain !== undefined) data.targetChain = normalizeTargetChain(params.targetChain);
     if (params.maxRequestsPerMinute !== undefined) data.maxRequestsPerMinute = params.maxRequestsPerMinute;
     if (params.maxRequestsPerDay !== undefined) data.maxRequestsPerDay = params.maxRequestsPerDay;
 
@@ -614,6 +626,16 @@ function normalizeSlug(slug: string): string {
         throw new AdminTenantError('INVALID_SLUG', 'Tenant slug must use lowercase letters, numbers and hyphens.');
     }
     return normalized;
+}
+
+function normalizeTargetChain(value?: string | null): TenantTargetChain {
+    const normalized = (value || DEFAULT_TENANT_TARGET_CHAIN).trim().toUpperCase();
+    if (isTenantTargetChain(normalized)) return normalized;
+
+    throw new AdminTenantError(
+        'INVALID_TARGET_CHAIN',
+        `Tenant targetChain must be one of: ${TENANT_TARGET_CHAINS.join(', ')}.`
+    );
 }
 
 function normalizeTaxId(value?: string | null): string | null {
@@ -663,6 +685,7 @@ function buildTenantProfileAssetMetadata(tenant: any, commercialProfile: any): P
             status: tenant.status,
             isActive: tenant.isActive,
             planTier: tenant.planTier,
+            targetChain: tenant.targetChain || DEFAULT_TENANT_TARGET_CHAIN,
         },
         commercialProfile: normalizeCommercialProfileSnapshot(commercialProfile),
         profileUpdatedAt: toIsoString(commercialProfile?.updatedAt),
@@ -689,6 +712,7 @@ function buildTenantProfileEventPayload(params: {
             slug: params.tenant.slug,
             status: params.tenant.status,
             planTier: params.tenant.planTier,
+            targetChain: params.tenant.targetChain || DEFAULT_TENANT_TARGET_CHAIN,
         },
         commercialProfile: normalizeCommercialProfileSnapshot(params.commercialProfile),
         reason: params.reason,

@@ -1,0 +1,1 @@
+ALTER TABLE "Tenant" ALTER COLUMN "targetChain" SET DEFAULT 'STELLAR';

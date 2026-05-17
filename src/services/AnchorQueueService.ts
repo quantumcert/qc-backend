@@ -1,5 +1,6 @@
 // src/services/AnchorQueueService.ts
 import prisma from '../config/prisma';
+import { DEFAULT_TENANT_TARGET_CHAIN } from '../config/tenantChains';
 import { DLTAdapterFactory, SupportedChain } from './DLTAdapterFactory';
 import { WebhookDispatcher } from '../utils/WebhookDispatcher';
 import { RetryWorker } from './RetryWorker';
@@ -89,7 +90,7 @@ export class AnchorQueueService {
         // Group by chain to minimize adapter instantiations
         const byChain = new Map<string, typeof lockedEvents>();
         for (const event of lockedEvents) {
-            const chain = tenantChainMap.get(event.tenantId) ?? 'ALGORAND';
+            const chain = (tenantChainMap.get(event.tenantId) ?? DEFAULT_TENANT_TARGET_CHAIN).trim().toUpperCase();
             if (!byChain.has(chain)) byChain.set(chain, []);
             byChain.get(chain)!.push(event);
         }

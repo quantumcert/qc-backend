@@ -7,8 +7,10 @@ import {
 } from '../services/core-facets/AdminTenantOperationsFacet';
 import { AdminAuthorizationError } from '../services/core-facets/AdminAuthorizationFacet';
 import { AuthenticatedRequest, DiamondFacets } from '../types';
+import { TENANT_TARGET_CHAINS } from '../config/tenantChains';
 
 const jsonObjectSchema = z.record(z.unknown());
+const tenantTargetChainSchema = z.enum([...TENANT_TARGET_CHAINS] as [string, ...string[]]);
 
 const commercialProfileSchema = z.object({
     legalName: z.string().trim().min(1).nullable().optional(),
@@ -37,6 +39,7 @@ const createTenantSchema = z.object({
     slug: z.string().trim().min(2),
     contactEmail: z.string().email(),
     planTier: z.nativeEnum(PlanTier).optional(),
+    targetChain: tenantTargetChainSchema.optional(),
     maxRequestsPerMinute: z.number().int().positive().nullable().optional(),
     maxRequestsPerDay: z.number().int().positive().nullable().optional(),
     commercialProfile: commercialProfileSchema,
@@ -47,6 +50,7 @@ const updateCommercialProfileSchema = z.object({
     name: z.string().trim().min(2).optional(),
     contactEmail: z.string().email().optional(),
     planTier: z.nativeEnum(PlanTier).optional(),
+    targetChain: tenantTargetChainSchema.optional(),
     maxRequestsPerMinute: z.number().int().positive().nullable().optional(),
     maxRequestsPerDay: z.number().int().positive().nullable().optional(),
     commercialProfile: commercialProfileSchema,
@@ -222,6 +226,7 @@ function respondWithAdminTenantError(error: unknown, res: Response, logPrefix: s
             ADMIN_ACTOR_REQUIRED: 401,
             ADMIN_REASON_REQUIRED: 400,
             INVALID_SLUG: 400,
+            INVALID_TARGET_CHAIN: 400,
             PLATFORM_ADMIN_REQUIRED: 403,
             SLUG_ALREADY_EXISTS: 409,
             TENANT_NOT_FOUND: 404,

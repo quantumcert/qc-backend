@@ -159,8 +159,8 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 **Success Criteria** (what must be TRUE):
 
 1. O admin operacional é entregue como módulo isolado dentro do `qc-dashboard`, com rotas/admin shell próprios; `qc-admin` fica como extração futura, não como requisito desta fase.
-2. Platform Admin Quantum consegue cadastrar cliente/empresa B2B, criar o Tenant correspondente com slug sugerido automaticamente a partir do nome e editavel, preencher perfil comercial, contatos, plano, limites e status.
-2a. Perfil do tenant é editável no admin e cada criação/alteração mantém um `Asset` canônico `tenant-profile:<tenantId>` com `EventLog` aprovado e `signatureHash` pronto para ancoragem.
+2. Platform Admin Quantum consegue cadastrar cliente/empresa B2B, criar o Tenant correspondente com slug sugerido automaticamente a partir do nome e editavel, definir a chain do tenant com `STELLAR` como padrão, preencher perfil comercial, contatos, plano, limites e status.
+2a. Perfil do tenant é editável no admin e cada criação/alteração mantém um `Asset` canônico `tenant-profile:<tenantId>` com `targetChain`, `EventLog` aprovado e `signatureHash` pronto para ancoragem.
 3. Platform Admin consegue ativar, suspender e arquivar tenants com fluxo auditável.
 4. Platform Admin consegue criar múltiplas API keys por tenant, rotacionar e revogar, com secret hasheado, prefixo visível, escopos canônicos selecionáveis por checkbox, expiração e auditoria; API keys só autenticam quando o tenant está `ACTIVE` e chamadas Diamond/REST são bloqueadas quando a chave não possui o escopo exigido.
 5. A área admin contempla compras, ativações, recebimentos, concessão/revogação/ajuste de créditos e histórico operacional por tenant.
@@ -212,6 +212,8 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 **QTAG purchase/fulfillment decision:** QTAG física é entitlement/saldo separado de créditos. Comprar TAG não ativa chip nem cria vínculo físico final; apenas aumenta `availableQTags`. O uso acontece quando o cliente escolhe qual Asset deve receber a TAG. Nesse momento uma unidade é reservada/consumida, um pedido de emissão é criado, e a fila operacional conduz gravação, QA e despacho. A ativação da TAG acontece somente após `commissioning.confirm(success=true)` ou evento operacional equivalente definido no plano.
 
 **Tenant profile Asset decision:** A Fase 4 já cria o primeiro bridge operacional da visão "tudo é Asset": o perfil comercial do tenant deve ser editável no admin, materializado como `Asset` local com `externalId` determinístico `tenant-profile:<tenantId>` e registrado em `EventLog` aprovado para entrar na fila de ancoragem. A Fase 6 continua responsável por generalizar o modelo para perfis B2C, dependentes, pets, objetos, documentos e QTAGs.
+
+**Tenant chain decision:** Como a plataforma será multichain, `Tenant.targetChain` é o roteador canônico de ancoragem do tenant. O padrão operacional é `STELLAR`; a UI admin deve permitir escolher outra chain suportada quando necessário, e o Tenant Quantum/Quantum Cert deve ser normalizado sempre com `targetChain=STELLAR`.
 
 **API key scope decision:** Escopos de API key são catálogo canônico, não texto livre. O cadastro no dashboard usa checkboxes, dashboard/backend rejeitam escopos fora do catálogo, defaults dependem da role (`READER`, `OPERATOR`, `ADMIN`) e o runtime aplica a permissão por selector Diamond e por rotas REST mapeadas antes da execução. Tenants podem ter múltiplas chaves ativas separadas por integração/uso operacional.
 

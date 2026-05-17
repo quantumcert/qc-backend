@@ -130,6 +130,7 @@ describe('AdminTenantOperationsFacet', () => {
       slug: 'cliente-b2b',
       contactEmail: 'ops@cliente.com',
       planTier: PlanTier.PROFESSIONAL,
+      targetChain: 'STELLAR',
       status: TenantStatus.DRAFT,
       isActive: false,
     });
@@ -166,6 +167,7 @@ describe('AdminTenantOperationsFacet', () => {
       data: expect.objectContaining({
         slug: 'cliente-b2b',
         contactEmail: 'ops@cliente.com',
+        targetChain: 'STELLAR',
         status: TenantStatus.DRAFT,
         isActive: false,
       }),
@@ -184,6 +186,48 @@ describe('AdminTenantOperationsFacet', () => {
         actorTenantId: 'tenant-quantum',
         action: 'TENANT_CREATED',
         reason: 'cadastrar cliente b2b aprovado',
+      }),
+    }));
+  });
+
+  it('persists an explicit tenant target chain when Platform Admin selects a non-default chain', async () => {
+    mockTenant.findUnique.mockResolvedValue(null);
+    mockTenant.create.mockResolvedValue({
+      id: 'tenant-solana',
+      name: 'Cliente Solana',
+      slug: 'cliente-solana',
+      contactEmail: 'ops@solana.com',
+      planTier: PlanTier.PROFESSIONAL,
+      targetChain: 'SOLANA',
+      status: TenantStatus.DRAFT,
+      isActive: false,
+    });
+    mockTenantCommercialProfile.create.mockResolvedValue({
+      id: 'profile-solana',
+      tenantId: 'tenant-solana',
+      legalName: 'Cliente Solana Ltda',
+    });
+
+    await AdminTenantOperationsFacet.createTenant(platformActor, {
+      name: 'Cliente Solana',
+      slug: 'cliente-solana',
+      contactEmail: 'ops@solana.com',
+      planTier: PlanTier.PROFESSIONAL,
+      targetChain: 'SOLANA',
+      reason: 'tenant com chain solana aprovada',
+    });
+
+    expect(mockTenant.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        slug: 'cliente-solana',
+        targetChain: 'SOLANA',
+      }),
+    }));
+    expect(mockAdminAuditLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        metadata: expect.objectContaining({
+          targetChain: 'SOLANA',
+        }),
       }),
     }));
   });

@@ -52,6 +52,7 @@ Quantum platform admins can operate across tenants:
 
 - create and edit B2B client/company records;
 - set tenant status: draft, pending review, active, suspended, archived;
+- define the tenant anchoring chain through `Tenant.targetChain`, with `STELLAR` as the default for new tenants and Tenant Quantum;
 - configure legal/commercial profile: company name, CNPJ/tax ID, contacts, billing owner, plan, limits, white-label metadata;
 - edit tenant profile through the admin UI and keep a canonical tenant-profile `Asset` with an approved anchoring event for every profile creation/update;
 - activate/deactivate tenant access;
@@ -172,7 +173,8 @@ The planning phase must define API contracts for:
 - platform admin tenant CRUD;
 - tenant activation workflow;
 - tenant plan/limit/commercial profile management;
-- tenant profile Asset upsert and anchoring event generation, using a deterministic `externalId` per tenant profile and the same `EventLog`/anchor queue used by normal assets;
+- tenant target-chain selection and persistence, defaulting to `STELLAR` and feeding the same `AnchorQueueService` routing used by normal assets;
+- tenant profile Asset upsert and anchoring event generation, using a deterministic `externalId` per tenant profile, `targetChain` metadata and the same `EventLog`/anchor queue used by normal assets;
 - API key lifecycle with multiple active keys per tenant, prefix display, hashed secret storage, expiration, rotation and revocation;
 - canonical API key scope catalog with selector/route mapping and role-based defaults for Reader, Operator and Admin keys;
 - purchase/order records or integration placeholders;
@@ -209,6 +211,7 @@ Minimum `qc-dashboard` admin UI:
 Add or confirm canonical backend storage for:
 
 - tenant commercial profile;
+- tenant target chain through `Tenant.targetChain`, with `STELLAR` as default and supported multichain values validated by backend/admin schemas;
 - canonical tenant profile Asset with deterministic `externalId`, profile metadata and approved event log for blockchain anchoring;
 - tenant activation status and activation timestamps;
 - API key metadata, hashed secret, prefix, scopes, expiration and revoked metadata;
@@ -232,8 +235,8 @@ Add or confirm canonical backend storage for:
 ## Acceptance Criteria
 
 1. A Quantum platform admin can create a B2B client/company from the admin area without direct DB access.
-2. A created B2B client becomes a backend `Tenant` with status, commercial profile, limits and activation state.
-2a. Every tenant profile create/update creates or updates a canonical profile `Asset` and appends an approved `EventLog` with `signatureHash` so the same profile mutation is visible to the application and anchor queue.
+2. A created B2B client becomes a backend `Tenant` with status, commercial profile, limits, target chain and activation state. If no chain is selected, the backend persists `STELLAR`.
+2a. Every tenant profile create/update creates or updates a canonical profile `Asset` and appends an approved `EventLog` with `signatureHash` and `targetChain` context so the same profile mutation is visible to the application and anchor queue.
 3. A platform admin can create multiple API keys, rotate and revoke them, and only key prefix/metadata are visible after creation. API keys authenticate only while the tenant is `ACTIVE`; suspension blocks usage without automatic revocation. Creation uses checkbox-selected canonical scopes; invalid scopes are rejected and Diamond/REST calls are denied when the key lacks the required scope.
 4. A platform admin can grant or adjust credits with a mandatory reason and auditable ledger entry.
 5. Purchases/activation/receivable records are visible on the tenant detail page and are linked to the tenant.

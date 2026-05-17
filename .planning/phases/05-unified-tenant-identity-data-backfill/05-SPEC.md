@@ -28,6 +28,7 @@ Remaining B2B risks:
 
 - Tenant Quantum owns B2C consumers and current migrated users from Phase 4.
 - B2B customers remain real tenants, never B2C users inside Tenant Quantum.
+- Every tenant has an explicit `targetChain` for anchoring; Phase 4 defaults and normalizes this to `STELLAR`, while Phase 5 may expose tenant-safe visibility/policy for external B2B operation.
 - Platform Admin Quantum controls approval, activation, commercial policy, grants and escalations.
 - Tenant Admin B2B manages only its own tenant users/operators, API keys allowed by policy, credits/QTAG visibility, purchases and audit.
 - API consumers operate through tenant-scoped API keys with scopes, request audit, rate limits and non-sensitive logs.

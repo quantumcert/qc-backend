@@ -43,7 +43,7 @@ model Tenant {
   customTagFee      Float?
 
   // DLT chain for anchor routing (used by DLTAdapterFactory)
-  targetChain String @default("ALGORAND")
+  targetChain String @default("STELLAR")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -102,8 +102,9 @@ Layout:
 - Header row: title `Clientes B2B`, description, primary CTA `Cadastrar cliente`.
 - Filter row: search input, status select, plan select, risk/status quick filters.
 - Main content: table, not cards.
-- Columns: Company, Tenant slug, Status, Plan, Credits, QTAGs, API Keys, Last API call, Updated, Actions.
+- Columns: Company, Tenant slug, Status, Plan, Chain, Credits, QTAGs, API Keys, Last API call, Updated, Actions.
 - Row action menu: View details, Activate, Suspend, Archive, Add API key.
+- Create form includes a chain select with `Stellar` preselected and backed by the tenant `targetChain` contract.
 
 Primary focal point:
 
@@ -113,12 +114,13 @@ Primary focal point:
 
 Header:
 
-- Company name, tenant slug, status badge, plan badge.
+- Company name, tenant slug, status badge, plan badge, chain badge.
 - Primary action depends on status:
   - `Ativar tenant`
   - `Adicionar API key`
   - `Suspender tenant`
 - Secondary actions: Edit profile, View audit.
+- Profile edit form includes the tenant target-chain select; saving profile changes must persist the chain and refresh the tenant-profile Asset/event context.
 
 Top metric strip:
 

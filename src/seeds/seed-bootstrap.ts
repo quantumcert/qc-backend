@@ -23,6 +23,7 @@ import {
     getPlatformTenantSlug,
     PREVIOUS_PLATFORM_TENANT_SLUG,
 } from '../config/platformTenant';
+import { DEFAULT_TENANT_TARGET_CHAIN } from '../config/tenantChains';
 
 const prisma = new PrismaClient();
 
@@ -55,6 +56,7 @@ async function main() {
                 slug: platformSlug,
                 contactEmail: platformContactEmail,
                 planTier: 'ENTERPRISE',
+                targetChain: DEFAULT_TENANT_TARGET_CHAIN,
                 isActive: true,
                 status: 'ACTIVE',
                 activatedAt: platformTenant.activatedAt ?? new Date(),
@@ -72,6 +74,7 @@ async function main() {
                 slug: platformSlug,
                 contactEmail: platformContactEmail,
                 planTier: 'ENTERPRISE',
+                targetChain: DEFAULT_TENANT_TARGET_CHAIN,
                 isActive: true,
                 status: 'ACTIVE',
                 activatedAt: previousPlatformTenant.activatedAt ?? new Date(),
@@ -88,6 +91,7 @@ async function main() {
                 slug: platformSlug,
                 contactEmail: platformContactEmail,
                 planTier: 'ENTERPRISE',
+                targetChain: DEFAULT_TENANT_TARGET_CHAIN,
                 isActive: true,
                 status: 'ACTIVE',
                 activatedAt: new Date(),
@@ -106,6 +110,7 @@ async function main() {
                     source: 'bootstrap-seed',
                     planTier: 'ENTERPRISE',
                     slug: platformSlug,
+                    targetChain: DEFAULT_TENANT_TARGET_CHAIN,
                 },
             },
         });
@@ -225,6 +230,12 @@ async function main() {
     });
 
     if (sampleTenant) {
+        sampleTenant = await prisma.tenant.update({
+            where: { id: sampleTenant.id },
+            data: {
+                targetChain: DEFAULT_TENANT_TARGET_CHAIN,
+            },
+        });
         console.log(`  ✅ Sample Tenant already exists: ${sampleTenant.id}`);
     } else {
         sampleTenant = await prisma.tenant.create({
@@ -233,6 +244,7 @@ async function main() {
                 slug: sampleSlug,
                 contactEmail: 'sample@example.com',
                 planTier: 'FREE',
+                targetChain: DEFAULT_TENANT_TARGET_CHAIN,
                 isActive: true,
             },
         });
