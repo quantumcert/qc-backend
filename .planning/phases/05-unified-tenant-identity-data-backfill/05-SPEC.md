@@ -1,13 +1,14 @@
-# Phase 4: Unified Tenant Identity + Data Backfill — Specification
+# Phase 5: Unified Tenant Identity + Data Backfill — Specification
 
 **Status:** Approved for planning
 **Created:** 2026-05-17
+**Depends on:** Phase 4 — B2B Admin Operations Console
 **Repos:** `qc-backend`, `qc-dashboard`; later consumers: `qc-home`, `qc-record-module`
 **Business source of truth:** `qc-business`
 
 ## Goal
 
-Make `qc-backend` the canonical source of truth for tenants, users, dependents, wallets/credits, and asset ownership. The current B2C users from `qc-dashboard` must be migrated under the operational Tenant Quantum. Future B2B customers remain separate tenants with their own admins, operators, API keys, billing rules, and white-label surfaces.
+Make `qc-backend` the canonical source of truth for tenants, users, dependents, wallets/credits, and asset ownership. The current B2C users from `qc-dashboard` must be migrated under the operational Tenant Quantum. Future B2B customers remain separate tenants with their own admins, operators, API keys, billing rules, and white-label surfaces created/operated by Phase 4.
 
 This phase must complete before deeper on-chain provenance work. The chain cannot become the reliable visibility layer while users and ownership still live in two separate databases.
 
@@ -18,14 +19,14 @@ This phase must complete before deeper on-chain provenance work. The chain canno
 This creates three risks:
 
 1. B2C users cannot be cleanly attached to Tenant Quantum in the backend.
-2. B2B tenant users and Quantum platform admins would compete for the same loose role model.
+2. B2B tenant users and Quantum platform admins would compete for the same loose role model if Phase 4 admin boundaries are not enforced.
 3. Backfill to on-chain assets would anchor unstable ownership references.
 
 ## Target Model
 
 - `Tenant Quantum` is a real tenant, for example slug `quantum`.
 - B2C users are tenant-scoped users under Tenant Quantum, not tenants.
-- B2B customers are real tenants with their own tenant users, tenant admins, operators, API keys, limits, billing rules, and branded public verification.
+- B2B customers are real tenants created/activated by the Phase 4 admin module, with their own tenant users, tenant admins, operators, API keys, limits, billing rules, and branded public verification.
 - Platform admins belong to Quantum/platform scope and can operate across tenants through explicit platform-admin authorization.
 - Tenant admins operate only their own tenant.
 - Public verification remains unauthenticated and resolves public identifiers without exposing private tenant/user data.
@@ -85,7 +86,7 @@ Minimum backend surfaces required before dashboard cutover:
 - `wallet.get`;
 - `wallet.purchaseCredits` or payment/credit intent equivalent;
 - `assets.create/list/get/update`;
-- admin-only user/asset queues for Quantum platform admins.
+- admin-only user/asset queues that reuse the Phase 4 admin authorization model.
 
 ## Acceptance Criteria
 
@@ -102,4 +103,4 @@ Minimum backend surfaces required before dashboard cutover:
 - Final commercial packaging and pricing.
 - Final public signup method choice.
 - Full white-label UI implementation.
-- On-chain Asset registry implementation; this is Phase 5 and depends on the stable user/ownership model from this phase.
+- On-chain Asset registry implementation; this is Phase 6 and depends on the stable user/ownership model from this phase.

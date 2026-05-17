@@ -1,8 +1,8 @@
-# Phase 5: On-chain Asset Identity + Provenance — Specification
+# Phase 6: On-chain Asset Identity + Provenance — Specification
 
 **Status:** Approved for planning
 **Created:** 2026-05-17
-**Depends on:** Phase 4 — Unified Tenant Identity + Data Backfill
+**Depends on:** Phase 5 — Unified Tenant Identity + Data Backfill
 **Primary chain:** Stellar/Soroban
 
 ## Goal
@@ -31,7 +31,7 @@ QTAG/Device        -> Asset(type=QTAG/DEVICE)
 Each Asset receives:
 
 - local `Asset.id`;
-- tenant/user ownership references from Phase 4;
+- tenant/user ownership references from Phase 5;
 - public URL/public identifier;
 - on-chain identity record;
 - on-chain event trail;
@@ -108,7 +108,7 @@ At minimum, the on-chain trail must support:
 
 ## Backfill Requirements
 
-The backfill must run after Phase 4 has stable users and ownership.
+The backfill must run after Phase 5 has stable users and ownership.
 
 Order:
 

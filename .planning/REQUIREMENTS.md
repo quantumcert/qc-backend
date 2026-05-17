@@ -1,6 +1,6 @@
 # Requirements — Quantum Cert Backend
 
-_Generated: 2026-05-08 | updated 2026-05-17 with tenant identity, data unification and on-chain asset identity transition_
+_Generated: 2026-05-08 | updated 2026-05-17 with B2B admin operations, tenant identity, data unification and on-chain asset identity transition_
 
 ---
 
@@ -43,6 +43,17 @@ _Generated: 2026-05-08 | updated 2026-05-17 with tenant identity, data unificati
 - [x] **DLT-04**: Omnibus routing por chain — master wallet opera em cada chain suportada; no slice Stellar/hackathon, o aceite é preservar os seams multi-chain sem implementar todos os adapters
 - [ ] **DLT-05**: `lastScannedBlock` persistido em DB — confirmação de transações não depende de estado in-memory (sobrevive restarts); permanece no backlog v1 e está deferred from Phase 3 hackathon slice
 
+### ADMIN — B2B Admin Operations Console
+
+- [ ] **ADMIN-01**: Admin operacional no `qc-dashboard` — criar módulo isolado de admin para Platform Admin Quantum e Tenant Admin B2B, sem criar app `qc-admin` nesta fase
+- [ ] **ADMIN-02**: Cadastro de clientes/empresas B2B — Platform Admin cadastra empresa, perfil comercial, contatos, CNPJ/tax ID, plano, limites e status do tenant
+- [ ] **ADMIN-03**: Ativação e suspensão de tenants — fluxo auditável para draft, pending review, active, suspended e archived
+- [ ] **ADMIN-04**: Gestão de API keys B2B — criar, rotacionar, revogar e auditar chaves por tenant, com secret hasheado, prefixo visível, escopos e expiração
+- [ ] **ADMIN-05**: Operações comerciais — registrar compras/pedidos/ativações e expor histórico operacional por tenant
+- [ ] **ADMIN-06**: Concessão e ajuste de créditos B2B — Platform Admin concede, revoga ou ajusta créditos com motivo obrigatório e ledger auditável
+- [ ] **ADMIN-07**: Gestão de admins e operadores do tenant — convidar/remover Tenant Admins e operadores respeitando escopo do tenant
+- [ ] **ADMIN-08**: Auditoria admin server-side — toda mutação privilegiada exige autorização backend e gera evento de auditoria por actor/tenant/ação
+
 ### ID — Unified Tenant Identity + Data Backfill
 
 - [ ] **ID-01**: Tenant Quantum canônico — criar/garantir tenant operacional da Quantum para usuários B2C, sem transformar consumidores em tenants
@@ -84,13 +95,13 @@ _Generated: 2026-05-08 | updated 2026-05-17 with tenant identity, data unificati
 - [ ] **M2M-02**: `POST /api/v1/agent/event` — endpoint dedicado para ingestão de eventos de dispositivos M2M
 - [ ] **M2M-03**: Validação de assinatura Falcon-512 no payload do agente — garante autenticidade do dispositivo
 
-### FACET — Specialized Domain Facets (Phase 8)
+### FACET — Specialized Domain Facets (Phase 9)
 
 - [ ] **FACET-01**: `ERecycleFacet` — registro de resíduos e emissão de créditos ambientais ancorables em blockchain ([#10](https://github.com/quantumcert/qc-backend/issues/10))
 - [ ] **FACET-02**: Transferência Multi-Party — N assinaturas configuráveis obrigatórias antes de processar transferência de ownership ([#15](https://github.com/quantumcert/qc-backend/issues/15))
 - [ ] **FACET-03**: Validação biométrica — match biométrico do owner bloqueia transferência não autorizada ([#15](https://github.com/quantumcert/qc-backend/issues/15))
 - [ ] **FACET-04**: Geração de Contrato Dinâmico — contrato gerado automaticamente no evento de transferência com dados do asset e das partes ([#15](https://github.com/quantumcert/qc-backend/issues/15))
-- [ ] **FACET-05**: Todos os Facets da Fase 8 seguem a Golden Rule — zero termos de domínio no core, payload 100% opaco
+- [ ] **FACET-05**: Todos os Facets da Fase 9 seguem a Golden Rule — zero termos de domínio no core, payload 100% opaco
 
 ---
 
@@ -125,7 +136,7 @@ Quantum Cert é um workspace multi-repo composto por `qc-backend`, `qc-dashboard
 
 ## Traceability
 
-_Updated: 2026-05-17 — requisitos ID/OCHAIN adicionados para unificar usuários/tenants/bancos e garantir Asset on-chain por entidade_
+_Updated: 2026-05-17 — requisitos ADMIN/ID/OCHAIN adicionados para administrar B2B, unificar usuários/tenants/bancos e garantir Asset on-chain por entidade_
 
 | REQ-ID   | Phase   | Status                          |
 | -------- | ------- | ------------------------------- |
@@ -151,34 +162,42 @@ _Updated: 2026-05-17 — requisitos ID/OCHAIN adicionados para unificar usuário
 | DLT-03   | Phase 3 | Complete                        |
 | DLT-04   | Phase 3 | Complete for Stellar slice      |
 | DLT-05   | Phase 3 | Deferred from Stellar slice     |
-| ID-01    | Phase 4 | Approved for planning           |
-| ID-02    | Phase 4 | Approved for planning           |
-| ID-03    | Phase 4 | Approved for planning           |
-| ID-04    | Phase 4 | Approved for planning           |
-| ID-05    | Phase 4 | Approved for planning           |
-| ID-06    | Phase 4 | Approved for planning           |
-| OCHAIN-01 | Phase 5 | Approved for planning          |
-| OCHAIN-02 | Phase 5 | Approved for planning          |
-| OCHAIN-03 | Phase 5 | Approved for planning          |
-| OCHAIN-04 | Phase 5 | Approved for planning          |
-| OCHAIN-05 | Phase 5 | Approved for planning          |
-| OPS-01   | Phase 6 | Pending                         |
-| OPS-02   | Phase 6 | Pending                         |
-| OPS-03   | Phase 6 | Pending                         |
-| OPS-04   | Phase 6 | Pending                         |
-| OPS-05   | Phase 6 | Pending                         |
-| OPS-06   | Phase 6 | Pending                         |
-| OPS-07   | Phase 6 | Pending                         |
-| ESC-01   | Phase 7 | Pending                         |
-| ESC-02   | Phase 7 | Pending                         |
-| ESC-03   | Phase 7 | Pending                         |
-| ESC-04   | Phase 7 | Pending                         |
-| ESC-05   | Phase 7 | Pending                         |
-| M2M-01   | Phase 7 | Pending                         |
-| M2M-02   | Phase 7 | Pending                         |
-| M2M-03   | Phase 7 | Pending                         |
-| FACET-01 | Phase 8 | Pending                         |
-| FACET-02 | Phase 8 | Pending                         |
-| FACET-03 | Phase 8 | Pending                         |
-| FACET-04 | Phase 8 | Pending                         |
-| FACET-05 | Phase 8 | Pending                         |
+| ADMIN-01 | Phase 4 | Approved for planning           |
+| ADMIN-02 | Phase 4 | Approved for planning           |
+| ADMIN-03 | Phase 4 | Approved for planning           |
+| ADMIN-04 | Phase 4 | Approved for planning           |
+| ADMIN-05 | Phase 4 | Approved for planning           |
+| ADMIN-06 | Phase 4 | Approved for planning           |
+| ADMIN-07 | Phase 4 | Approved for planning           |
+| ADMIN-08 | Phase 4 | Approved for planning           |
+| ID-01    | Phase 5 | Approved for planning           |
+| ID-02    | Phase 5 | Approved for planning           |
+| ID-03    | Phase 5 | Approved for planning           |
+| ID-04    | Phase 5 | Approved for planning           |
+| ID-05    | Phase 5 | Approved for planning           |
+| ID-06    | Phase 5 | Approved for planning           |
+| OCHAIN-01 | Phase 6 | Approved for planning          |
+| OCHAIN-02 | Phase 6 | Approved for planning          |
+| OCHAIN-03 | Phase 6 | Approved for planning          |
+| OCHAIN-04 | Phase 6 | Approved for planning          |
+| OCHAIN-05 | Phase 6 | Approved for planning          |
+| OPS-01   | Phase 7 | Pending                         |
+| OPS-02   | Phase 7 | Pending                         |
+| OPS-03   | Phase 7 | Pending                         |
+| OPS-04   | Phase 7 | Pending                         |
+| OPS-05   | Phase 7 | Pending                         |
+| OPS-06   | Phase 7 | Pending                         |
+| OPS-07   | Phase 7 | Pending                         |
+| ESC-01   | Phase 8 | Pending                         |
+| ESC-02   | Phase 8 | Pending                         |
+| ESC-03   | Phase 8 | Pending                         |
+| ESC-04   | Phase 8 | Pending                         |
+| ESC-05   | Phase 8 | Pending                         |
+| M2M-01   | Phase 8 | Pending                         |
+| M2M-02   | Phase 8 | Pending                         |
+| M2M-03   | Phase 8 | Pending                         |
+| FACET-01 | Phase 9 | Pending                         |
+| FACET-02 | Phase 9 | Pending                         |
+| FACET-03 | Phase 9 | Pending                         |
+| FACET-04 | Phase 9 | Pending                         |
+| FACET-05 | Phase 9 | Pending                         |
