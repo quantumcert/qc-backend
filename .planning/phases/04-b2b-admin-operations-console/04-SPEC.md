@@ -24,6 +24,7 @@ That creates operational risk:
 5. Wallet/credit terminology can drift into direct client-wallet custody, which must be avoided for the production commercial model.
 6. QTAG purchases can drift into physical fulfillment without an Asset selection, making tags impossible to trace back to the protected asset.
 7. B2C users remain split between the dashboard database and backend assets, blocking a single operational view for Tenant Quantum.
+8. Users/operators of each tenant can remain invisible to Platform Admin or be managed outside the canonical backend model, breaking auditability, ownership resolution and the future on-chain Asset view.
 
 ## Product Boundary
 
@@ -62,6 +63,8 @@ Quantum platform admins can operate across tenants:
 - inspect receivables/payment status from the configured external provider;
 - manage QTAG entitlement balances, issuance queue, engraving/encoding status, dispatch and failed/retry states;
 - view tenant usage, asset counts, credit balance, API activity, and operational incidents;
+- list, create and edit tenant-scoped users/operators for any tenant, including role, status, contact/profile metadata, external identity links and audit history;
+- view each tenant user's profile Asset state when available and the Assets owned by, delegated to or associated with that user;
 - impersonation/debug must be explicit, audited, and disabled by default unless planned separately.
 
 ### Tenant Admin
@@ -74,6 +77,8 @@ B2B tenant admins can operate only their own tenant:
 - view purchases, credits, usage and invoices/receipts;
 - create/import assets where the tenant plan allows it;
 - view activation status and required pending actions.
+
+Phase 4 must expose Platform Admin operational CRUD for tenant users. Full Tenant Admin self-service for invitations, removals, operator policy and external B2B readiness remains Phase 5.
 
 ### Audit and Security
 
@@ -92,6 +97,8 @@ Required audit events:
 - QTAG issuance requested/encoded/failed/dispatched/activated;
 - plan/limit changed;
 - tenant admin invited/removed;
+- tenant user created/updated/status-changed/role-changed;
+- tenant user profile Asset linked or refreshed;
 - white-label settings changed.
 
 ## Wallet, Receivables and Credit Model
@@ -185,6 +192,9 @@ The planning phase must define API contracts for:
 - QTAG fulfillment/order records linked to a target `Asset`;
 - QTAG issuance queue statuses for engraving/encoding, QA, dispatch, delivery/activation and failure/retry;
 - credit grant/revoke/adjustment with reason and actor;
+- platform admin tenant-user list/detail/create/update/status/role operations;
+- tenant-user profile Asset visibility and associated Asset list by ownership/delegation;
+- external identity link/unlink contracts for tenant users, with conflict reporting instead of silent merge;
 - audit log query by tenant and by actor;
 - tenant-admin self-service views constrained to current tenant.
 
@@ -203,7 +213,8 @@ Minimum `qc-dashboard` admin UI:
 - API key creation form with explicit scope checkboxes, not free-text scope entry;
 - purchase/receivables/credit operations panel with payment status and reason fields;
 - QTAG fulfillment queue with asset, owner, order, status, encoder/operator, dispatch tracking and retry actions;
-- tenant admin user/team panel;
+- tenant detail Team/Usuários tab for Platform Admin with user list, create/edit user dialog, role/status controls, external identity metadata, profile Asset state and owned/associated Assets;
+- constrained tenant admin user/team panel for own-tenant visibility, with full self-service invite/operator lifecycle deferred to Phase 5;
 - safe empty/loading/error states for operational work.
 
 ## Data Model Requirements
@@ -225,7 +236,7 @@ Add or confirm canonical backend storage for:
 - link from fulfillment order to `EncodingSession`/`Device` once physical commissioning starts;
 - purchase/order records or integration reference IDs;
 - admin audit log entries tied to actor, tenant, action and payload hash;
-- tenant admin membership and role assignments.
+- tenant user records, external identity links, membership role/status assignments and profile Asset reference/status.
 - Tenant Quantum canonical record for B2C users;
 - backend tenant-scoped user, external identity and membership records;
 - migration run/checkpoint/report records for idempotent dashboard backfill;
@@ -253,7 +264,8 @@ Add or confirm canonical backend storage for:
 16. B2C dashboard domain writes for users, dependents, credits and asset ownership are cut over to backend canonical contracts; the local dashboard database remains only for session/preferences compatibility.
 17. Existing B2C ownership references that match `openId` or migrated aliases are resolvable to canonical backend users while preserving `Owner.ownerRef`.
 18. Existing B2C credit/QTAG state required for continuity is represented in backend ledgers without changing the locked rule that registration flows alter credits, not wallet balance.
-19. This phase produces the tenant/API-key/credit/QTAG/backfill foundation required for Phase 5 B2B external readiness.
+19. Platform Admin can list, create and edit users for any tenant from the tenant detail Team/Usuários tab, see their role/status/external identity, profile Asset state and owned/associated Assets, and every mutation is tenant-scoped and audited.
+20. This phase produces the tenant/API-key/credit/QTAG/backfill/user-admin foundation required for Phase 5 B2B external readiness.
 
 ## Out of Scope
 
@@ -262,4 +274,5 @@ Add or confirm canonical backend storage for:
 - Public self-service B2B signup without platform review.
 - Final white-label public verification UI.
 - Generalized on-chain asset identity/provenance for every entity type; tenant profile Asset anchoring is in scope here as the operational bridge for Phase 4.
+- Full Tenant Admin self-service invitation/operator lifecycle for external B2B customers; Phase 4 includes Platform Admin operational user CRUD and constrained own-tenant visibility, while Phase 5 expands tenant-managed B2B operations.
 - Final Transfero/provider integration contract; this remains implementation to define during planning with `qc-business`.

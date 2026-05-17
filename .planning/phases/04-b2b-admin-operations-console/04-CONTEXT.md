@@ -26,6 +26,7 @@ Os requisitos estao travados em `04-SPEC.md`, `REQUIREMENTS.md` (`ADMIN-01` a `A
 - ledger de creditos B2B separado de wallet financeira;
 - ledger de entitlement QTAG separado de creditos;
 - pedido/fila de fulfillment QTAG vinculado a um `Asset`;
+- visualizacao, criacao e edicao de usuarios/equipe por tenant pelo Platform Admin, com estado de Asset de perfil e Assets associados;
 - autorizacao server-side e audit log para mutacoes privilegiadas;
 - visoes de Platform Admin Quantum e Tenant Admin B2B.
 
@@ -67,6 +68,7 @@ Os requisitos estao travados em `04-SPEC.md`, `REQUIREMENTS.md` (`ADMIN-01` a `A
 - **D-16:** A tela de detalhe do tenant deve ser o hub central, com abas/painel para status/plano, perfil comercial, usuarios/equipe, API keys, creditos, compras/recebimentos, QTAGs, requisicoes e auditoria.
 - **D-17:** Filas operacionais separadas devem existir para ativacoes, pagamentos/recebimentos e QTAG fulfillment, para que operadores Quantum consigam tratar pendencias sem navegar tenant por tenant.
 - **D-18:** A interface deve deixar claro o escopo de cada ator: Platform Admin ve e opera cross-tenant; Tenant Admin ve somente dados do proprio tenant.
+- **D-18a:** A aba usuarios/equipe do Tenant Detail e escopo da Phase 4 para Platform Admin: listar, criar e editar usuarios tenant-scoped, ver role/status/identidade externa, Asset de perfil quando existir e Assets associados. Convites e self-service completo pelo Tenant Admin ficam para Phase 5.
 
 ### Tenant Quantum and Backfill
 - **D-19:** O usuario escolheu executar o backfill completo nesta fase (`10B`), nao apenas dry-run. Isso altera a fronteira anterior em que Phase 5 era a fase principal de identity/data backfill.

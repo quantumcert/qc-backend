@@ -9,7 +9,7 @@
 
 ## Goal
 
-Prepare the platform for external B2B tenants after Phase 4 creates the admin console, canonical tenant/user foundation, Tenant Quantum and B2C backfill. Phase 5 is not the Tenant Quantum/backfill phase. It is the B2B tenant readiness phase: tenant admins, operators, API consumption, tenant-scoped operations, white-label/public boundaries and pilot cutover for real customer tenants.
+Prepare the platform for external B2B tenants after Phase 4 creates the admin console, Platform Admin tenant-user CRUD, canonical tenant/user foundation, Tenant Quantum and B2C backfill. Phase 5 is not the Tenant Quantum/backfill phase and is not the first place where Quantum admins can edit tenant users. It is the B2B tenant readiness phase: tenant-admin self-service, invitations, operators, API consumption, tenant-scoped operations, white-label/public boundaries and pilot cutover for real customer tenants.
 
 This phase must complete before deeper on-chain provenance work because Phase 6 needs stable ownership and tenant boundaries for both B2C users under Tenant Quantum and B2B customers under their own tenants.
 
@@ -19,7 +19,7 @@ Phase 4 creates the operational foundation and migrates current B2C users into T
 
 Remaining B2B risks:
 
-1. B2B customers may exist as tenants but lack a complete tenant-admin lifecycle for their own users/operators.
+1. B2B customers may exist as tenants and be editable by Platform Admin, but still lack a complete tenant-admin self-service lifecycle for their own users/operators.
 2. API keys may work technically but remain Quantum-operated instead of tenant-consumable with scopes, docs, limits and request audit.
 3. White-label/public consultation can blur with Quantum internal admin if boundaries are not made explicit.
 4. A pilot B2B tenant cannot be validated end-to-end if onboarding, credits, QTAG fulfillment and public verification are still only platform-admin workflows.
@@ -28,6 +28,7 @@ Remaining B2B risks:
 
 - Tenant Quantum owns B2C consumers and current migrated users from Phase 4.
 - B2B customers remain real tenants, never B2C users inside Tenant Quantum.
+- Platform Admin user/team CRUD from Phase 4 remains the operational override and support surface.
 - Every tenant has an explicit `targetChain` for anchoring; Phase 4 defaults and normalizes this to `STELLAR`, while Phase 5 may expose tenant-safe visibility/policy for external B2B operation.
 - Platform Admin Quantum controls approval, activation, commercial policy, grants and escalations.
 - Tenant Admin B2B manages only its own tenant users/operators, API keys allowed by policy, credits/QTAG visibility, purchases and audit.
@@ -38,8 +39,8 @@ Remaining B2B risks:
 
 Backend:
 
-- tenant-scoped B2B user/membership lifecycle;
-- invitation or assignment flow for tenant admins/operators;
+- tenant-scoped B2B user/membership lifecycle building on Phase 4 Platform Admin CRUD;
+- invitation, assignment and removal flow for tenant admins/operators;
 - API key scopes and rate-limit visibility suitable for external tenants;
 - request audit queries by tenant/key/endpoint/correlation id;
 - tenant credit/QTAG summaries based on Phase 4 ledgers;
@@ -60,8 +61,8 @@ Business:
 
 ## Acceptance Criteria
 
-1. A B2B tenant created/activated in Phase 4 has tenant-scoped admins/operators separate from Tenant Quantum.
-2. Tenant Admin B2B can invite/remove operators and view only its own tenant profile, team, API keys, credits, QTAGs, purchases and audit.
+1. A B2B tenant created/activated in Phase 4 has tenant-scoped admins/operators separate from Tenant Quantum and visible/editable by Platform Admin.
+2. Tenant Admin B2B can invite/remove operators and view only its own tenant profile, team, API keys, credits, QTAGs, purchases and audit, without gaining Platform Admin override permissions.
 3. B2B API keys have scopes, prefixes, expiration/revocation metadata, request audit and rate-limit visibility suitable for external API use.
 4. Tenant Admin B2B cannot access Platform Admin Quantum routes, cross-tenant data, grants, global activation controls or other tenants' audit.
 5. White-label/public consultation boundaries are tenant-aware and public-safe, with no private admin/billing payload leakage.

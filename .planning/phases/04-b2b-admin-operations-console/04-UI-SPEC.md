@@ -143,6 +143,33 @@ Tabs:
 - Audit
 - Team
 
+### Tenant Team/Users Tab
+
+The Team tab in `/admin/platform/tenants/:tenantId` is a Platform Admin operational surface, not only a Tenant Admin placeholder.
+
+Layout:
+
+- Header row: title `Usuários do tenant`, description, primary CTA `Adicionar usuário`.
+- Filter row: search input, role select, status select, profile Asset state select.
+- Main content: table with a detail drawer for each user.
+- Columns: User, Email/phone/document, Role, Status, External identity, Profile Asset, Associated Assets, Last activity, Updated, Actions.
+
+Actions:
+
+- Create tenant user/operator.
+- Edit existing tenant user profile and contact fields.
+- Change role/status within server-side policy.
+- Link or review external identity metadata.
+- Open profile Asset/public URL state when available.
+- Open associated Assets filtered by owner/delegation.
+
+Rules:
+
+- User creation/editing from Platform Admin must always be scoped to the selected tenant.
+- The UI must show whether the user profile has a canonical Asset reference, is pending backfill, or is not yet eligible for on-chain anchoring.
+- Associated Assets are read-only in this tab unless a separate ownership transfer/delegation flow exists.
+- Full Tenant Admin self-service invitations and operator lifecycle are Phase 5; Phase 4 only needs constrained own-tenant visibility in `/admin/tenant`.
+
 ### Operational Queues
 
 Queues are first-class pages, not just tenant detail tabs.

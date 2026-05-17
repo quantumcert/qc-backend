@@ -31,7 +31,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 - [x] **Phase 1: Core Gap Closure + Production Hardening** _(4/4 plans complete)_ — Fechar falhas de segurança críticas e conectar features inacessíveis antes de qualquer expansão
 - [ ] **Phase 2: Document Verification + QTAG Production** _(3/3 plans complete; human UAT pending)_ — Verificação pública de documentos e NFC commissioning funcionando em produção
 - [x] **Phase 3: Pluggable DLT Workers — Stellar/Soroban Priority** _(complete; UAT passed; PRs merged)_ — Adapter Stellar para hackathon + infraestrutura multi-chain
-- [ ] **Phase 4: B2B Admin Operations Console** _(5/7 plans complete; in progress)_ — Área admin no `qc-dashboard` para cadastrar empresas/tenants, editar perfil com Asset canônico/ancoragem, ativações, API keys, compras, recebimentos via provider, concessão de créditos, saldo/fila QTAG, Tenant Quantum, backfill e operação comercial B2B
+- [ ] **Phase 4: B2B Admin Operations Console** _(5/7 plans complete; in progress)_ — Área admin no `qc-dashboard` para cadastrar empresas/tenants, editar perfil com Asset canônico/ancoragem, administrar usuários/equipe por tenant, ativações, API keys, compras, recebimentos via provider, concessão de créditos, saldo/fila QTAG, Tenant Quantum, backfill e operação comercial B2B
 - [ ] **Phase 5: B2B Tenant External Readiness** — Tenants B2B externos operam com admins, operadores, API keys, créditos, QTAGs, auditoria e boundaries white-label/públicos próprios após Tenant Quantum/backfill da Phase 4
 - [ ] **Phase 6: On-chain Asset Identity + Provenance** — Todo perfil, dependente, pet, objeto, documento e QTAG tem Asset local + Asset/registro on-chain e rastreabilidade por eventos na Stellar/Soroban
 - [ ] **Phase 7: Scale + Observability Infrastructure** — Redis, Pino, Sentry, BullMQ — plataforma multi-instância pronta para carga real
@@ -165,6 +165,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 4. Platform Admin consegue criar múltiplas API keys por tenant, rotacionar e revogar, com secret hasheado, prefixo visível, escopos canônicos selecionáveis por checkbox, expiração e auditoria; API keys só autenticam quando o tenant está `ACTIVE` e chamadas Diamond/REST são bloqueadas quando a chave não possui o escopo exigido.
 5. A área admin contempla compras, ativações, recebimentos, concessão/revogação/ajuste de créditos e histórico operacional por tenant.
 6. Tenant Admin B2B visualiza apenas dados do próprio tenant: perfil permitido, créditos, compras, API keys, usuários/equipe e status de ativação.
+6a. Platform Admin consegue listar, criar e editar usuários/equipe de qualquer tenant pelo Tenant Detail, ver status/papel/identidade externa, vínculo de Asset de perfil quando existir e Assets associados por ownership/delegação, com mutações auditadas.
 7. Toda mutação privilegiada usa autorização server-side; esconder menu na UI não conta como controle de segurança.
 8. Eventos de auditoria registram actor, tenant, ação, timestamp e payload hash/referência para cada operação crítica.
 9. Créditos de uso da aplicação são geridos por ledger próprio, separado de saldo financeiro/on-chain; compra de créditos só altera crédito disponível após pagamento confirmado.
@@ -197,11 +198,11 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 **Wave 4** _(blocked on schema, credit ledger and QTAG ledger)_
 
-- [ ] 04-06-PLAN.md — Tenant Quantum, complete B2C backfill, ownership/credits/QTAG reconciliation and dashboard B2C cutover: ADMIN-08, ADMIN-09, ID-01, ID-02, ID-03, ID-04, ID-05, ID-06
+- [ ] 04-06-PLAN.md — Tenant Quantum, complete B2C backfill, Platform Admin tenant-user contracts, ownership/credits/QTAG reconciliation and dashboard B2C cutover: ADMIN-08, ADMIN-09, ID-01, ID-02, ID-03, ID-04, ID-05, ID-06
 
 **Wave 5** _(blocked on operational slices)_
 
-- [ ] 04-07-PLAN.md — Platform queues, Tenant Admin constrained view, cross-repo verification and UAT closure: ADMIN-01..13, ID-01..06
+- [ ] 04-07-PLAN.md — Platform queues, Platform Admin tenant-user UI, Tenant Admin constrained view, cross-repo verification and UAT closure: ADMIN-01..13, ID-01..06
 
 **Cross-repo note:** `qc-dashboard` implementa a interface; `qc-backend` define os contratos, autorização, tenant/API-key/credit ledger, QTAG entitlement ledger, QTAG fulfillment queue, purchase/payment intents, provider adapter e auditoria; `qc-record-module` executa gravação/commissioning físico; `qc-business` define regras comerciais, planos, pricing, compras, política de concessão de créditos/TAGs e escolha final do provider de recebimento.
 
@@ -212,6 +213,8 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 **QTAG purchase/fulfillment decision:** QTAG física é entitlement/saldo separado de créditos. Comprar TAG não ativa chip nem cria vínculo físico final; apenas aumenta `availableQTags`. O uso acontece quando o cliente escolhe qual Asset deve receber a TAG. Nesse momento uma unidade é reservada/consumida, um pedido de emissão é criado, e a fila operacional conduz gravação, QA e despacho. A ativação da TAG acontece somente após `commissioning.confirm(success=true)` ou evento operacional equivalente definido no plano.
 
 **Tenant profile Asset decision:** A Fase 4 já cria o primeiro bridge operacional da visão "tudo é Asset": o perfil comercial do tenant deve ser editável no admin, materializado como `Asset` local com `externalId` determinístico `tenant-profile:<tenantId>` e registrado em `EventLog` aprovado para entrar na fila de ancoragem. A Fase 6 continua responsável por generalizar o modelo para perfis B2C, dependentes, pets, objetos, documentos e QTAGs.
+
+**Tenant user/admin decision:** A Fase 4 deve permitir que Platform Admin visualize, crie e edite usuários/equipe de qualquer tenant no Tenant Detail, incluindo vínculo de identidade externa, role/status, Asset de perfil quando existir e Assets associados por ownership/delegação. A Fase 5 fica responsável por transformar essa fundação em self-service B2B completo para Tenant Admin, com convites, operadores, políticas e limites próprios do tenant.
 
 **Tenant chain decision:** Como a plataforma será multichain, `Tenant.targetChain` é o roteador canônico de ancoragem do tenant. O padrão operacional é `STELLAR`; a UI admin deve permitir escolher outra chain suportada quando necessário, e o Tenant Quantum/Quantum Cert deve ser normalizado sempre com `targetChain=STELLAR`.
 
@@ -227,8 +230,8 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 **Requirements**: B2B-01, B2B-02, B2B-03, B2B-04, B2B-05, B2B-06
 **Success Criteria** (what must be TRUE):
 
-1. Um tenant B2B criado/ativado na Phase 4 tem admins e operadores tenant-scoped separados do Tenant Quantum.
-2. Tenant Admin B2B gerencia equipe, API keys permitidas, créditos, QTAGs, compras e auditoria apenas do próprio tenant.
+1. Um tenant B2B criado/ativado na Phase 4 tem admins e operadores tenant-scoped separados do Tenant Quantum, partindo dos usuários/equipe já visíveis e editáveis por Platform Admin.
+2. Tenant Admin B2B gerencia equipe, convites, operadores, API keys permitidas, créditos, QTAGs, compras e auditoria apenas do próprio tenant.
 3. API keys B2B têm scopes, auditoria de requisições, limites e visibilidade de consumo adequados para tenants externos.
 4. Tenant Admin B2B não acessa rotas Platform Admin, grants globais, ativação cross-tenant nem auditoria de outros tenants.
 5. Boundaries white-label/públicos por tenant ficam explícitos e não vazam payloads privados de admin/billing.
@@ -237,7 +240,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 **Plans**: TBD
 **Cross-repo note:** Esta fase é transversal a `qc-backend`, `qc-dashboard` e `qc-home`; depende da Phase 4 para admin operacional, Tenant Quantum/backfill, API keys, créditos e QTAG ledgers; `qc-business` deve confirmar regras comerciais/planos/white-label antes do piloto B2B.
 
-**Dependência da Fase 4:** Tenant Quantum, usuários B2C canônicos, migration engine, backfill completo de usuários/dependentes do dashboard, console admin B2B, fundação tenant/API key, ledgers de crédito/QTAG e filas de fulfillment são entregues pela Fase 4. A Fase 5 começa a partir desses artefatos e foca a prontidão de tenants B2B externos.
+**Dependência da Fase 4:** Tenant Quantum, usuários B2C canônicos, migration engine, backfill completo de usuários/dependentes do dashboard, console admin B2B, Platform Admin CRUD de usuários/equipe por tenant, fundação tenant/API key, ledgers de crédito/QTAG e filas de fulfillment são entregues pela Fase 4. A Fase 5 começa a partir desses artefatos e foca a prontidão de tenants B2B externos, especialmente self-service de equipe/operadores pelo Tenant Admin.
 
 ### Phase 6: On-chain Asset Identity + Provenance
 
