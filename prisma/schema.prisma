@@ -1633,7 +1633,7 @@ model EncodingSession {
   @@index([tenantId])
   @@index([assetId])
   @@index([fulfillmentOrderId])
+  @@index([fulfillmentOrderId, attemptNo])
   @@index([ntagUID])
   @@index([status])
-  @@unique([fulfillmentOrderId, attemptNo])
 }
