@@ -1,7 +1,7 @@
 # ROADMAP — Quantum Cert Backend
 
 _Generated: 2026-05-08 | Granularity: standard | Mode: mvp_
-_Coverage: 60 requirements mapped (41 original/current + 19 architecture transition requirements)_
+_Coverage: 62 requirements mapped (41 original/current + 21 architecture transition requirements)_
 _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 ---
@@ -31,7 +31,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 - [x] **Phase 1: Core Gap Closure + Production Hardening** _(4/4 plans complete)_ — Fechar falhas de segurança críticas e conectar features inacessíveis antes de qualquer expansão
 - [ ] **Phase 2: Document Verification + QTAG Production** _(3/3 plans complete; human UAT pending)_ — Verificação pública de documentos e NFC commissioning funcionando em produção
 - [x] **Phase 3: Pluggable DLT Workers — Stellar/Soroban Priority** _(complete; UAT passed; PRs merged)_ — Adapter Stellar para hackathon + infraestrutura multi-chain
-- [ ] **Phase 4: B2B Admin Operations Console** — Área admin no `qc-dashboard` para cadastrar empresas/tenants, ativações, API keys, compras, concessão de créditos e operação comercial B2B
+- [ ] **Phase 4: B2B Admin Operations Console** — Área admin no `qc-dashboard` para cadastrar empresas/tenants, ativações, API keys, compras, recebimentos via provider, concessão de créditos e operação comercial B2B
 - [ ] **Phase 5: Unified Tenant Identity + Data Backfill** — Backend vira fonte canônica de tenants, usuários B2C/B2B, dependentes, carteiras/créditos e vínculos de ownership; dashboard deixa de ter banco de domínio
 - [ ] **Phase 6: On-chain Asset Identity + Provenance** — Todo perfil, dependente, pet, objeto, documento e QTAG tem Asset local + Asset/registro on-chain e rastreabilidade por eventos na Stellar/Soroban
 - [ ] **Phase 7: Scale + Observability Infrastructure** — Redis, Pino, Sentry, BullMQ — plataforma multi-instância pronta para carga real
@@ -150,27 +150,31 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 ### Phase 4: B2B Admin Operations Console
 
-**Goal**: Quantum Cert tem uma área admin operacional no `qc-dashboard` para cadastrar e administrar clientes/empresas B2B, tenants, ativações, API keys, compras, concessão de créditos e demais fluxos comerciais antes da unificação de identidade
+**Goal**: Quantum Cert tem uma área admin operacional no `qc-dashboard` para cadastrar e administrar clientes/empresas B2B, tenants, ativações, API keys, compras, recebimentos via provider, concessão de créditos e demais fluxos comerciais antes da unificação de identidade
 **Mode:** mvp
 **GitHub Milestone**: TBD
 **GitHub Issues**: TBD
 **Depends on**: Phase 3
-**Requirements**: ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-04, ADMIN-05, ADMIN-06, ADMIN-07, ADMIN-08
+**Requirements**: ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-04, ADMIN-05, ADMIN-06, ADMIN-07, ADMIN-08, ADMIN-09, ADMIN-10
 **Success Criteria** (what must be TRUE):
 
 1. O admin operacional é entregue como módulo isolado dentro do `qc-dashboard`, com rotas/admin shell próprios; `qc-admin` fica como extração futura, não como requisito desta fase.
 2. Platform Admin Quantum consegue cadastrar cliente/empresa B2B, criar o Tenant correspondente, preencher perfil comercial, contatos, plano, limites e status.
 3. Platform Admin consegue ativar, suspender e arquivar tenants com fluxo auditável.
 4. Platform Admin consegue criar, rotacionar e revogar API keys por tenant, com secret hasheado, prefixo visível, escopos, expiração e auditoria.
-5. A área admin contempla compras, ativações, concessão/revogação/ajuste de créditos e histórico operacional por tenant.
+5. A área admin contempla compras, ativações, recebimentos, concessão/revogação/ajuste de créditos e histórico operacional por tenant.
 6. Tenant Admin B2B visualiza apenas dados do próprio tenant: perfil permitido, créditos, compras, API keys, usuários/equipe e status de ativação.
 7. Toda mutação privilegiada usa autorização server-side; esconder menu na UI não conta como controle de segurança.
 8. Eventos de auditoria registram actor, tenant, ação, timestamp e payload hash/referência para cada operação crítica.
+9. Créditos de uso da aplicação são geridos por ledger próprio, separado de saldo financeiro/on-chain; compra de créditos só altera crédito disponível após pagamento confirmado.
+10. Recebimentos não custodiam wallet do cliente diretamente; Transfero é candidata preferencial para anchor/provider de recebimentos, mas a implementação final fica a definir atrás de uma interface de provider.
 
 **Plans**: TBD
-**Cross-repo note:** `qc-dashboard` implementa a interface; `qc-backend` define os contratos, autorização, tenant/API-key/credit ledger e auditoria; `qc-business` define regras comerciais, planos, pricing, compras e política de concessão de créditos.
+**Cross-repo note:** `qc-dashboard` implementa a interface; `qc-backend` define os contratos, autorização, tenant/API-key/credit ledger, purchase/payment intents, provider adapter e auditoria; `qc-business` define regras comerciais, planos, pricing, compras, política de concessão de créditos e escolha final do provider de recebimento.
 
 **Placement decision:** começar no `qc-dashboard` porque reduz duplicação e usa a autenticação/experiência operacional atual. Separar em `qc-admin` só quando houver necessidade real de deploy separado, SSO interno, boundary de compliance, marca própria ou escala de manutenção.
+
+**Wallet/credits decision:** "Wallet" na aplicação deve ser tratado como conta operacional/financeira + carteira de créditos, não como custódia direta da wallet blockchain do cliente. Para compra de créditos, o fluxo alvo é `PurchaseOrder`/`PaymentIntent` -> confirmação por provider externo -> `CreditLedgerEntry(PURCHASED)` -> créditos disponíveis. Transfero entra como candidata preferencial para anchor de recebimentos, mas a integração final e o contrato exato ficam marcados como implementação a definir.
 
 ### Phase 5: Unified Tenant Identity + Data Backfill
 
@@ -297,7 +301,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 - `qc-dashboard` already has protected routes for store, profile, assets, and asset creation.
 - Existing asset creation wizard can be reused for category, details, photos/documents, and public privacy.
-- Existing wallet rule already supports credit-only activation through `creditsBalance`.
+- Existing wallet rule already supports credit-only activation through `creditsBalance`; production must replace fallback balance-derived credits with backend `CreditLedger`.
 - Existing store already models QTAG/QTRACK and credit packages, but physical checkout remains simulated.
 - Existing public verification route can become the post-onboarding certificate/QR destination.
 - `qc-dashboard` already has a `user`/`admin` role concept and server-side `adminProcedure`; Phase 4 turns this into a dedicated operational admin module instead of a separate `qc-admin` app.
@@ -334,7 +338,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 9. What is the B2B onboarding path: self-service tenant signup, invitation, sales-assisted approval, or all three?
 10. Which B2B operations require bulk workflows, API keys, billing controls, and branded verification pages?
 
-**Promotion note:** The structural decision is locked: B2C users live under the Tenant Quantum, B2B customers remain separate tenants, and the first operational admin surface ships inside `qc-dashboard` as an isolated module. Product details such as signup method, pricing, QTAG fulfillment, approval SLAs, purchase policies, credit packages and white-label commercial packaging still require `qc-business` decisions before implementation plans are finalized.
+**Promotion note:** The structural decision is locked: B2C users live under the Tenant Quantum, B2B customers remain separate tenants, the first operational admin surface ships inside `qc-dashboard` as an isolated module, and application credits are ledger-based rather than direct client-wallet custody. Product details such as signup method, pricing, QTAG fulfillment, approval SLAs, purchase policies, credit packages, provider/Transfero contract and white-label commercial packaging still require `qc-business` decisions before implementation plans are finalized.
 
 ---
 

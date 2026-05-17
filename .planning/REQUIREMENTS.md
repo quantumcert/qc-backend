@@ -1,6 +1,6 @@
 # Requirements — Quantum Cert Backend
 
-_Generated: 2026-05-08 | updated 2026-05-17 with B2B admin operations, tenant identity, data unification and on-chain asset identity transition_
+_Generated: 2026-05-08 | updated 2026-05-17 with B2B admin operations, receivables/credits, tenant identity, data unification and on-chain asset identity transition_
 
 ---
 
@@ -53,6 +53,8 @@ _Generated: 2026-05-08 | updated 2026-05-17 with B2B admin operations, tenant id
 - [ ] **ADMIN-06**: Concessão e ajuste de créditos B2B — Platform Admin concede, revoga ou ajusta créditos com motivo obrigatório e ledger auditável
 - [ ] **ADMIN-07**: Gestão de admins e operadores do tenant — convidar/remover Tenant Admins e operadores respeitando escopo do tenant
 - [ ] **ADMIN-08**: Auditoria admin server-side — toda mutação privilegiada exige autorização backend e gera evento de auditoria por actor/tenant/ação
+- [ ] **ADMIN-09**: Ledger de créditos separado da wallet financeira — créditos de uso da aplicação são conta/ledger comercial, não saldo on-chain nem custódia direta da wallet do cliente
+- [ ] **ADMIN-10**: Recebimentos via provider externo — compra de créditos cria pedido/intenção de pagamento e só credita após confirmação de provider; Transfero é candidata preferencial, implementação final a definir
 
 ### ID — Unified Tenant Identity + Data Backfill
 
@@ -136,7 +138,7 @@ Quantum Cert é um workspace multi-repo composto por `qc-backend`, `qc-dashboard
 
 ## Traceability
 
-_Updated: 2026-05-17 — requisitos ADMIN/ID/OCHAIN adicionados para administrar B2B, unificar usuários/tenants/bancos e garantir Asset on-chain por entidade_
+_Updated: 2026-05-17 — requisitos ADMIN/ID/OCHAIN adicionados para administrar B2B, recebimentos/créditos, unificar usuários/tenants/bancos e garantir Asset on-chain por entidade_
 
 | REQ-ID   | Phase   | Status                          |
 | -------- | ------- | ------------------------------- |
@@ -170,6 +172,8 @@ _Updated: 2026-05-17 — requisitos ADMIN/ID/OCHAIN adicionados para administrar
 | ADMIN-06 | Phase 4 | Approved for planning           |
 | ADMIN-07 | Phase 4 | Approved for planning           |
 | ADMIN-08 | Phase 4 | Approved for planning           |
+| ADMIN-09 | Phase 4 | Approved for planning           |
+| ADMIN-10 | Phase 4 | Approved for planning           |
 | ID-01    | Phase 5 | Approved for planning           |
 | ID-02    | Phase 5 | Approved for planning           |
 | ID-03    | Phase 5 | Approved for planning           |

@@ -68,8 +68,8 @@ Phase 9 [          ] 0% (Specialized Domain Facets)
 | Metric                  | Value                      |
 | ----------------------- | -------------------------- |
 | Phases total            | 9                          |
-| Requirements total (v1) | 60 (41 prior + 19 transition) |
-| Requirements mapped     | 60/60                      |
+| Requirements total (v1) | 62 (41 prior + 21 transition) |
+| Requirements mapped     | 62/62                      |
 | Plans written           | 10                         |
 | Plans complete          | 10                         |
 
@@ -108,6 +108,8 @@ Phase 9 [          ] 0% (Specialized Domain Facets)
 | Requisitos podem ser transversais                         | Aceite real pode exigir integração entre `qc-backend`, `qc-dashboard`, `qc-home`, `qc-record-module` e decisão de negócio em `qc-business`; planos devem declarar repos impactados e UAT fim a fim                   | —     |
 | Admin B2B começa no qc-dashboard                          | A primeira entrega usa módulo admin isolado no `qc-dashboard`; `qc-admin` separado fica condicionado a deploy/auth/compliance/marca/manutenção próprios                                                              | 4     |
 | B2B admin operacional antes de identidade/backfill         | Cadastro de empresa, ativação, API keys, compras e créditos precisam existir antes de migrar usuários/assets para o modelo canônico                                                                                  | 4     |
+| Créditos são ledger, não wallet custodial do cliente       | Compra/uso/concessão de créditos deve passar por ledger backend; wallet do cliente não é custodiada diretamente pela Quantum Cert                                                                                   | 4     |
+| Transfero é candidata para recebimentos                    | Transfero deve ser pesquisada primeiro como anchor/provider de recebimentos; integração final, settlement, moedas e webhooks ficam como implementação a definir com `qc-business`                                  | 4     |
 | B2C sob Tenant Quantum                                    | Usuários consumidores não viram tenants; vivem como usuários tenant-scoped do Tenant Quantum, com dependentes e assets próprios                                                                                     | 5     |
 | B2B permanece tenant real                                 | Clientes B2B precisam de tenant próprio, admins, operadores, API keys, limites, billing e white-label; não devem ser misturados ao fluxo B2C                                                                       | 5     |
 | Backend vira fonte canônica de usuários e domínio         | O banco do dashboard hoje guarda usuários/dependentes, mas a transição exige que Tenant, usuário, carteira/créditos, owner e asset sejam canônicos no `qc-backend`                                                   | 5     |
@@ -118,7 +120,7 @@ Phase 9 [          ] 0% (Specialized Domain Facets)
 | Phase   | Requer research-phase | Motivo                                                                |
 | ------- | --------------------- | --------------------------------------------------------------------- |
 | Phase 3 | Sim                   | Soroban contract ABI vs SorobanAdapter.ts + BIP-44 migration strategy |
-| Phase 4 | Sim                   | Admin cross-repo para tenants, API keys, compras, créditos e autorização platform/tenant |
+| Phase 4 | Sim                   | Admin cross-repo para tenants, API keys, compras, recebimentos/provider, créditos e autorização platform/tenant |
 | Phase 5 | Sim                   | Migração multi-repo de identidade, banco e backfill dashboard→backend |
 | Phase 6 | Sim                   | Modelo Stellar/Soroban para Asset identity + registry/provenance por entidade |
 | Phase 8 | Sim                   | TEAL/Soroban escrow on-chain — smart contract requer auditoria de segurança |
@@ -130,7 +132,7 @@ Phase 9 [          ] 0% (Specialized Domain Facets)
 ### Todos
 
 - Plan/update `qc-record-module` integration so a real NTAG 424 DNA can be written, locked, scanned, and approved through `/api/v1/scan`.
-- Plan Phase 4 around `qc-dashboard` admin module, backend tenant/API-key contracts, B2B activation, purchases, credit grants and admin audit.
+- Plan Phase 4 around `qc-dashboard` admin module, backend tenant/API-key contracts, B2B activation, purchases, Transfero/provider receivables, credit ledger/grants and admin audit.
 - Plan Phase 5 around backend-canonical tenant users, dashboard user backfill, owner resolution, credits migration, and dashboard cutover after Phase 4 provides B2B tenants/admin foundations.
 - Plan Phase 6 after Phase 5 so on-chain Asset identity uses stable tenant/user/ownership references.
 - Before executing a requirement with product/business ambiguity, check whether the decision belongs in `qc-business` and whether acceptance depends on `qc-dashboard`, `qc-home`, or `qc-record-module`.
@@ -161,6 +163,6 @@ Phase 9 [          ] 0% (Specialized Domain Facets)
 - Phase 1 COMPLETA: Falcon-512 real, SKIP LOCKED, Lifecycle, Transfer REST, Curation Layer, review-fix aplicado
 - Code review fix report: `.planning/phases/01-core-gap-closure-production-hardening/01-REVIEW-FIX.md` — encerrado sem blocker; WR-01, WR-06, WR-07 postergados como dívida técnica não bloqueante por exigirem mudança cross-cutting/schema
 - Phase 2: DOC-01/02/03 + QTAG-01/02 implementados e verificados automaticamente; UAT físico registrado como bloqueado em `.planning/phases/02-document-verification-qtag-production/02-HUMAN-UAT.md` por dependência externa do `qc-record-module`.
-- Phase 4 approved 2026-05-17: build isolated admin module inside `qc-dashboard` for B2B company/tenant registration, activation, API keys, purchases, credit grants, tenant admin operations and audit; separate `qc-admin` app is deferred until there is a concrete deploy/auth/compliance/brand need.
+- Phase 4 approved 2026-05-17: build isolated admin module inside `qc-dashboard` for B2B company/tenant registration, activation, API keys, purchases, provider-based receivables, credit ledger/grants, tenant admin operations and audit; separate `qc-admin` app is deferred until there is a concrete deploy/auth/compliance/brand need. Transfero is the preferred receivables/anchor candidate to research first, with final implementation to define.
 - Phase 5 approved 2026-05-17: unify `qc-dashboard` user/dependent data into backend tenant-scoped users under Tenant Quantum; B2B remains separate tenants; backfill and dashboard cutover are required before deeper on-chain provenance.
 - Phase 6 approved 2026-05-17: every profile/dependent/pet/object/document/QTAG must be represented as local Asset plus on-chain Asset/registry proof with event provenance.
