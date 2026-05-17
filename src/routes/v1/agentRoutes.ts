@@ -13,6 +13,7 @@ import { requireApiKey } from '../../middleware/apiKeyAuth';
 import { requireIdempotency } from '../../middleware/idempotencyGuard';
 import { tenantRateLimiter } from '../../middleware/rateLimiter';
 import { requireOperator } from '../../middleware/rbacGuard';
+import { requireApiKeyScope } from '../../middleware/apiKeyScopeGuard';
 import { requireAgentSignature } from '../../middleware/requireAgentSignature';
 import { AgentController } from '../../controllers/AgentController';
 
@@ -59,6 +60,7 @@ router.post(
   requireIdempotency,
   tenantRateLimiter,
   requireOperator,
+  requireApiKeyScope('agents:write'),
   requireAgentSignature,
   AgentController.handleEvent,
 );

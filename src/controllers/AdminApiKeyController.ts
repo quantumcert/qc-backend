@@ -39,7 +39,7 @@ const requestAuditListSchema = z.object({
     to: z.string().datetime().optional().transform((value) => value ? new Date(value) : undefined),
 });
 
-const createInitialApiKeySchema = z.object({
+const createApiKeySchema = z.object({
     label: z.string().trim().min(1).max(100),
     role: z.nativeEnum(ApiKeyRole).optional(),
     scopes: z.array(z.enum(API_KEY_SCOPES as [string, ...string[]])).max(API_KEY_SCOPES.length).optional(),
@@ -77,10 +77,10 @@ export class AdminApiKeyController {
         }
     }
 
-    static async createInitial(req: AuthenticatedRequest, res: Response) {
+    static async create(req: AuthenticatedRequest, res: Response) {
         try {
-            const payload = createInitialApiKeySchema.parse(req.body);
-            const result = await AdminApiKeyOperationsFacet.createInitialApiKey(
+            const payload = createApiKeySchema.parse(req.body);
+            const result = await AdminApiKeyOperationsFacet.createApiKey(
                 req.adminActor!,
                 req.params.tenantId,
                 {
@@ -96,8 +96,12 @@ export class AdminApiKeyController {
                 meta: buildMeta(),
             });
         } catch (error) {
-            return respondWithAdminApiKeyError(error, res, '[AdminApiKeyController.createInitial]');
+            return respondWithAdminApiKeyError(error, res, '[AdminApiKeyController.create]');
         }
+    }
+
+    static async createInitial(req: AuthenticatedRequest, res: Response) {
+        return AdminApiKeyController.create(req, res);
     }
 
     static async rotate(req: AuthenticatedRequest, res: Response) {
@@ -197,7 +201,6 @@ function respondWithAdminApiKeyError(error: unknown, res: Response, logPrefix: s
             PLATFORM_ADMIN_REQUIRED: 403,
             TENANT_NOT_FOUND: 404,
             TENANT_NOT_ACTIVE: 409,
-            INITIAL_KEY_ALREADY_EXISTS: 409,
             KEY_NOT_FOUND: 404,
             KEY_ALREADY_REVOKED: 409,
         };

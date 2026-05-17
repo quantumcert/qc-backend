@@ -7,17 +7,18 @@
 ## Escopo Concluído
 
 - Adicionados contratos backend de ciclo de vida de API keys para Platform Admin em `/api/v1/admin/platform/tenants/:tenantId/api-keys`.
-- Adicionado `AdminApiKeyOperationsFacet` para emissão inicial, listagem, rotação e revogação com auditoria de actor/reason.
+- Adicionado `AdminApiKeyOperationsFacet` para criação de múltiplas chaves por tenant, listagem, rotação e revogação com auditoria de actor/reason.
 - Mantido segredo bruto de API key como exibição única apenas na criação/rotação; respostas de listagem expõem somente prefixo e metadados.
 - Adicionado middleware de auditoria sanitizada de requests com API key, persistindo metadados de método/path/selector/status/latência/correlation sem raw key, headers ou payload de body.
 - Adicionada listagem backend de request audit em `/api/v1/admin/platform/tenants/:tenantId/request-audit`.
 - Fortalecido o gate central de API keys: uma chave só autentica quando o tenant está `ACTIVE`; tenant suspenso/inativo bloqueia uso sem revogar automaticamente a chave.
+- Adicionado guard de escopo para rotas REST autenticadas, além do enforcement por selector no `DiamondProxy`.
 - Travada a identidade do tenant plataforma Quantum Cert como canônica e não sobrescrevível: slug `quantum-cert-platform`, nome `Quantum Cert`, contato `platform@quantumcert.com`.
 - Ajustado `seed-bootstrap` para normalizar o tenant Quantum Cert em toda execução, incluindo status Enterprise ativo e limpeza de flags de suspensão/arquivamento.
 - Feito backfill dos aliases locais de Platform Admin para `dev-user-001`, `dev@localhost` e `dev@local.host`.
 - Alinhados os defaults de identidade Platform Admin em desenvolvimento no `qc-dashboard` com o seed do backend.
 - Adicionados procedures tRPC no dashboard para API keys e request audit.
-- Adicionada aba `API Keys` no Tenant Detail com tabela de chaves ativas, emissão inicial, rotação, revogação e diálogos de segredo bruto exibido uma única vez.
+- Adicionada aba `API Keys` no Tenant Detail com tabela de chaves ativas, adição de novas chaves, rotação, revogação e diálogos de segredo bruto exibido uma única vez.
 - Adicionada aba `Requests` no Tenant Detail e página `/admin/platform/audit` com filtros por tenant/key/selector/status/correlation.
 
 ## Commits

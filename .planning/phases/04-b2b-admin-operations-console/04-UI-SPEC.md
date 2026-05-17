@@ -103,7 +103,7 @@ Layout:
 - Filter row: search input, status select, plan select, risk/status quick filters.
 - Main content: table, not cards.
 - Columns: Company, Tenant slug, Status, Plan, Credits, QTAGs, API Keys, Last API call, Updated, Actions.
-- Row action menu: View details, Activate, Suspend, Archive, Issue first API key.
+- Row action menu: View details, Activate, Suspend, Archive, Add API key.
 
 Primary focal point:
 
@@ -116,7 +116,7 @@ Header:
 - Company name, tenant slug, status badge, plan badge.
 - Primary action depends on status:
   - `Ativar tenant`
-  - `Emitir primeira API key`
+  - `Adicionar API key`
   - `Suspender tenant`
 - Secondary actions: Edit profile, View audit.
 
@@ -375,7 +375,7 @@ The confirm button text must include the action and target type, for example `Su
 |---------|------|
 | Platform admin primary CTA | `Cadastrar cliente` |
 | Tenant detail activation CTA | `Ativar tenant` |
-| First API key CTA | `Emitir primeira API key` |
+| API key CTA | `Adicionar API key` |
 | Credit grant CTA | `Conceder créditos` |
 | QTAG reservation CTA | `Reservar QTAG para asset` |
 | Empty tenant list heading | `Nenhum cliente B2B cadastrado` |

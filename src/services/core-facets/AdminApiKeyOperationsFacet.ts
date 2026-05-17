@@ -16,7 +16,7 @@ type AdminApiKeyMutationContext = {
     userAgent?: string;
 };
 
-type CreateInitialApiKeyParams = AdminApiKeyMutationContext & {
+type CreateApiKeyParams = AdminApiKeyMutationContext & {
     label: string;
     role?: ApiKeyRole;
     scopes?: string[];
@@ -49,7 +49,7 @@ type ListRequestAuditParams = {
 };
 
 const ADMIN_API_KEY_ACTIONS = {
-    API_KEY_INITIAL_CREATED: 'API_KEY_INITIAL_CREATED',
+    API_KEY_CREATED: 'API_KEY_CREATED',
     API_KEY_ROTATED: 'API_KEY_ROTATED',
     API_KEY_REVOKED: 'API_KEY_REVOKED',
 } as const;
@@ -95,27 +95,19 @@ export class AdminApiKeyOperationsFacet {
     static async createInitialApiKey(
         actor: AdminActorContext,
         tenantId: string,
-        params: CreateInitialApiKeyParams
+        params: CreateApiKeyParams
+    ) {
+        return this.createApiKey(actor, tenantId, params);
+    }
+
+    static async createApiKey(
+        actor: AdminActorContext,
+        tenantId: string,
+        params: CreateApiKeyParams
     ) {
         this.ensurePlatformActor(actor);
         const reason = AdminAuthorizationFacet.requireReason(params.reason || actor.reason);
         await this.ensureTenantAllowsKeys(tenantId);
-
-        const existingActiveKey = await prisma.apiKey.findFirst({
-            where: {
-                tenantId,
-                isActive: true,
-                revokedAt: null,
-            },
-            select: { id: true, keyPrefix: true },
-        });
-
-        if (existingActiveKey) {
-            throw new AdminApiKeyOperationsError(
-                'INITIAL_KEY_ALREADY_EXISTS',
-                'Tenant already has an active API key. Rotate or revoke the existing key first.'
-            );
-        }
 
         const label = normalizeRequiredLabel(params.label);
         const role = params.role || ApiKeyRole.OPERATOR;
@@ -140,7 +132,7 @@ export class AdminApiKeyOperationsFacet {
             await this.createAdminAuditLog(tx, {
                 tenantId,
                 actor,
-                action: ADMIN_API_KEY_ACTIONS.API_KEY_INITIAL_CREATED,
+                action: ADMIN_API_KEY_ACTIONS.API_KEY_CREATED,
                 resourceId: newKey.id,
                 reason,
                 metadata: {

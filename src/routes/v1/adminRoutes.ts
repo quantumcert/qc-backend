@@ -114,6 +114,11 @@ router.get(
     AdminApiKeyController.list
 );
 router.post(
+    '/platform/tenants/:tenantId/api-keys',
+    requireAdminReason,
+    AdminApiKeyController.create
+);
+router.post(
     '/platform/tenants/:tenantId/api-keys/initial',
     requireAdminReason,
     AdminApiKeyController.createInitial

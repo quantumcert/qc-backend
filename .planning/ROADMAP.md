@@ -162,7 +162,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 2. Platform Admin Quantum consegue cadastrar cliente/empresa B2B, criar o Tenant correspondente com slug sugerido automaticamente a partir do nome e editavel, preencher perfil comercial, contatos, plano, limites e status.
 2a. Perfil do tenant é editável no admin e cada criação/alteração mantém um `Asset` canônico `tenant-profile:<tenantId>` com `EventLog` aprovado e `signatureHash` pronto para ancoragem.
 3. Platform Admin consegue ativar, suspender e arquivar tenants com fluxo auditável.
-4. Platform Admin consegue criar, rotacionar e revogar API keys por tenant, com secret hasheado, prefixo visível, escopos canônicos selecionáveis por checkbox, expiração e auditoria; API keys só autenticam quando o tenant está `ACTIVE` e chamadas Diamond são bloqueadas quando a chave não possui o escopo exigido pelo selector.
+4. Platform Admin consegue criar múltiplas API keys por tenant, rotacionar e revogar, com secret hasheado, prefixo visível, escopos canônicos selecionáveis por checkbox, expiração e auditoria; API keys só autenticam quando o tenant está `ACTIVE` e chamadas Diamond/REST são bloqueadas quando a chave não possui o escopo exigido.
 5. A área admin contempla compras, ativações, recebimentos, concessão/revogação/ajuste de créditos e histórico operacional por tenant.
 6. Tenant Admin B2B visualiza apenas dados do próprio tenant: perfil permitido, créditos, compras, API keys, usuários/equipe e status de ativação.
 7. Toda mutação privilegiada usa autorização server-side; esconder menu na UI não conta como controle de segurança.
@@ -188,7 +188,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 **Wave 2** _(blocked on Wave 1 for tenant contracts; plans can run in parallel)_
 
-- [x] 04-03-PLAN.md — API key initial issue/list/rotate/revoke plus sanitized request audit: ADMIN-01, ADMIN-04, ADMIN-08 — DONE 2026-05-17
+- [x] 04-03-PLAN.md — API key create/list/rotate/revoke, scoped route enforcement plus sanitized request audit: ADMIN-01, ADMIN-04, ADMIN-08 — DONE 2026-05-17
 - [x] 04-04-PLAN.md — Credit ledger, purchase/payment/provider boundary and payment queue: ADMIN-05, ADMIN-06, ADMIN-08, ADMIN-09, ADMIN-10 — DONE 2026-05-17
 
 **Wave 3** _(blocked on schema, tenant lifecycle and credit/provider foundation)_
@@ -213,7 +213,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 **Tenant profile Asset decision:** A Fase 4 já cria o primeiro bridge operacional da visão "tudo é Asset": o perfil comercial do tenant deve ser editável no admin, materializado como `Asset` local com `externalId` determinístico `tenant-profile:<tenantId>` e registrado em `EventLog` aprovado para entrar na fila de ancoragem. A Fase 6 continua responsável por generalizar o modelo para perfis B2C, dependentes, pets, objetos, documentos e QTAGs.
 
-**API key scope decision:** Escopos de API key são catálogo canônico, não texto livre. O cadastro no dashboard usa checkboxes, dashboard/backend rejeitam escopos fora do catálogo, defaults dependem da role (`READER`, `OPERATOR`, `ADMIN`) e o `DiamondProxy` aplica a permissão por selector antes da execução.
+**API key scope decision:** Escopos de API key são catálogo canônico, não texto livre. O cadastro no dashboard usa checkboxes, dashboard/backend rejeitam escopos fora do catálogo, defaults dependem da role (`READER`, `OPERATOR`, `ADMIN`) e o runtime aplica a permissão por selector Diamond e por rotas REST mapeadas antes da execução. Tenants podem ter múltiplas chaves ativas separadas por integração/uso operacional.
 
 ### Phase 5: B2B Tenant External Readiness
 

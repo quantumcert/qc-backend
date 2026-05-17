@@ -4,6 +4,7 @@ import { Router } from 'express';
 import { DeviceController } from '../../controllers/DeviceController';
 import { requireApiKey, optionalApiKey } from '../../middleware/apiKeyAuth';
 import { requireAdmin } from '../../middleware/rbacGuard';
+import { requireApiKeyScope } from '../../middleware/apiKeyScopeGuard';
 import { tenantRateLimiter } from '../../middleware/rateLimiter';
 import { requireIdempotency } from '../../middleware/idempotencyGuard';
 import rateLimit from 'express-rate-limit';
@@ -71,7 +72,7 @@ const nfcValidateLimiter = rateLimit({
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post('/', requireApiKey, requireIdempotency, tenantRateLimiter, requireAdmin, DeviceController.register);
+router.post('/', requireApiKey, requireIdempotency, tenantRateLimiter, requireAdmin, requireApiKeyScope('qtags:write'), DeviceController.register);
 
 /**
  * @openapi

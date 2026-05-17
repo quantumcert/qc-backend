@@ -110,7 +110,7 @@ describe('AdminApiKeyOperationsFacet', () => {
     }));
   });
 
-  it('creates the initial tenant API key only for an active tenant and returns raw key once', async () => {
+  it('creates a tenant API key only for an active tenant and returns raw key once', async () => {
     mockTenant.findUnique.mockResolvedValue({
       id: 'tenant-b2b',
       isActive: true,
@@ -149,9 +149,53 @@ describe('AdminApiKeyOperationsFacet', () => {
       data: expect.objectContaining({
         tenantId: 'tenant-b2b',
         actorUserId: 'user-platform',
-        action: 'API_KEY_INITIAL_CREATED',
+        action: 'API_KEY_CREATED',
         resourceType: 'ApiKey',
         reason: 'primeira chave do tenant aprovada',
+      }),
+    }));
+  });
+
+  it('creates additional tenant API keys without forcing rotation or revocation of existing active keys', async () => {
+    mockTenant.findUnique.mockResolvedValue({
+      id: 'tenant-b2b',
+      isActive: true,
+      status: TenantStatus.ACTIVE,
+    });
+    mockApiKey.findFirst.mockResolvedValue(apiKeyFixture({ id: 'api-key-existing' }));
+    mockApiKey.create.mockResolvedValue(apiKeyFixture({
+      id: 'api-key-new',
+      label: 'Portal read integration',
+      role: ApiKeyRole.READER,
+      scopes: ['assets:read', 'public:read'],
+    }));
+
+    const result = await AdminApiKeyOperationsFacet.createApiKey(platformActor, 'tenant-b2b', {
+      label: 'Portal read integration',
+      role: ApiKeyRole.READER,
+      scopes: ['assets:read', 'public:read'],
+      reason: 'nova integracao de consulta liberada',
+    });
+
+    expect(result).toMatchObject({
+      id: 'api-key-new',
+      rawKey: 'qc_test_raw_secret_value',
+      keyPrefix: 'qc_test_prefix01',
+      role: ApiKeyRole.READER,
+    });
+    expect(mockApiKey.update).not.toHaveBeenCalled();
+    expect(mockApiKey.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        tenantId: 'tenant-b2b',
+        label: 'Portal read integration',
+        role: ApiKeyRole.READER,
+        scopes: ['assets:read', 'public:read'],
+      }),
+    }));
+    expect(mockAdminAuditLog.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        action: 'API_KEY_CREATED',
+        reason: 'nova integracao de consulta liberada',
       }),
     }));
   });
