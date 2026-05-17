@@ -602,7 +602,9 @@ export class AdminTenantOperationsFacet {
 }
 
 function buildTenantWhere(params: TenantListParams): Prisma.TenantWhereInput {
-    const where: Prisma.TenantWhereInput = {};
+    const where: Prisma.TenantWhereInput = {
+        status: { not: TenantStatus.ARCHIVED },
+    };
 
     if (params.status) where.status = params.status;
     if (params.planTier) where.planTier = params.planTier;

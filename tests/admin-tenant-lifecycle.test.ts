@@ -503,6 +503,24 @@ describe('AdminTenantOperationsFacet', () => {
     expect(mockAdminAuditLog.create).not.toHaveBeenCalled();
   });
 
+  it('excludes archived tenants from the default admin listing', async () => {
+    mockTenant.findMany.mockResolvedValue([]);
+    mockTenant.count.mockResolvedValue(0);
+
+    await AdminTenantOperationsFacet.listTenants(platformActor, {});
+
+    expect(mockTenant.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        status: { not: TenantStatus.ARCHIVED },
+      }),
+    }));
+    expect(mockTenant.count).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        status: { not: TenantStatus.ARCHIVED },
+      }),
+    }));
+  });
+
   it('denies Tenant Admin cross-tenant lifecycle operations', async () => {
     await expect(
       AdminTenantOperationsFacet.listTenants(tenantAdminActor, {})
