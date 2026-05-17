@@ -24,6 +24,7 @@ import {
     PREVIOUS_PLATFORM_TENANT_SLUG,
 } from '../config/platformTenant';
 import { DEFAULT_TENANT_TARGET_CHAIN } from '../config/tenantChains';
+import { ensureConfiguredLocalApiKey } from './bootstrap-configured-api-key';
 
 const prisma = new PrismaClient();
 
@@ -221,6 +222,22 @@ async function main() {
         console.log(`  ║  Role: ${result.role}`);
         console.log(`  ║  Tenant: ${platformTenant.name} (${platformTenant.id})`);
         console.log('  ╚═══════════════════════════════════════════════════════╝');
+    }
+
+    const configuredLocalKey = await ensureConfiguredLocalApiKey(prisma, {
+        tenantId: platformTenant.id,
+        rawKey: process.env.DOCS_DEFAULT_API_KEY,
+        label: 'Local Dashboard/Docs API Key',
+    });
+
+    if (configuredLocalKey.created) {
+        console.log(`  ✅ Local Dashboard/Docs API Key registered: ${configuredLocalKey.keyPrefix}...`);
+    } else if (configuredLocalKey.reason === 'already-present') {
+        console.log(`  ✅ Local Dashboard/Docs API Key already valid: ${configuredLocalKey.keyPrefix}...`);
+    } else if (configuredLocalKey.reason === 'missing-key') {
+        console.log('  ℹ️  DOCS_DEFAULT_API_KEY not configured; skipping local API key registration.');
+    } else if (configuredLocalKey.reason === 'production') {
+        console.log('  ℹ️  Production runtime; skipping local API key registration.');
     }
 
     // ─── Step 4: Create a Sample FREE Tenant ──────────────
