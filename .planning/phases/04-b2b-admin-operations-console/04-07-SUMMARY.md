@@ -9,6 +9,7 @@
 - Corrigida a sobreposição do último select na aba `Team` do Tenant Detail.
 - Adicionada rota `/admin/tenant` com visão restrita de Tenant Admin.
 - A camada tRPC do dashboard agora resolve o tenant do contexto e rejeita leitura cross-tenant por parâmetro arbitrário.
+- A criação/edição de usuário na aba `Team` agora pode sincronizar o usuário local do `qc-dashboard` com metadata `tenantRole`/`tenantId` e senha inicial/redefinição para acesso ao `/admin/tenant`.
 - Adicionada fila `/admin/platform/queues/activations` para tenants pendentes de ativação, com filtros, paginação e estado vazio.
 - Adicionado smoke test operacional cobrindo criação/ativação de tenant, primeira API key, grant de créditos, usuário do tenant, QTAG reserve/queue e request audit.
 - Atualizados testes de identidade de perfil no dashboard para o contrato canônico `users.upsertB2C`.
@@ -25,6 +26,7 @@
 ### qc-dashboard
 
 - `pnpm exec vitest run server/admin-e2e.test.ts server/admin.tenant-scope.test.ts` - passou, 4 testes.
+- `pnpm exec vitest run server/admin-e2e.test.ts server/admin.tenant-scope.test.ts server/auth.login.test.ts` - passou, 8 testes após sincronização de usuário local Tenant Admin.
 - `pnpm exec vitest run server/profileIdentityAnchoring.test.ts server/admin.tenant-scope.test.ts` - passou, 25 testes.
 - `pnpm test` - passou, 40 arquivos, 172 testes e 3 ignorados.
 - `pnpm check` - passou.

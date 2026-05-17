@@ -86,6 +86,7 @@ Validar o console operacional B2B, Tenant Quantum, backfill B2C, usuários/equip
 ### 7. Tenant Admin
 
 - [ ] Entrar com usuário Tenant Admin de tenant B2B.
+- [ ] Criar ou editar esse usuário na aba `Team` informando senha inicial/redefinição do dashboard.
 - [ ] Acessar `/admin/tenant`.
 - [ ] Confirmar que apenas dados do próprio tenant aparecem.
 - [ ] Confirmar que Tenant Admin não consegue enviar `tenantId` arbitrário para ler outro tenant.
