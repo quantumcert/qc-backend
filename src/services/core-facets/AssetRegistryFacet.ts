@@ -12,6 +12,7 @@
 import crypto from 'crypto';
 import prisma from '../../config/prisma';
 import { AuditActions, ResourceTypes } from '../../types';
+import { buildPublicVerifyUrl } from '../../utils/publicVerifyUrl';
 import { AnchorQueueService } from '../AnchorQueueService';
 import { AssetAnchoringService } from '../AssetAnchoringService';
 
@@ -71,8 +72,7 @@ export class AssetRegistryFacet {
             // Generate a secure UUID for the Asset to build the public URL synchronously
             const { v4: uuidv4 } = require('uuid');
             const id = uuidv4();
-            const baseUrl = process.env.PUBLIC_URL_BASE || 'https://api.domain.com';
-            const publicUrl = `${baseUrl}/v1/public/asset/${id}`;
+            const publicUrl = buildPublicVerifyUrl(id);
 
             const asset = await tx.asset.create({
                 data: {

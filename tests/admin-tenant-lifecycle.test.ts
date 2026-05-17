@@ -105,7 +105,7 @@ describe('AdminTenantOperationsFacet', () => {
       id: 'asset-tenant-profile',
       tenantId: 'tenant-b2b',
       externalId: 'tenant-profile:tenant-b2b',
-      publicUrl: 'https://api.domain.com/v1/public/asset/asset-tenant-profile',
+      publicUrl: 'http://localhost:3001/public/verify/asset-tenant-profile',
       status: 'ACTIVE',
       createdAt: new Date('2026-05-17T00:00:00.000Z'),
       updatedAt: new Date('2026-05-17T00:00:00.000Z'),
@@ -123,6 +123,8 @@ describe('AdminTenantOperationsFacet', () => {
   });
 
   it('creates a draft tenant with normalized commercial profile and admin audit', async () => {
+    const previousPublicConsultationUrl = process.env.PUBLIC_CONSULTATION_URL_BASE;
+    process.env.PUBLIC_CONSULTATION_URL_BASE = 'https://consulta.quantumcert.com.br/';
     mockTenant.findUnique.mockResolvedValue(null);
     mockTenant.create.mockResolvedValue({
       id: 'tenant-b2b',
@@ -172,6 +174,13 @@ describe('AdminTenantOperationsFacet', () => {
         isActive: false,
       }),
     }));
+    expect(mockAsset.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: expect.objectContaining({
+        publicUrl: expect.stringMatching(
+          /^https:\/\/consulta\.quantumcert\.com\.br\/public\/verify\/[0-9a-f-]+$/
+        ),
+      }),
+    }));
     expect(mockTenantCommercialProfile.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
         tenantId: 'tenant-b2b',
@@ -188,6 +197,11 @@ describe('AdminTenantOperationsFacet', () => {
         reason: 'cadastrar cliente b2b aprovado',
       }),
     }));
+    if (previousPublicConsultationUrl === undefined) {
+      delete process.env.PUBLIC_CONSULTATION_URL_BASE;
+    } else {
+      process.env.PUBLIC_CONSULTATION_URL_BASE = previousPublicConsultationUrl;
+    }
   });
 
   it('persists an explicit tenant target chain when Platform Admin selects a non-default chain', async () => {
@@ -261,6 +275,7 @@ describe('AdminTenantOperationsFacet', () => {
       status: TenantStatus.ACTIVE,
       isActive: true,
     });
+    mockAsset.findUnique.mockResolvedValue({ id: 'asset-tenant-profile' });
     mockTenantCommercialProfile.upsert.mockResolvedValue({
       id: 'profile-b2b',
       tenantId: 'tenant-b2b',
@@ -327,6 +342,7 @@ describe('AdminTenantOperationsFacet', () => {
           assetKind: 'TENANT_PROFILE',
         }),
         publicDataKeys: ['assetKind', 'tenant'],
+        publicUrl: 'http://localhost:3001/public/verify/asset-tenant-profile',
       }),
     }));
     expect(mockEventLog.create).toHaveBeenCalledWith(expect.objectContaining({

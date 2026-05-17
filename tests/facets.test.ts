@@ -87,7 +87,7 @@ const ASSET_PAYLOAD = {
 
 const BICYCLE = {
     id: 'asset_bike_001', tenantId: 'tenant_001', externalId: 'EXT-001',
-    status: 'ACTIVE', publicUrl: 'https://api.domain.com/v1/public/asset/123',
+    status: 'ACTIVE', publicUrl: 'http://localhost:3001/public/verify/asset_bike_001',
     metadata: { brand: 'Canyon', model: 'Neuron' },
     publicDataKeys: ['brand'],
     createdAt: new Date('2026-02-16'), updatedAt: new Date('2026-02-16'),
@@ -101,6 +101,8 @@ describe('FACETA 1/3: AssetRegistryFacet — Criação e Ciclo de Vida', () => {
     beforeEach(() => { vi.clearAllMocks(); });
 
     it('✅ Cria Asset com tenant e owners', async () => {
+        const previousPublicConsultationUrl = process.env.PUBLIC_CONSULTATION_URL_BASE;
+        process.env.PUBLIC_CONSULTATION_URL_BASE = 'https://consulta.quantumcert.com.br/';
         mockAsset.create.mockResolvedValue(BICYCLE);
         mockAuditLog.create.mockResolvedValue({ id: 'audit_001' });
 
@@ -109,6 +111,13 @@ describe('FACETA 1/3: AssetRegistryFacet — Criação e Ciclo de Vida', () => {
         expect(result).toBeDefined();
         expect(result.status).toBe('ACTIVE');
         expect(mockAsset.create).toHaveBeenCalledOnce();
+        expect(mockAsset.create).toHaveBeenCalledWith(expect.objectContaining({
+            data: expect.objectContaining({
+                publicUrl: expect.stringMatching(
+                    /^https:\/\/consulta\.quantumcert\.com\.br\/public\/verify\/[0-9a-f-]+$/
+                ),
+            }),
+        }));
         expect(mockAuditLog.create).toHaveBeenCalledOnce();
         expect(mockEventLog.create).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -121,6 +130,11 @@ describe('FACETA 1/3: AssetRegistryFacet — Criação e Ciclo de Vida', () => {
                 }),
             }),
         );
+        if (previousPublicConsultationUrl === undefined) {
+            delete process.env.PUBLIC_CONSULTATION_URL_BASE;
+        } else {
+            process.env.PUBLIC_CONSULTATION_URL_BASE = previousPublicConsultationUrl;
+        }
     });
 
     it('✅ Atualiza status do Asset (State Transition)', async () => {

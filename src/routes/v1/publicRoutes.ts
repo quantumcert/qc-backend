@@ -205,7 +205,7 @@ router.post('/asset/:id/contact', BlindContactController.submitContact);
  *               verified: true
  *               assetId: "uuid-do-ativo"
  *               assetStatus: "ACTIVE"
- *               publicUrl: "https://api.domain.com/v1/public/asset/uuid-do-ativo"
+ *               publicUrl: "https://app.quantumcert.com.br/public/verify/uuid-do-ativo"
  *               dltTxId: "STELLAR-TX"
  *               chain: "STELLAR"
  *               anchoredAt: "2026-05-13T22:00:00.000Z"

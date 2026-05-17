@@ -15,6 +15,7 @@ import {
     TENANT_TARGET_CHAINS,
     type TenantTargetChain,
 } from '../../config/tenantChains';
+import { buildPublicVerifyUrl } from '../../utils/publicVerifyUrl';
 import { AnchorQueueService } from '../AnchorQueueService';
 import { AssetAnchoringService } from '../AssetAnchoringService';
 import { AdminAuthorizationFacet } from './AdminAuthorizationFacet';
@@ -501,7 +502,16 @@ export class AdminTenantOperationsFacet {
         }
     ) {
         const externalId = buildTenantProfileExternalId(params.tenant.id);
-        const assetId = randomUUID();
+        const existingProfileAsset = await tx.asset.findUnique({
+            where: {
+                tenantId_externalId: {
+                    tenantId: params.tenant.id,
+                    externalId,
+                },
+            },
+            select: { id: true },
+        });
+        const assetId = existingProfileAsset?.id ?? randomUUID();
         const metadata = buildTenantProfileAssetMetadata(params.tenant, params.commercialProfile);
 
         const profileAsset = await tx.asset.upsert({
@@ -524,6 +534,7 @@ export class AdminTenantOperationsFacet {
                 status: AssetStatus.ACTIVE,
                 metadata,
                 publicDataKeys: TENANT_PROFILE_PUBLIC_DATA_KEYS,
+                publicUrl: buildPublicAssetUrl(assetId),
             },
         });
 
@@ -669,8 +680,7 @@ function buildTenantProfileExternalId(tenantId: string): string {
 }
 
 function buildPublicAssetUrl(assetId: string): string {
-    const baseUrl = process.env.PUBLIC_URL_BASE || 'https://api.domain.com';
-    return `${baseUrl}/v1/public/asset/${assetId}`;
+    return buildPublicVerifyUrl(assetId);
 }
 
 function buildTenantProfileAssetMetadata(tenant: any, commercialProfile: any): Prisma.InputJsonObject {
