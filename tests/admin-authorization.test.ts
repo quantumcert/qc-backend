@@ -60,7 +60,7 @@ describe('AdminAuthorizationFacet', () => {
           tenantId: 'tenant-quantum',
           role: TenantMembershipRole.PLATFORM_ADMIN,
           status: TenantMembershipStatus.ACTIVE,
-          tenant: { id: 'tenant-quantum', slug: 'quantum' },
+          tenant: { id: 'tenant-quantum', slug: 'quantum-cert-platform' },
         },
       ],
     });
@@ -93,7 +93,7 @@ describe('AdminAuthorizationFacet', () => {
             tenantId: 'tenant-quantum',
             role: TenantMembershipRole.PLATFORM_ADMIN,
             status: TenantMembershipStatus.ACTIVE,
-            tenant: { id: 'tenant-quantum', slug: 'quantum' },
+            tenant: { id: 'tenant-quantum', slug: 'quantum-cert-platform' },
           },
         ],
       });

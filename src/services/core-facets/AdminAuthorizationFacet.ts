@@ -5,8 +5,7 @@ import {
     TenantUserStatus,
 } from '@prisma/client';
 import { AdminActorContext } from '../../types';
-
-const DEFAULT_PLATFORM_TENANT_SLUG = 'quantum';
+import { getPlatformTenantSlug } from '../../config/platformTenant';
 
 type MembershipWithTenant = {
     tenantId: string;
@@ -69,9 +68,7 @@ export class AdminAuthorizationFacet {
         platformTenantSlug?: string;
     }): Promise<AdminActorContext> {
         const actor = await this.resolveAdminActor(params);
-        const platformTenantSlug = params.platformTenantSlug
-            || process.env.QUANTUM_TENANT_SLUG
-            || DEFAULT_PLATFORM_TENANT_SLUG;
+        const platformTenantSlug = params.platformTenantSlug || getPlatformTenantSlug();
 
         const membership = actor.memberships.find((item) =>
             item.status === TenantMembershipStatus.ACTIVE
