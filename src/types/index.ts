@@ -7,9 +7,9 @@
 // ═══════════════════════════════════════════════════════════
 
 import { Request } from 'express';
-import { ApiKeyRole, PlanTier, TapVerdict } from '@prisma/client';
+import { ApiKeyRole, PlanTier, TapVerdict, TenantMembershipRole } from '@prisma/client';
 
-export { ApiKeyRole, PlanTier, TapVerdict };
+export { ApiKeyRole, PlanTier, TapVerdict, TenantMembershipRole };
 
 // ─── AUTHENTICATED REQUEST (API Key) ────────────────────
 // Extended Request carrying resolved Tenant + API Key context.
@@ -19,6 +19,20 @@ export interface AuthenticatedRequest extends Request {
     apiKeyRole?: ApiKeyRole;
     apiKeyPrefix?: string;
     agentId?: string; // set by requireAgentSignature when request comes from a machine identity
+    adminActor?: AdminActorContext;
+    adminScope?: AdminScope;
+    correlationId?: string;
+}
+
+export type AdminScope = 'PLATFORM' | 'TENANT';
+
+export interface AdminActorContext {
+    actorUserId: string;
+    actorTenantId: string;
+    tenantId?: string;
+    role: TenantMembershipRole;
+    reason?: string;
+    correlationId?: string;
 }
 
 // ─── PUBLIC REQUEST ─────────────────────────────────────

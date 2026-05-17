@@ -1,10 +1,32 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  ApiKeyRole,
   Prisma,
+  TenantMembershipStatus,
   TenantMembershipRole,
   TenantStatus,
+  TenantUserStatus,
   TenantUserRole,
 } from '@prisma/client';
+
+const { mockTenantUser } = vi.hoisted(() => ({
+  mockTenantUser: {
+    findUnique: vi.fn(),
+  },
+}));
+
+vi.mock('../src/config/prisma', () => ({
+  default: {
+    tenantUser: mockTenantUser,
+  },
+}));
+
+import {
+  AdminAuthorizationError,
+  AdminAuthorizationFacet,
+} from '../src/services/core-facets/AdminAuthorizationFacet';
+import { requireAdminReason, requirePlatformAdmin } from '../src/middleware/platformAdminAuth';
+import { AuthenticatedRequest } from '../src/types';
 
 describe('Phase 4 admin schema foundation', () => {
   it('exposes canonical tenant admin models and roles', () => {
@@ -22,3 +44,116 @@ describe('Phase 4 admin schema foundation', () => {
     expect(TenantMembershipRole.TENANT_ADMIN).toBe('TENANT_ADMIN');
   });
 });
+
+describe('AdminAuthorizationFacet', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('resolves Quantum Platform Admin from canonical membership', async () => {
+    mockTenantUser.findUnique.mockResolvedValue({
+      id: 'user-platform',
+      tenantId: 'tenant-quantum',
+      status: TenantUserStatus.ACTIVE,
+      memberships: [
+        {
+          tenantId: 'tenant-quantum',
+          role: TenantMembershipRole.PLATFORM_ADMIN,
+          status: TenantMembershipStatus.ACTIVE,
+          tenant: { id: 'tenant-quantum', slug: 'quantum' },
+        },
+      ],
+    });
+
+    const actor = await AdminAuthorizationFacet.requirePlatformAdmin({
+      actorUserId: 'user-platform',
+      reason: 'activate tenant',
+      correlationId: 'corr-1',
+    });
+
+    expect(actor).toMatchObject({
+      actorUserId: 'user-platform',
+      actorTenantId: 'tenant-quantum',
+      role: TenantMembershipRole.PLATFORM_ADMIN,
+      reason: 'activate tenant',
+      correlationId: 'corr-1',
+    });
+  });
+
+  it('allows Tenant Admin only inside its own tenant', async () => {
+    mockTenantUser.findUnique.mockResolvedValue({
+      id: 'user-tenant-admin',
+      tenantId: 'tenant-a',
+      status: TenantUserStatus.ACTIVE,
+      memberships: [
+        {
+          tenantId: 'tenant-a',
+          role: TenantMembershipRole.TENANT_ADMIN,
+          status: TenantMembershipStatus.ACTIVE,
+          tenant: { id: 'tenant-a', slug: 'tenant-a' },
+        },
+      ],
+    });
+
+    await expect(
+      AdminAuthorizationFacet.requireTenantAdmin({
+        actorUserId: 'user-tenant-admin',
+        targetTenantId: 'tenant-b',
+      })
+    ).rejects.toMatchObject({ code: 'TENANT_ADMIN_REQUIRED' });
+
+    await expect(
+      AdminAuthorizationFacet.requireTenantAdmin({
+        actorUserId: 'user-tenant-admin',
+        targetTenantId: 'tenant-a',
+      })
+    ).resolves.toMatchObject({
+      actorUserId: 'user-tenant-admin',
+      tenantId: 'tenant-a',
+      role: TenantMembershipRole.TENANT_ADMIN,
+    });
+  });
+
+  it('does not treat ApiKeyRole.ADMIN as Quantum Platform Admin', async () => {
+    const req = {
+      apiKeyRole: ApiKeyRole.ADMIN,
+      headers: {},
+      body: { reason: 'cross-tenant operation' },
+    } as AuthenticatedRequest;
+    const res = createResponseMock();
+    const next = vi.fn();
+
+    await requirePlatformAdmin(req, res as any, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+      code: 'ADMIN_ACTOR_REQUIRED',
+    }));
+  });
+
+  it('requires a reason for privileged admin mutations', () => {
+    const req = { headers: {}, body: {} } as AuthenticatedRequest;
+    const res = createResponseMock();
+    const next = vi.fn();
+
+    requireAdminReason(req, res as any, next);
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+      code: 'ADMIN_REASON_REQUIRED',
+    }));
+    expect(() => AdminAuthorizationFacet.requireReason('  ')).toThrow(AdminAuthorizationError);
+  });
+});
+
+function createResponseMock() {
+  const res = {
+    status: vi.fn(),
+    json: vi.fn(),
+  };
+  res.status.mockReturnValue(res);
+  res.json.mockReturnValue(res);
+  return res;
+}

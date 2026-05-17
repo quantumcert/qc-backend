@@ -43,7 +43,9 @@ export const requireRole = (minimumRole: ApiKeyRole) => {
 };
 
 // ─── REQUIRE ADMIN ──────────────────────────────────────
-// Shorthand for requireRole('ADMIN')
+// Shorthand for requireRole('ADMIN').
+// This is a tenant API-key role. It does not grant Quantum Platform Admin
+// privileges for Phase 4 operational admin routes.
 export const requireAdmin = requireRole('ADMIN' as ApiKeyRole);
 
 // ─── REQUIRE OPERATOR ───────────────────────────────────
