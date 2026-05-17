@@ -351,7 +351,7 @@ export class AdminApiKeyOperationsFacet {
         const skip = (page - 1) * limit;
         const where = buildRequestAuditWhere(tenantId, params);
 
-        const [requests, total] = await Promise.all([
+        const [requests, total, selectorRows] = await Promise.all([
             prisma.apiRequestAudit.findMany({
                 where,
                 skip,
@@ -360,10 +360,20 @@ export class AdminApiKeyOperationsFacet {
                 orderBy: { createdAt: 'desc' },
             }),
             prisma.apiRequestAudit.count({ where }),
+            prisma.apiRequestAudit.findMany({
+                where: {
+                    tenantId,
+                    selector: { not: null },
+                },
+                distinct: ['selector'],
+                select: { selector: true },
+                orderBy: { selector: 'asc' },
+            }),
         ]);
 
         return {
             requests,
+            selectors: normalizeRequestAuditSelectors(selectorRows),
             pagination: {
                 page,
                 limit,
@@ -495,6 +505,12 @@ function buildRequestAuditWhere(
     }
 
     return where;
+}
+
+function normalizeRequestAuditSelectors(rows: Array<{ selector: string | null }>): string[] {
+    return Array.from(
+        new Set(rows.map((row) => row.selector?.trim()).filter(Boolean) as string[])
+    ).sort((current, next) => current.localeCompare(next));
 }
 
 export class AdminApiKeyOperationsError extends Error {

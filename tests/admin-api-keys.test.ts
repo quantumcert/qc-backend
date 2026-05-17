@@ -402,25 +402,32 @@ describe('AdminApiKeyOperationsFacet', () => {
   it('lists sanitized API request audit records for a tenant', async () => {
     const createdAt = new Date('2026-01-03T00:00:00.000Z');
     mockTenant.findUnique.mockResolvedValue({ id: 'tenant-b2b' });
-    mockApiRequestAudit.findMany.mockResolvedValue([
-      {
-        id: 'audit-1',
-        tenantId: 'tenant-b2b',
-        apiKeyId: 'api-key-1',
-        keyPrefix: 'qc_test_prefix01',
-        role: ApiKeyRole.OPERATOR,
-        method: 'POST',
-        path: '/api/v1/diamond',
-        selector: 'asset.create',
-        statusCode: 201,
-        latencyMs: 34,
-        correlationId: 'corr-audit',
-        sanitizedError: null,
-        ipAddress: '127.0.0.1',
-        userAgent: 'vitest',
-        createdAt,
-      },
-    ]);
+    mockApiRequestAudit.findMany
+      .mockResolvedValueOnce([
+        {
+          id: 'audit-1',
+          tenantId: 'tenant-b2b',
+          apiKeyId: 'api-key-1',
+          keyPrefix: 'qc_test_prefix01',
+          role: ApiKeyRole.OPERATOR,
+          method: 'POST',
+          path: '/api/v1/diamond',
+          selector: 'asset.create',
+          statusCode: 201,
+          latencyMs: 34,
+          correlationId: 'corr-audit',
+          sanitizedError: null,
+          ipAddress: '127.0.0.1',
+          userAgent: 'vitest',
+          createdAt,
+        },
+      ])
+      .mockResolvedValueOnce([
+        { selector: 'event.recordAuthenticated' },
+        { selector: 'asset.create' },
+        { selector: null },
+        { selector: 'asset.list' },
+      ]);
     mockApiRequestAudit.count.mockResolvedValue(1);
 
     const result = await AdminApiKeyOperationsFacet.listRequestAudit(platformActor, 'tenant-b2b', {
@@ -437,6 +444,11 @@ describe('AdminApiKeyOperationsFacet', () => {
       statusCode: 201,
       correlationId: 'corr-audit',
     });
+    expect(result.selectors).toEqual([
+      'asset.create',
+      'asset.list',
+      'event.recordAuthenticated',
+    ]);
     expect(mockApiRequestAudit.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({
         tenantId: 'tenant-b2b',
@@ -448,6 +460,15 @@ describe('AdminApiKeyOperationsFacet', () => {
         body: expect.anything(),
         headers: expect.anything(),
       }),
+    }));
+    expect(mockApiRequestAudit.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: {
+        tenantId: 'tenant-b2b',
+        selector: { not: null },
+      },
+      distinct: ['selector'],
+      select: { selector: true },
+      orderBy: { selector: 'asc' },
     }));
   });
 });
