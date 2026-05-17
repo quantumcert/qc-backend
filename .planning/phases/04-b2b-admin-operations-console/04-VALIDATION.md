@@ -5,7 +5,7 @@ status: implementation_complete_human_uat_pending
 nyquist_compliant: true
 wave_0_complete: true
 created: 2026-05-17
-last_validated: 2026-05-17T11:12:24Z
+last_validated: 2026-05-17T11:16:59Z
 ---
 
 # Phase 04 - Validation Strategy
@@ -114,6 +114,33 @@ last_validated: 2026-05-17T11:12:24Z
 - `/admin/tenant` -> visão Tenant Admin carrega dados somente do tenant resolvido pelo contexto.
 - `/admin/platform/queues/activations` -> fila de ativações renderiza filtros, estado vazio e paginação sem overflow horizontal.
 - `gsd-sdk query audit-uat --raw` -> 0 outstanding verification debt items.
+
+---
+
+## Validation Audit 2026-05-17T11:16:59Z
+
+| Metric | Count |
+|--------|-------|
+| Acceptance criteria audited | 21 |
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+| New test files generated | 0 |
+
+### Supplemental Coverage Confirmed
+
+| Requirement area | Existing automated coverage |
+|------------------|-----------------------------|
+| Tenant Quantum immutable seed and Stellar default | `tests/admin-authorization.test.ts`, `tests/tenant-user-contracts.test.ts` |
+| Tenant profile Asset, uppercase public external ID, CNPJ key metadata and public links | `tests/admin-tenant-lifecycle.test.ts`, `../qc-dashboard/client/src/pages/admin/platform/tenantName.test.ts`, `../qc-dashboard/client/src/pages/admin/platform/tenantProfileAssetLinks.test.ts`, `../qc-dashboard/server/verify.asset.test.ts` |
+| API key canonical scopes, selector guard and dynamic audit filters | `tests/admin-api-keys.test.ts`, `tests/api-key-scopes.test.ts`, `tests/api-key-scope-guard.test.ts`, `../qc-dashboard/server/admin.api-keys.test.ts`, `../qc-dashboard/client/src/pages/admin/platform/apiRequestAuditSelectors.test.ts` |
+| Tenant Admin own-tenant read-only visibility and cross-tenant injection block | `tests/admin-tenant-lifecycle.test.ts`, `tests/admin-api-keys.test.ts`, `tests/credit-ledger.test.ts`, `../qc-dashboard/server/admin.tenant-scope.test.ts` |
+| QTAG queue, status transition, dispatch tracking and release-before-activation flow | `tests/qtag-fulfillment.test.ts`, `tests/commissioning.test.ts`, `../qc-dashboard/server/admin.qtags.test.ts`, `../qc-dashboard/server/admin-e2e.test.ts` |
+| B2C canonical user/profile Asset, CPF trace key and backfill execution report | `tests/tenant-user-contracts.test.ts`, `tests/tenant-backfill.test.ts`, `../qc-dashboard/server/profileIdentityAnchoring.test.ts` |
+| Public verification branding, tenant display name and generic public contribution copy | `../qc-dashboard/server/verify.asset.test.ts`, `../qc-dashboard/client/src/lib/publicVerifyCopy.test.ts` |
+| Development status bar footer clearance and non-overlap regression | `../qc-dashboard/client/src/lib/devStatusBarLayout.test.ts` |
+
+No Nyquist gap required new tests in this audit pass. Manual-only items remain limited to real environment approval: backfill execution approval, final Transfero/provider contract and physical QTAG commissioning with `qc-record-module`.
 
 ---
 
