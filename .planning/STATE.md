@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase 04 approved for planning — B2B admin operations console
-last_updated: "2026-05-17T05:11:39Z"
+status: Phase 04 UI-SPEC approved — ready for plan-phase
+last_updated: "2026-05-17T06:07:39Z"
 progress:
   total_phases: 9
   completed_phases: 3
@@ -24,20 +24,20 @@ _Initialized: 2026-05-08_
 
 **Workspace Scope**: Produto multi-repo — `qc-backend`, `qc-dashboard`, `qc-home`, `qc-record-module`; decisões de negócio em `qc-business`.
 
-**Current Focus**: Phase 4 — B2B Admin Operations Console (approved for planning)
+**Current Focus**: Phase 4 — B2B Admin Operations Console (UI-SPEC approved; ready for plan-phase)
 
 ---
 
 ## Current Position
 
-Phase: 04 (b2b-admin-operations-console) — APPROVED FOR PLANNING
+Phase: 04 (b2b-admin-operations-console) — UI-SPEC APPROVED
 Plan: TBD
 | Field | Value |
 |-------|-------|
 | Milestone | TBD |
 | Phase | 4 — B2B Admin Operations Console |
 | Plan | TBD |
-| Status | Approved for planning after B2B/admin operations decision on 2026-05-17 |
+| Status | UI-SPEC approved after Visual Companion review on 2026-05-17; ready for plan-phase |
 
 **Progress**:
 
@@ -45,7 +45,7 @@ Plan: TBD
 Phase 1 [██████████] 100% (Plan 01: SEC-01/02/03 | Plan 02: SEC-04/05/06 | Plan 03: CORE-01/02/03/04 | Plan 04: CORE-05/06)
 Phase 2 [██████████] 100% (3/3 plans complete; backend verified; physical QTAG UAT blocked)
 Phase 3 [██████████] 100% (3/3 plans complete; Stellar UAT passed; PRs merged)
-Phase 4 [          ] 0% (B2B Admin Operations Console — approved for planning)
+Phase 4 [          ] 0% (B2B Admin Operations Console — UI-SPEC approved, ready for plan-phase)
 Phase 5 [          ] 0% (Unified Tenant Identity + Data Backfill — approved after Phase 4)
 Phase 6 [          ] 0% (On-chain Asset Identity + Provenance — approved after Phase 5)
 Phase 7 [          ] 0% (Scale + Observability — deferred behind identity/on-chain transition)
@@ -157,7 +157,7 @@ Phase 9 [          ] 0% (Specialized Domain Facets)
 
 **Phase 3 merge**: 2026-05-16 — backend PR #23 and dashboard PR #23 merged to `main`.
 
-**Next action**: Plan Phase 4 — B2B Admin Operations Console.
+**Next action**: Plan Phase 4 — B2B Admin Operations Console using `.planning/phases/04-b2b-admin-operations-console/04-UI-SPEC.md`.
 
 **Context for next session**:
 
