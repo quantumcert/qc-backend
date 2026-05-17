@@ -1,7 +1,7 @@
 # ROADMAP — Quantum Cert Backend
 
 _Generated: 2026-05-08 | Granularity: standard | Mode: mvp_
-_Coverage: 36/36 v1 requirements mapped + Phase 6 (domain facets)_
+_Coverage: 52 requirements mapped (41 original/current + 11 architecture transition requirements)_
 _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 ---
@@ -13,9 +13,11 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 | Phase 1   | Milestone #1     | #5, #7, #8 |
 | Phase 2   | Milestone #2     | #12, #2    |
 | Phase 3   | Milestone #3     | #11        |
-| Phase 4   | Milestone #4     | #13        |
-| Phase 5   | Milestone #5     | #3         |
-| Phase 6   | Milestone #6     | #10, #15   |
+| Phase 4   | TBD              | TBD        |
+| Phase 5   | TBD              | TBD        |
+| Phase 6   | Milestone #4     | #13        |
+| Phase 7   | Milestone #5     | #3         |
+| Phase 8   | Milestone #6     | #10, #15   |
 
 > Each GSD plan within a phase maps to a GitHub Issue (existing or new).
 > Branch naming: `{issue-number}-{type}-{description}`
@@ -28,9 +30,11 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 - [x] **Phase 1: Core Gap Closure + Production Hardening** _(4/4 plans complete)_ — Fechar falhas de segurança críticas e conectar features inacessíveis antes de qualquer expansão
 - [ ] **Phase 2: Document Verification + QTAG Production** _(3/3 plans complete; human UAT pending)_ — Verificação pública de documentos e NFC commissioning funcionando em produção
 - [x] **Phase 3: Pluggable DLT Workers — Stellar/Soroban Priority** _(complete; UAT passed; PRs merged)_ — Adapter Stellar para hackathon + infraestrutura multi-chain
-- [ ] **Phase 4: Scale + Observability Infrastructure** — Redis, Pino, Sentry, BullMQ — plataforma multi-instância pronta para carga real
-- [ ] **Phase 5: EscrowFacet + Time-Lock Oracle + M2M** — Escrow on-chain com time-lock e registro de agentes IoT
-- [ ] **Phase 6: Specialized Domain Facets** — ERecycleFacet, transferência Multi-Party, biometria, contratos dinâmicos
+- [ ] **Phase 4: Unified Tenant Identity + Data Backfill** — Backend vira fonte canônica de tenants, usuários B2C/B2B, dependentes, carteiras/créditos e vínculos de ownership; dashboard deixa de ter banco de domínio
+- [ ] **Phase 5: On-chain Asset Identity + Provenance** — Todo perfil, dependente, pet, objeto, documento e QTAG tem Asset local + Asset/registro on-chain e rastreabilidade por eventos na Stellar/Soroban
+- [ ] **Phase 6: Scale + Observability Infrastructure** — Redis, Pino, Sentry, BullMQ — plataforma multi-instância pronta para carga real
+- [ ] **Phase 7: EscrowFacet + Time-Lock Oracle + M2M** — Escrow on-chain com time-lock e registro de agentes IoT
+- [ ] **Phase 8: Specialized Domain Facets** — ERecycleFacet, transferência Multi-Party, biometria, contratos dinâmicos
 
 ---
 
@@ -142,13 +146,62 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 - [x] 03-03-PLAN.md — Cross-chain dashboard proof card + UAT + scope reconciliation
 
-### Phase 4: Scale + Observability Infrastructure
+### Phase 4: Unified Tenant Identity + Data Backfill
+
+**Goal**: O backend passa a ser a fonte canônica de Tenant, usuários, dependentes, carteiras/créditos e vínculos de ownership; o Tenant Quantum concentra usuários B2C, enquanto clientes B2B permanecem tenants próprios com admins/API keys
+**Mode:** mvp
+**GitHub Milestone**: TBD
+**GitHub Issues**: TBD
+**Depends on**: Phase 3
+**Requirements**: ID-01, ID-02, ID-03, ID-04, ID-05, ID-06
+**Success Criteria** (what must be TRUE):
+
+1. Existe um Tenant Quantum canônico, e todos os usuários B2C atuais do `qc-dashboard` estão migrados para usuários tenant-scoped nesse tenant.
+2. Usuários B2C, dependentes e admins não vivem mais apenas no banco do dashboard; o backend expõe endpoints/Facets para login, perfil, dependentes, carteira/créditos e vínculo com assets.
+3. Todo `Owner` de asset pode ser resolvido para um usuário tenant-scoped quando o owner nasceu do fluxo B2C/B2B, preservando `ownerRef` legado para compatibilidade.
+4. O backfill é idempotente, preserva `legacyDashboardUserId`, `legacyOpenId`, `identityAssetId`/equivalentes e gera relatório de órfãos/conflitos antes de bloquear o cutover.
+5. O `qc-dashboard` deixa de usar seu banco como fonte de domínio; no máximo mantém sessão/preferências temporárias, enquanto domínio e identidade canônica vêm do `qc-backend`.
+6. A separação de áreas fica explícita: Platform Admin Quantum opera todos os tenants; Tenant Admin B2B opera seu tenant; usuário B2C opera apenas seus próprios assets sob o Tenant Quantum.
+
+**Plans**: TBD
+**Cross-repo note:** Esta fase é transversal a `qc-backend` e `qc-dashboard`; `qc-home` pode depender dela para signup público e `qc-business` deve confirmar regras comerciais/planos/white-label antes de ativar tenants B2B self-service.
+
+**Backfill order:**
+
+1. Criar/validar Tenant Quantum canônico.
+2. Migrar `qc-dashboard.users` para usuários tenant-scoped no backend.
+3. Migrar dependentes por `guardianId`.
+4. Criar/vincular Asset de identidade para cada usuário/dependente.
+5. Resolver `Owner.ownerRef` para usuário canônico e preencher vínculo forte sem apagar `ownerRef` legado.
+6. Migrar carteira/créditos B2C para backend e validar o rule lock: ações consomem apenas `creditsBalance`.
+7. Trocar dashboard para leitura/escrita canônica via backend.
+
+### Phase 5: On-chain Asset Identity + Provenance
+
+**Goal**: Todo ativo do produto — perfil, dependente, pet, objeto, documento, QTAG e futuros tipos — tem identidade de Asset local, registro on-chain e trilha de eventos consultável tanto pela aplicação quanto pela Stellar/Soroban
+**Mode:** mvp
+**GitHub Milestone**: TBD
+**GitHub Issues**: TBD
+**Depends on**: Phase 4
+**Requirements**: OCHAIN-01, OCHAIN-02, OCHAIN-03, OCHAIN-04, OCHAIN-05
+**Success Criteria** (what must be TRUE):
+
+1. Todo caminho de criação de perfil, dependente, pet, objeto, documento ou QTAG passa pelo Asset Engine e cria um Asset local tenant-scoped antes de qualquer publicação.
+2. Cada Asset local recebe identidade Stellar própria (`asset_code + issuer`) e registro Soroban de proveniência, com identificadores públicos, hashes e vínculos suficientes para verificação sem expor PII.
+3. Eventos aprovados de lifecycle, ownership, delegação, QTAG, scan, documento e incidente são registrados na chain como trilha ordenada, com hash do payload e referência ao evento anterior quando aplicável.
+4. A API pública e o dashboard exibem uma visão única: dados públicos do app + prova on-chain + link Stellar Expert/contrato, sem divergência entre timeline local e timeline on-chain confirmada.
+5. Backfill cria registros on-chain faltantes para assets existentes, em fila idempotente, com relatório de pendências, retries e conflitos.
+
+**Plans**: TBD
+**Cross-repo note:** Esta fase depende da identidade/ownership canônica da Phase 4. O `qc-dashboard` consome a prova unificada; `qc-record-module` deve parear QTAG físico com Asset existente sem expor internals de tenant.
+
+### Phase 6: Scale + Observability Infrastructure
 
 **Goal**: A plataforma opera corretamente em múltiplas instâncias simultâneas com observabilidade de produção completa
 **Mode:** mvp
 **GitHub Milestone**: [#4](https://github.com/quantumcert/qc-backend/milestone/4)
 **GitHub Issues**: [#13](https://github.com/quantumcert/qc-backend/issues/13) (Revisar mensagens de erro/docs)
-**Depends on**: Phase 1
+**Depends on**: Phase 4, Phase 5
 **Requirements**: OPS-01, OPS-02, OPS-03, OPS-04, OPS-05, OPS-06, OPS-07
 **Success Criteria** (what must be TRUE):
 
@@ -160,13 +213,13 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 **Plans**: TBD
 
-### Phase 5: EscrowFacet + Time-Lock Oracle + M2M
+### Phase 7: EscrowFacet + Time-Lock Oracle + M2M
 
 **Goal**: Assets podem ser travados em escrow on-chain com liberação automática por tempo, e dispositivos IoT autenticados podem injetar eventos com assinatura Falcon
 **Mode:** mvp
 **GitHub Milestone**: [#5](https://github.com/quantumcert/qc-backend/milestone/5)
 **GitHub Issues**: [#3](https://github.com/quantumcert/qc-backend/issues/3) (AgentRegistryFacet + qc-universal-gateway)
-**Depends on**: Phase 3, Phase 4
+**Depends on**: Phase 5, Phase 6
 **Requirements**: ESC-01, ESC-02, ESC-03, ESC-04, ESC-05, M2M-01, M2M-02, M2M-03
 **Success Criteria** (what must be TRUE):
 
@@ -178,13 +231,13 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 **Plans**: TBD
 
-### Phase 6: Specialized Domain Facets
+### Phase 8: Specialized Domain Facets
 
 **Goal**: Facets de domínio especializado ampliam a plataforma para casos de uso avançados: créditos ambientais, transferência com múltiplas assinaturas, validação biométrica e geração automática de contratos
 **Mode:** mvp
 **GitHub Milestone**: [#6](https://github.com/quantumcert/qc-backend/milestone/6)
 **GitHub Issues**: [#10](https://github.com/quantumcert/qc-backend/issues/10) (ERecycleFacet — resíduos + créditos ambientais), [#15](https://github.com/quantumcert/qc-backend/issues/15) (Transferência Multi-Party, Biometria, Contrato Dinâmico)
-**Depends on**: Phase 5
+**Depends on**: Phase 7
 **Requirements**: FACET-01, FACET-02, FACET-03, FACET-04, FACET-05
 **Success Criteria** (what must be TRUE):
 
@@ -202,7 +255,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 ### B2C Consumer Onboarding
 
-**Status:** research candidate, not yet planned
+**Status:** promoted into Phase 4/Phase 5 architecture work on 2026-05-17; remaining product questions stay with `qc-business`
 **Scope:** cross-repo product research before implementation
 **Repos likely involved:** `qc-dashboard`, `qc-backend`, `qc-home`, `qc-record-module`; business decisions in `qc-business`
 
@@ -255,7 +308,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 9. What is the B2B onboarding path: self-service tenant signup, invitation, sales-assisted approval, or all three?
 10. Which B2B operations require bulk workflows, API keys, billing controls, and branded verification pages?
 
-**Do not implement yet:** this needs a dedicated research pass and product decision before becoming a roadmap phase.
+**Promotion note:** The structural decision is locked: B2C users live under the Tenant Quantum and B2B customers remain separate tenants. Product details such as signup method, pricing, QTAG fulfillment, approval SLAs and white-label commercial packaging still require `qc-business` decisions before implementation plans are finalized.
 
 ---
 
@@ -266,6 +319,8 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 | 1. Core Gap Closure + Production Hardening          | [M#1](https://github.com/quantumcert/qc-backend/milestone/1) | #5, #7, #8 | 4/4            | Complete          | 2026-05-09 |
 | 2. Document Verification + QTAG Production          | [M#2](https://github.com/quantumcert/qc-backend/milestone/2) | #12, #2    | 3/3            | Human UAT pending | -          |
 | 3. Pluggable DLT Workers — Stellar/Soroban Priority | [M#3](https://github.com/quantumcert/qc-backend/milestone/3) | #11        | 3/3            | Complete; PRs merged | 2026-05-14 |
-| 4. Scale + Observability Infrastructure             | [M#4](https://github.com/quantumcert/qc-backend/milestone/4) | #13        | 0/?            | Not started       | -          |
-| 5. EscrowFacet + Time-Lock Oracle + M2M             | [M#5](https://github.com/quantumcert/qc-backend/milestone/5) | #3         | 0/?            | Not started       | -          |
-| 6. Specialized Domain Facets                        | [M#6](https://github.com/quantumcert/qc-backend/milestone/6) | #10, #15   | 0/?            | Not started       | -          |
+| 4. Unified Tenant Identity + Data Backfill          | TBD                                                          | TBD        | 0/?            | Approved for planning | -       |
+| 5. On-chain Asset Identity + Provenance             | TBD                                                          | TBD        | 0/?            | Approved for planning | -       |
+| 6. Scale + Observability Infrastructure             | [M#4](https://github.com/quantumcert/qc-backend/milestone/4) | #13        | 0/?            | Deferred behind Phase 4/5 | -    |
+| 7. EscrowFacet + Time-Lock Oracle + M2M             | [M#5](https://github.com/quantumcert/qc-backend/milestone/5) | #3         | 0/?            | Deferred behind Phase 6 | -       |
+| 8. Specialized Domain Facets                        | [M#6](https://github.com/quantumcert/qc-backend/milestone/6) | #10, #15   | 0/?            | Deferred behind Phase 7 | -       |

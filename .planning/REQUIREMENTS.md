@@ -1,6 +1,6 @@
 # Requirements — Quantum Cert Backend
 
-_Generated: 2026-05-08 | v1 scope: backend completo production-ready (6 sub-sistemas)_
+_Generated: 2026-05-08 | updated 2026-05-17 with tenant identity, data unification and on-chain asset identity transition_
 
 ---
 
@@ -43,6 +43,23 @@ _Generated: 2026-05-08 | v1 scope: backend completo production-ready (6 sub-sist
 - [x] **DLT-04**: Omnibus routing por chain — master wallet opera em cada chain suportada; no slice Stellar/hackathon, o aceite é preservar os seams multi-chain sem implementar todos os adapters
 - [ ] **DLT-05**: `lastScannedBlock` persistido em DB — confirmação de transações não depende de estado in-memory (sobrevive restarts); permanece no backlog v1 e está deferred from Phase 3 hackathon slice
 
+### ID — Unified Tenant Identity + Data Backfill
+
+- [ ] **ID-01**: Tenant Quantum canônico — criar/garantir tenant operacional da Quantum para usuários B2C, sem transformar consumidores em tenants
+- [ ] **ID-02**: Usuário tenant-scoped no backend — adicionar modelo canônico para usuários, roles, dependentes, perfil, credenciais/identidades externas e vínculo com tenant
+- [ ] **ID-03**: Migração do banco do dashboard — migrar `qc-dashboard.users` para o backend preservando `legacyDashboardUserId`, `legacyOpenId`, CPF/email e metadados de dependentes
+- [ ] **ID-04**: Ownership forte entre usuários e assets — resolver `Owner.ownerRef` para usuário canônico quando aplicável, mantendo compatibilidade com `ownerRef` legado
+- [ ] **ID-05**: Carteira/créditos B2C no backend — mover `creditsBalance`/fluxos de compra/consumo para o backend, preservando a regra "não mexer no saldo, somente no crédito"
+- [ ] **ID-06**: Cutover do dashboard para backend canônico — dashboard passa a ler/escrever usuários, dependentes, carteira e assets via backend; banco local fica no máximo para sessão/preferências temporárias
+
+### OCHAIN — On-chain Asset Identity + Provenance
+
+- [ ] **OCHAIN-01**: Asset Engine obrigatório para toda entidade — perfil, dependente, pet, objeto, documento e QTAG nascem como `Asset` tenant-scoped antes da publicação
+- [ ] **OCHAIN-02**: Identidade on-chain por Asset — cada `Asset` recebe identidade Stellar própria com `asset_code + issuer`, registro Soroban de proveniência e zero PII on-chain
+- [ ] **OCHAIN-03**: Eventos rastreáveis na chain — lifecycle, ownership, delegação, QTAG, scan, documento e incidente geram eventos on-chain ordenados com hash do payload
+- [ ] **OCHAIN-04**: Prova pública unificada — API pública e dashboard exibem app data + timeline local + prova on-chain + links de explorer/contrato em uma visão única
+- [ ] **OCHAIN-05**: Backfill on-chain idempotente — assets existentes recebem registro on-chain e eventos mínimos de origem, com relatório de pendências, retries e conflitos
+
 ### OPS — Scale & Observability
 
 - [ ] **OPS-01**: Redis para rate limiting — substitui implementação in-memory (que quebra em rolling deploy multi-instância)
@@ -67,13 +84,13 @@ _Generated: 2026-05-08 | v1 scope: backend completo production-ready (6 sub-sist
 - [ ] **M2M-02**: `POST /api/v1/agent/event` — endpoint dedicado para ingestão de eventos de dispositivos M2M
 - [ ] **M2M-03**: Validação de assinatura Falcon-512 no payload do agente — garante autenticidade do dispositivo
 
-### FACET — Specialized Domain Facets (Phase 6)
+### FACET — Specialized Domain Facets (Phase 8)
 
 - [ ] **FACET-01**: `ERecycleFacet` — registro de resíduos e emissão de créditos ambientais ancorables em blockchain ([#10](https://github.com/quantumcert/qc-backend/issues/10))
 - [ ] **FACET-02**: Transferência Multi-Party — N assinaturas configuráveis obrigatórias antes de processar transferência de ownership ([#15](https://github.com/quantumcert/qc-backend/issues/15))
 - [ ] **FACET-03**: Validação biométrica — match biométrico do owner bloqueia transferência não autorizada ([#15](https://github.com/quantumcert/qc-backend/issues/15))
 - [ ] **FACET-04**: Geração de Contrato Dinâmico — contrato gerado automaticamente no evento de transferência com dados do asset e das partes ([#15](https://github.com/quantumcert/qc-backend/issues/15))
-- [ ] **FACET-05**: Todos os Facets da Fase 6 seguem a Golden Rule — zero termos de domínio no core, payload 100% opaco
+- [ ] **FACET-05**: Todos os Facets da Fase 8 seguem a Golden Rule — zero termos de domínio no core, payload 100% opaco
 
 ---
 
@@ -92,7 +109,7 @@ _Generated: 2026-05-08 | v1 scope: backend completo production-ready (6 sub-sist
 - **Lógica de negócio específica de tenant** — plataforma é agnóstica (Golden Rule); customizações ficam no payload opaco
 - **Operação de nó blockchain** — usamos nós hospedados (`ALGOD_SERVER`, Stellar Horizon, Solana RPC) — não rodamos nodes próprios
 - **Custódia de ativos físicos** — backend certifica, não guarda; responsabilidade do tenant
-- **Autenticação OAuth/magic link** — API keys são o único mecanismo de auth para o backend
+- **OAuth/magic link como decisão de produto** — auth B2C/B2B entra na fase ID; o método final de login público ainda depende de decisão de produto em `qc-business`
 
 ## Cross-Repo Requirement Policy
 
@@ -108,7 +125,7 @@ Quantum Cert é um workspace multi-repo composto por `qc-backend`, `qc-dashboard
 
 ## Traceability
 
-_Updated: 2026-05-14 — política de requisitos transversais multi-repo e recorte Phase 3 Stellar/hackathon adicionados_
+_Updated: 2026-05-17 — requisitos ID/OCHAIN adicionados para unificar usuários/tenants/bancos e garantir Asset on-chain por entidade_
 
 | REQ-ID   | Phase   | Status                          |
 | -------- | ------- | ------------------------------- |
@@ -129,28 +146,39 @@ _Updated: 2026-05-14 — política de requisitos transversais multi-repo e recor
 | DOC-03   | Phase 2 | Complete                        |
 | QTAG-01  | Phase 2 | Complete                        |
 | QTAG-02  | Phase 2 | Complete                        |
-| DLT-01   | Phase 3 | Pending (current Stellar slice) |
+| DLT-01   | Phase 3 | Complete                        |
 | DLT-02   | Phase 3 | Deferred from Stellar slice     |
-| DLT-03   | Phase 3 | Pending (current Stellar slice) |
-| DLT-04   | Phase 3 | Partial seam in current slice   |
+| DLT-03   | Phase 3 | Complete                        |
+| DLT-04   | Phase 3 | Complete for Stellar slice      |
 | DLT-05   | Phase 3 | Deferred from Stellar slice     |
-| OPS-01   | Phase 4 | Pending                         |
-| OPS-02   | Phase 4 | Pending                         |
-| OPS-03   | Phase 4 | Pending                         |
-| OPS-04   | Phase 4 | Pending                         |
-| OPS-05   | Phase 4 | Pending                         |
-| OPS-06   | Phase 4 | Pending                         |
-| OPS-07   | Phase 4 | Pending                         |
-| ESC-01   | Phase 5 | Pending                         |
-| ESC-02   | Phase 5 | Pending                         |
-| ESC-03   | Phase 5 | Pending                         |
-| ESC-04   | Phase 5 | Pending                         |
-| ESC-05   | Phase 5 | Pending                         |
-| M2M-01   | Phase 5 | Pending                         |
-| M2M-02   | Phase 5 | Pending                         |
-| M2M-03   | Phase 5 | Pending                         |
-| FACET-01 | Phase 6 | Pending                         |
-| FACET-02 | Phase 6 | Pending                         |
-| FACET-03 | Phase 6 | Pending                         |
-| FACET-04 | Phase 6 | Pending                         |
-| FACET-05 | Phase 6 | Pending                         |
+| ID-01    | Phase 4 | Approved for planning           |
+| ID-02    | Phase 4 | Approved for planning           |
+| ID-03    | Phase 4 | Approved for planning           |
+| ID-04    | Phase 4 | Approved for planning           |
+| ID-05    | Phase 4 | Approved for planning           |
+| ID-06    | Phase 4 | Approved for planning           |
+| OCHAIN-01 | Phase 5 | Approved for planning          |
+| OCHAIN-02 | Phase 5 | Approved for planning          |
+| OCHAIN-03 | Phase 5 | Approved for planning          |
+| OCHAIN-04 | Phase 5 | Approved for planning          |
+| OCHAIN-05 | Phase 5 | Approved for planning          |
+| OPS-01   | Phase 6 | Pending                         |
+| OPS-02   | Phase 6 | Pending                         |
+| OPS-03   | Phase 6 | Pending                         |
+| OPS-04   | Phase 6 | Pending                         |
+| OPS-05   | Phase 6 | Pending                         |
+| OPS-06   | Phase 6 | Pending                         |
+| OPS-07   | Phase 6 | Pending                         |
+| ESC-01   | Phase 7 | Pending                         |
+| ESC-02   | Phase 7 | Pending                         |
+| ESC-03   | Phase 7 | Pending                         |
+| ESC-04   | Phase 7 | Pending                         |
+| ESC-05   | Phase 7 | Pending                         |
+| M2M-01   | Phase 7 | Pending                         |
+| M2M-02   | Phase 7 | Pending                         |
+| M2M-03   | Phase 7 | Pending                         |
+| FACET-01 | Phase 8 | Pending                         |
+| FACET-02 | Phase 8 | Pending                         |
+| FACET-03 | Phase 8 | Pending                         |
+| FACET-04 | Phase 8 | Pending                         |
+| FACET-05 | Phase 8 | Pending                         |

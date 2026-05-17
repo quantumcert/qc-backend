@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase 03 complete — backend PR #23 and dashboard PR #23 merged
-last_updated: "2026-05-16T05:00:28Z"
+status: Phase 04 approved for planning — unified tenant identity + data backfill
+last_updated: "2026-05-17T05:04:45Z"
 progress:
-  total_phases: 6
+  total_phases: 8
   completed_phases: 3
   total_plans: 10
   completed_plans: 10
-  percent: 100
+  percent: 38
 ---
 
 # STATE — Quantum Cert Backend
@@ -24,20 +24,20 @@ _Initialized: 2026-05-08_
 
 **Workspace Scope**: Produto multi-repo — `qc-backend`, `qc-dashboard`, `qc-home`, `qc-record-module`; decisões de negócio em `qc-business`.
 
-**Current Focus**: Phase 3 — Pluggable DLT Workers — Stellar/Soroban Priority (complete; backend PR #23 and dashboard PR #23 merged)
+**Current Focus**: Phase 4 — Unified Tenant Identity + Data Backfill (approved for planning)
 
 ---
 
 ## Current Position
 
-Phase: 03 (pluggable-dlt-workers-stellar-soroban-priority) — COMPLETE
-Plan: 3 of 3
+Phase: 04 (unified-tenant-identity-data-backfill) — APPROVED FOR PLANNING
+Plan: TBD
 | Field | Value |
 |-------|-------|
-| Milestone | 1 |
-| Phase | 3 — Pluggable DLT Workers — Stellar/Soroban Priority |
-| Plan | 3 plans ready |
-| Status | Complete; backend PR #23 and dashboard PR #23 merged |
+| Milestone | TBD |
+| Phase | 4 — Unified Tenant Identity + Data Backfill |
+| Plan | TBD |
+| Status | Approved for planning after architecture decision on 2026-05-17 |
 
 **Progress**:
 
@@ -45,9 +45,11 @@ Plan: 3 of 3
 Phase 1 [██████████] 100% (Plan 01: SEC-01/02/03 | Plan 02: SEC-04/05/06 | Plan 03: CORE-01/02/03/04 | Plan 04: CORE-05/06)
 Phase 2 [██████████] 100% (3/3 plans complete; backend verified; physical QTAG UAT blocked)
 Phase 3 [██████████] 100% (3/3 plans complete; Stellar UAT passed; PRs merged)
-Phase 4 [          ] 0%
-Phase 5 [          ] 0%
-Phase 6 [          ] 0%
+Phase 4 [          ] 0% (Unified Tenant Identity + Data Backfill — approved for planning)
+Phase 5 [          ] 0% (On-chain Asset Identity + Provenance — approved after Phase 4)
+Phase 6 [          ] 0% (Scale + Observability — deferred behind identity/on-chain transition)
+Phase 7 [          ] 0% (EscrowFacet + Time-Lock Oracle + M2M)
+Phase 8 [          ] 0% (Specialized Domain Facets)
 ```
 
 ---
@@ -64,9 +66,9 @@ Phase 6 [          ] 0%
 
 | Metric                  | Value                      |
 | ----------------------- | -------------------------- |
-| Phases total            | 6                          |
-| Requirements total (v1) | 41 (36 original + 5 FACET) |
-| Requirements mapped     | 41/41                      |
+| Phases total            | 8                          |
+| Requirements total (v1) | 52 (41 prior + 11 transition) |
+| Requirements mapped     | 52/52                      |
 | Plans written           | 10                         |
 | Plans complete          | 10                         |
 
@@ -93,7 +95,7 @@ Phase 6 [          ] 0%
 | DocumentVerificationFacet response shape slim             | Testes existentes esperam { verified, assetId, assetStatus, dltTxId, anchoredAt, eventId, issuerId } sem PublicAssetPanel — reescrita alinhada com testes                                                            | 1     |
 | ChainTransaction logging não-bloqueante em anchorEvent()  | Log de ChainTransaction dentro de try/catch: falha de DB write não pode abortar uma txn Algorand já submetida                                                                                                        | 1     |
 | Phase 3 depende só de Phase 1                             | DLT Workers não dependem de DOC/QTAG — podem rodar em paralelo com Phase 2 se necessário                                                                                                                             | 3     |
-| Phase 5 depende de Phase 3 + Phase 4                      | EscrowFacet usa BullMQ (OPS-05) e TEAL on-chain requer Soroban research concluído                                                                                                                                    | 5     |
+| Phase 7 depende de Phase 5 + Phase 6                      | EscrowFacet usa BullMQ (OPS-05) e lógica on-chain deve vir depois da identidade/proveniência on-chain e da infraestrutura de escala                                                                                  | 7     |
 | DLT-02 (Solana) mantido como backlog v1                   | Solana continua no backlog v1, mas está deferido do slice Stellar/hackathon; não é critério de aceite da execução atual da Phase 3                                                                                   | 3     |
 | Phase 3 hackathon slice segue 03-SPEC.md                  | Stellar/Soroban é o recorte obrigatório de entrega; x402/micropagamento é nice-to-have via env desligada por default; DLT-02 Solana e DLT-05 lastScannedBlock ficam explicitamente deferidos, não marcados como done | 3     |
 | Stellar-first, Solana-ready                               | Phase 3 deve fazer Stellar funcionar agora, mas manter `tenant.targetChain`, `DLTAdapterFactory`, `IDLTAdapter` e `ChainTransaction.chain` como seams atômicos para Solana entrar depois sem reimplementar core      | 3     |
@@ -103,13 +105,19 @@ Phase 6 [          ] 0%
 | CurationFacet não adicionado ao FacetRegistry             | Rota pública direta (não via Diamond) — conforme spec 2026-05-08; decisão arquitetural intencional                                                                                                                   | 1     |
 | Tenant isolation via findFirst com {id, tenantId}         | Cross-tenant retorna 404 (NOT_FOUND) em vez de 403 — evita information leakage sobre existência de recursos de outros tenants                                                                                        | 1     |
 | Requisitos podem ser transversais                         | Aceite real pode exigir integração entre `qc-backend`, `qc-dashboard`, `qc-home`, `qc-record-module` e decisão de negócio em `qc-business`; planos devem declarar repos impactados e UAT fim a fim                   | —     |
+| B2C sob Tenant Quantum                                    | Usuários consumidores não viram tenants; vivem como usuários tenant-scoped do Tenant Quantum, com dependentes e assets próprios                                                                                     | 4     |
+| B2B permanece tenant real                                 | Clientes B2B precisam de tenant próprio, admins, operadores, API keys, limites, billing e white-label; não devem ser misturados ao fluxo B2C                                                                       | 4     |
+| Backend vira fonte canônica de usuários e domínio         | O banco do dashboard hoje guarda usuários/dependentes, mas a transição exige que Tenant, usuário, carteira/créditos, owner e asset sejam canônicos no `qc-backend`                                                   | 4     |
+| Asset on-chain para toda entidade                         | Perfil, dependente, pet, objeto, documento e QTAG devem nascer como `Asset` local e receber identidade/proveniência on-chain, em vez de apenas ancorar eventos soltos                                                | 5     |
 
 ### Research Flags
 
 | Phase   | Requer research-phase | Motivo                                                                |
 | ------- | --------------------- | --------------------------------------------------------------------- |
 | Phase 3 | Sim                   | Soroban contract ABI vs SorobanAdapter.ts + BIP-44 migration strategy |
-| Phase 5 | Sim                   | TEAL escrow on-chain — smart contract requer auditoria de segurança   |
+| Phase 4 | Sim                   | Migração multi-repo de identidade, banco e backfill dashboard→backend |
+| Phase 5 | Sim                   | Modelo Stellar/Soroban para Asset identity + registry/provenance por entidade |
+| Phase 7 | Sim                   | TEAL/Soroban escrow on-chain — smart contract requer auditoria de segurança |
 
 ### Blockers
 
@@ -118,6 +126,8 @@ Phase 6 [          ] 0%
 ### Todos
 
 - Plan/update `qc-record-module` integration so a real NTAG 424 DNA can be written, locked, scanned, and approved through `/api/v1/scan`.
+- Plan Phase 4 around backend-canonical tenant users, dashboard user backfill, owner resolution, credits migration, and dashboard cutover.
+- Plan Phase 5 after Phase 4 so on-chain Asset identity uses stable tenant/user/ownership references.
 - Before executing a requirement with product/business ambiguity, check whether the decision belongs in `qc-business` and whether acceptance depends on `qc-dashboard`, `qc-home`, or `qc-record-module`.
 
 ---
@@ -138,7 +148,7 @@ Phase 6 [          ] 0%
 
 **Phase 3 merge**: 2026-05-16 — backend PR #23 and dashboard PR #23 merged to `main`.
 
-**Next action**: Run `$gsd-progress` to choose the next phase or `$gsd-complete-milestone` if this milestone is considered complete.
+**Next action**: Plan Phase 4 — Unified Tenant Identity + Data Backfill.
 
 **Context for next session**:
 
@@ -146,3 +156,5 @@ Phase 6 [          ] 0%
 - Phase 1 COMPLETA: Falcon-512 real, SKIP LOCKED, Lifecycle, Transfer REST, Curation Layer, review-fix aplicado
 - Code review fix report: `.planning/phases/01-core-gap-closure-production-hardening/01-REVIEW-FIX.md` — encerrado sem blocker; WR-01, WR-06, WR-07 postergados como dívida técnica não bloqueante por exigirem mudança cross-cutting/schema
 - Phase 2: DOC-01/02/03 + QTAG-01/02 implementados e verificados automaticamente; UAT físico registrado como bloqueado em `.planning/phases/02-document-verification-qtag-production/02-HUMAN-UAT.md` por dependência externa do `qc-record-module`.
+- Phase 4 approved 2026-05-17: unify `qc-dashboard` user/dependent data into backend tenant-scoped users under Tenant Quantum; B2B remains separate tenants; backfill and dashboard cutover are required before deeper on-chain provenance.
+- Phase 5 approved 2026-05-17: every profile/dependent/pet/object/document/QTAG must be represented as local Asset plus on-chain Asset/registry proof with event provenance.
