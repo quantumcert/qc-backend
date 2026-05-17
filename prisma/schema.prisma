@@ -27,6 +27,11 @@ model Tenant {
   slug         String  @unique
   contactEmail String
   isActive     Boolean @default(true)
+  status       TenantStatus @default(ACTIVE)
+  activatedAt  DateTime?
+  suspendedAt  DateTime?
+  archivedAt   DateTime?
+  statusReason String?
 
   planTier PlanTier @default(FREE)
 
@@ -59,16 +64,174 @@ model Tenant {
   agents               Agent[] // M2M / IoT Agent identities
   contributors         Contributor[] // Curation Layer — CORE-05
   pendingContributions PendingContribution[] // Curation Layer — CORE-06
+  commercialProfile    TenantCommercialProfile?
+  tenantUsers          TenantUser[]
+  tenantMemberships    TenantMembership[]
+  purchaseOrders       PurchaseOrder[]
+  paymentIntents       PaymentIntent[]
+  paymentEvents        PaymentEvent[]
+  creditLedgerEntries  CreditLedgerEntry[]
+  qTagLedgerEntries    QTagLedgerEntry[]
+  qTagFulfillmentOrders QTagFulfillmentOrder[]
+  migrationRuns        MigrationRun[]
+  migrationCheckpoints MigrationCheckpoint[]
+  migrationRecords     MigrationRecord[]
 
   @@index([slug])
   @@index([planTier])
   @@index([isActive])
+  @@index([status])
 }
 
 enum PlanTier {
   FREE
   PROFESSIONAL
   ENTERPRISE
+}
+
+enum TenantStatus {
+  DRAFT
+  PENDING_REVIEW
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+model TenantCommercialProfile {
+  id       String @id @default(cuid())
+  tenantId String @unique
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  legalName       String?
+  taxId           String?
+  taxIdType       String?
+  contactName     String?
+  contactEmail    String?
+  contactPhone    String?
+  billingOwner    String?
+  commercialPlan  String?
+  limits          Json    @default("{}")
+  whiteLabel      Json    @default("{}")
+  internalNotes   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([taxId])
+}
+
+model TenantUser {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  email        String?
+  phone        String?
+  document     String?
+  documentType String?
+  displayName  String?
+  role         TenantUserRole   @default(MEMBER)
+  status       TenantUserStatus @default(ACTIVE)
+
+  legacyDashboardUserId String? @unique
+  legacyOpenId          String? @unique
+  profile               Json    @default("{}")
+  metadata              Json    @default("{}")
+
+  guardianId String?
+  guardian   TenantUser?  @relation("TenantUserDependents", fields: [guardianId], references: [id])
+  dependents TenantUser[] @relation("TenantUserDependents")
+
+  externalIdentities ExternalIdentity[]
+  memberships        TenantMembership[]
+  invitedMemberships TenantMembership[] @relation("MembershipInviter")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  migratedAt DateTime?
+
+  @@index([tenantId])
+  @@index([tenantId, email])
+  @@index([tenantId, document])
+  @@index([tenantId, role])
+  @@index([legacyDashboardUserId])
+  @@index([legacyOpenId])
+  @@index([guardianId])
+}
+
+enum TenantUserRole {
+  PLATFORM_ADMIN
+  TENANT_ADMIN
+  OPERATOR
+  MEMBER
+  DEPENDENT
+  VIEWER
+}
+
+enum TenantUserStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+model ExternalIdentity {
+  id           String @id @default(cuid())
+  tenantUserId String
+  tenantUser   TenantUser @relation(fields: [tenantUserId], references: [id], onDelete: Cascade)
+
+  provider        String
+  providerSubject String
+  email           String?
+  metadata        Json @default("{}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([provider, providerSubject])
+  @@index([tenantUserId])
+  @@index([provider])
+}
+
+model TenantMembership {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   TenantUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  role   TenantMembershipRole   @default(MEMBER)
+  status TenantMembershipStatus @default(ACTIVE)
+
+  invitedByUserId String?
+  invitedByUser   TenantUser? @relation("MembershipInviter", fields: [invitedByUserId], references: [id])
+  reason          String?
+  metadata        Json @default("{}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, userId])
+  @@index([tenantId, role])
+  @@index([userId])
+  @@index([status])
+}
+
+enum TenantMembershipRole {
+  PLATFORM_ADMIN
+  TENANT_ADMIN
+  OPERATOR
+  MEMBER
+  VIEWER
+}
+
+enum TenantMembershipStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  REMOVED
 }
 
 // --- API KEY — Authenticated Access Credentials ---------
@@ -81,11 +244,17 @@ model ApiKey {
   keyPrefix String
   label     String?
   role      ApiKeyRole @default(READER)
+  scopes    String[]   @default([])
 
   isActive   Boolean   @default(true)
   revokedAt  DateTime?
   lastUsedAt DateTime?
   expiresAt  DateTime?
+  createdByActorId String?
+  revokedByActorId String?
+  revocationReason String?
+  rotatedFromApiKeyId String?
+  lastRotatedAt DateTime?
 
   createdAt DateTime @default(now())
 
@@ -96,6 +265,8 @@ model ApiKey {
   @@index([keyHash])
   @@index([keyPrefix])
   @@index([isActive])
+  @@index([expiresAt])
+  @@index([rotatedFromApiKeyId])
 }
 
 enum ApiKeyRole {
@@ -177,6 +348,59 @@ model AuditLog {
   @@index([timestamp])
 }
 
+model AdminAuditLog {
+  id String @id @default(cuid())
+
+  tenantId      String?
+  actorUserId   String?
+  actorTenantId String?
+
+  action       String
+  resourceType String
+  resourceId   String?
+  reason       String?
+  payloadHash  String?
+  metadata     Json?
+
+  correlationId String?
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([actorTenantId])
+  @@index([action])
+  @@index([resourceType, resourceId])
+  @@index([correlationId])
+}
+
+model ApiRequestAudit {
+  id String @id @default(cuid())
+
+  tenantId     String
+  apiKeyId     String?
+  keyPrefix    String?
+  role         String?
+  method       String
+  path         String
+  selector     String?
+  statusCode   Int
+  latencyMs    Int?
+  correlationId String?
+  sanitizedError String?
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([apiKeyId, createdAt])
+  @@index([keyPrefix])
+  @@index([statusCode])
+  @@index([correlationId])
+  @@index([selector])
+}
+
 // ===========================================================
 // PHASE 2: AGNOSTIC ASSET ENGINE & ZERO KNOWLEDGE SECURITY
 // ===========================================================
@@ -239,6 +463,7 @@ model Asset {
 
   // --- Phase 6: Audit & Telemetry -----------------------
   tagScanLogs TagScanLog[]
+  qTagFulfillmentOrders QTagFulfillmentOrder[]
 
   // --- FractionalOwnershipFacet Preparation -------------
   // Enables future fractional ownership (e.g., 40% Owner A, 60% Owner B).
@@ -343,6 +568,7 @@ model Device {
   sdmEncKeyId String? // KMS-wrapped AES-128 for picc_data decryption
 
   // --- Device State -------------------------------------
+  status       DeviceStatus @default(ACTIVE)
   isActive     Boolean  @default(true)
   registeredAt DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -359,6 +585,14 @@ model Device {
   @@index([uid])
   @@index([tenantId])
   @@index([isActive])
+  @@index([status])
+}
+
+enum DeviceStatus {
+  PROVISIONED
+  ACTIVE
+  DISABLED
+  REPLACED
 }
 
 // --- DEVICE TAP LOG — Immutable NFC Tap History ---------
@@ -605,6 +839,260 @@ enum DepositStatus {
   PENDING
   CONFIRMED
   FAILED
+}
+
+model PurchaseOrder {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  userId          String?
+  type            PurchaseOrderType
+  status          PurchaseOrderStatus @default(DRAFT)
+  sku             String?
+  quantity        Int @default(1)
+  amount          String?
+  currency        String?
+  provider        String?
+  providerOrderId String?
+  metadata        Json @default("{}")
+
+  createdByActorId String?
+  reason           String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  paymentIntents      PaymentIntent[]
+  paymentEvents       PaymentEvent[]
+  creditLedgerEntries CreditLedgerEntry[]
+  qTagLedgerEntries   QTagLedgerEntry[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, type])
+  @@index([provider, providerOrderId])
+  @@index([createdAt])
+}
+
+enum PurchaseOrderType {
+  CREDIT_PACKAGE
+  QTAG_PACKAGE
+  ACTIVATION
+  OTHER
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  PENDING_PAYMENT
+  PAID
+  CANCELLED
+  REFUNDED
+  FAILED
+}
+
+model PaymentIntent {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  purchaseOrderId String?
+  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+
+  provider         String
+  providerIntentId String?
+  amount           String
+  currency         String
+  status           PaymentStatus @default(PENDING)
+  paymentUrl       String?
+  metadata         Json @default("{}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  paymentEvents PaymentEvent[]
+
+  @@index([tenantId, status])
+  @@index([purchaseOrderId])
+  @@index([provider, providerIntentId])
+}
+
+enum PaymentStatus {
+  PENDING
+  REQUIRES_ACTION
+  CONFIRMED
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+model PaymentEvent {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  purchaseOrderId String?
+  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+
+  paymentIntentId String?
+  paymentIntent   PaymentIntent? @relation(fields: [paymentIntentId], references: [id], onDelete: SetNull)
+
+  provider        String
+  providerEventId String
+  eventType       String
+  status          PaymentEventStatus @default(RECEIVED)
+  payloadHash     String
+  sanitizedPayload Json?
+  receivedAt      DateTime @default(now())
+  processedAt     DateTime?
+
+  @@unique([provider, providerEventId])
+  @@index([tenantId, receivedAt])
+  @@index([purchaseOrderId])
+  @@index([paymentIntentId])
+  @@index([status])
+}
+
+enum PaymentEventStatus {
+  RECEIVED
+  CONFIRMED
+  FAILED
+  REVERSED
+  IGNORED
+}
+
+model CreditLedgerEntry {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  userId          String?
+  purchaseOrderId String?
+  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+
+  entryType       CreditLedgerEntryType
+  amount          Int
+  availableDelta  Int
+  reservedDelta   Int @default(0)
+  referenceType   String?
+  referenceId     String?
+  idempotencyKey  String?
+  actorUserId     String?
+  reason          String?
+  metadata        Json @default("{}")
+  createdAt       DateTime @default(now())
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, userId])
+  @@index([purchaseOrderId])
+  @@index([referenceType, referenceId])
+  @@index([entryType])
+}
+
+enum CreditLedgerEntryType {
+  PURCHASED
+  GRANTED
+  ADJUSTED
+  RESERVED
+  CONSUMED
+  RELEASED
+  REFUNDED
+  REVOKED
+  EXPIRED
+}
+
+model QTagLedgerEntry {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  userId          String?
+  purchaseOrderId String?
+  purchaseOrder   PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+
+  fulfillmentOrderId String?
+  fulfillmentOrder   QTagFulfillmentOrder? @relation(fields: [fulfillmentOrderId], references: [id], onDelete: SetNull)
+
+  entryType       QTagLedgerEntryType
+  quantity        Int
+  availableDelta  Int
+  reservedDelta   Int @default(0)
+  referenceType   String?
+  referenceId     String?
+  idempotencyKey  String?
+  actorUserId     String?
+  reason          String?
+  metadata        Json @default("{}")
+  createdAt       DateTime @default(now())
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, userId])
+  @@index([purchaseOrderId])
+  @@index([fulfillmentOrderId])
+  @@index([referenceType, referenceId])
+  @@index([entryType])
+}
+
+enum QTagLedgerEntryType {
+  PURCHASED
+  GRANTED
+  RESERVED
+  CONSUMED
+  RELEASED
+  REFUNDED
+  ADJUSTED
+  REVOKED
+}
+
+model QTagFulfillmentOrder {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  userId  String?
+  assetId String
+  asset   Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  status            QTagFulfillmentStatus @default(REQUESTED)
+  sku               String?
+  shippingRecipient Json?
+  trackingCode      String?
+  carrier           String?
+  notes             String?
+  attempts          Int @default(0)
+  lastError         String?
+  claimedByActorId  String?
+  dispatchedAt      DateTime?
+  deliveredAt       DateTime?
+  activatedAt       DateTime?
+  cancelledAt       DateTime?
+  cancellationReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  encodingSessions EncodingSession[]
+  qTagLedgerEntries QTagLedgerEntry[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, assetId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+enum QTagFulfillmentStatus {
+  REQUESTED
+  READY_FOR_ENCODING
+  ENCODING_IN_PROGRESS
+  ENCODING_FAILED
+  QA_PENDING
+  QA_FAILED
+  DISPATCH_READY
+  DISPATCHED
+  DELIVERED
+  ACTIVATED
+  CANCELLED
+  EXPIRED
 }
 
 // ===========================================================
@@ -1024,23 +1512,128 @@ model EnvironmentalCredit {
   @@index([anchorStatus])
 }
 
+model MigrationRun {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  mode        MigrationMode
+  source      String
+  status      MigrationRunStatus @default(PENDING)
+  batchSize   Int?
+  checksum    String?
+  summary     Json @default("{}")
+  error       String?
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  createdByActorId String?
+
+  checkpoints MigrationCheckpoint[]
+  records     MigrationRecord[]
+
+  @@index([tenantId, status])
+  @@index([source])
+  @@index([startedAt])
+}
+
+enum MigrationMode {
+  DRY_RUN
+  EXECUTE
+}
+
+enum MigrationRunStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model MigrationCheckpoint {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  migrationRunId String
+  migrationRun   MigrationRun @relation(fields: [migrationRunId], references: [id], onDelete: Cascade)
+
+  source        String
+  batchKey      String
+  lastSourceId  String?
+  processedCount Int @default(0)
+  checksum      String?
+  status        MigrationRunStatus @default(PENDING)
+  metadata      Json @default("{}")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([migrationRunId, batchKey])
+  @@index([tenantId, source])
+  @@index([status])
+}
+
+model MigrationRecord {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  migrationRunId String
+  migrationRun   MigrationRun @relation(fields: [migrationRunId], references: [id], onDelete: Cascade)
+
+  source          String
+  sourceId        String
+  targetType      String?
+  targetId        String?
+  status          MigrationRecordStatus @default(PENDING)
+  checksum        String?
+  error           String?
+  warnings        Json @default("[]")
+  metadata        Json @default("{}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([migrationRunId, source, sourceId])
+  @@index([tenantId, source])
+  @@index([status])
+  @@index([targetType, targetId])
+}
+
+enum MigrationRecordStatus {
+  PENDING
+  MIGRATED
+  SKIPPED
+  CONFLICT
+  ERROR
+}
+
 model EncodingSession {
   id       String @id @default(cuid())
   tenantId String
 
-  assetId String @unique
+  assetId String
+
+  fulfillmentOrderId String?
+  fulfillmentOrder   QTagFulfillmentOrder? @relation(fields: [fulfillmentOrderId], references: [id], onDelete: SetNull)
 
   ntagUID     String
   status      EncodingStatus @default(PENDING)
+  attemptNo   Int @default(1)
+  stationId   String?
+  operatorId  String?
   layoutB64   String
   sdmMacKeyId String
   sdmEncKeyId String
   anchorTxId  String?
   lockedAt    DateTime?
+  expiresAt   DateTime?
+  lastError   String?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
   @@index([tenantId])
+  @@index([assetId])
+  @@index([fulfillmentOrderId])
   @@index([ntagUID])
   @@index([status])
+  @@unique([fulfillmentOrderId, attemptNo])
 }
