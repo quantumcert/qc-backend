@@ -517,6 +517,32 @@ describe('FACETA 5: PublicProfileFacet — Consulta LGPD-Safe', () => {
         expect(result?.metadata).not.toHaveProperty('model'); // was not in publicDataKeys
         expect(result).not.toHaveProperty('tenantId'); // LGPD protection
     });
+
+    it('✅ Expõe somente a marca pública do tenant para white label', () => {
+        const result = PublicProfileFacet.filterAsset({
+            ...BICYCLE,
+            tenant: {
+                id: 'tenant_001',
+                name: 'ACME CERT',
+                slug: 'acme-cert',
+                commercialProfile: {
+                    legalName: 'ACME Certificadora Ltda',
+                    whiteLabel: {
+                        logoUrl: 'https://cdn.acme.test/logo.svg',
+                        primaryColor: '#123456',
+                    },
+                },
+            },
+        });
+
+        expect(result).not.toHaveProperty('tenantId');
+        expect(result?.tenantBrand).toEqual({
+            name: 'ACME Certificadora Ltda',
+            slug: 'acme-cert',
+            logoUrl: 'https://cdn.acme.test/logo.svg',
+            primaryColor: '#123456',
+        });
+    });
 });
 
 // ═══════════════════════════════════════════════════════════
