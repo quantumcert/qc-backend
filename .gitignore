@@ -12,6 +12,7 @@ dist/
 coverage/
 .turbo
 .worktrees/
+.playwright-mcp/
 contracts/soroban/**/.stellar/
 contracts/soroban/**/target/
 docs/doc-inpi-atualizado.pdf
