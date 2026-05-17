@@ -160,12 +160,13 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 1. O admin operacional é entregue como módulo isolado dentro do `qc-dashboard`, com rotas/admin shell próprios; `qc-admin` fica como extração futura, não como requisito desta fase.
 2. Platform Admin Quantum consegue cadastrar cliente/empresa B2B, criar o Tenant correspondente com slug sugerido automaticamente a partir do nome e editavel, definir a chain do tenant com `STELLAR` como padrão, preencher perfil comercial, contatos, plano, limites e status.
-2a. Perfil do tenant é editável no admin e cada criação/alteração mantém um `Asset` canônico `tenant-profile:<tenantId>` com `targetChain`, `EventLog` aprovado e `signatureHash` pronto para ancoragem.
+2a. CNPJ/taxId é chave única de Tenant B2B; duplicidade bloqueia criação/edição e o perfil do tenant registra chave determinística derivada do CNPJ normalizado.
+2b. Perfil do tenant é editável no admin e cada criação/alteração mantém um `Asset` canônico `tenant-profile:<tenantId>` com `targetChain`, `EventLog` aprovado e `signatureHash` pronto para ancoragem.
 3. Platform Admin consegue ativar, suspender e arquivar tenants com fluxo auditável.
 4. Platform Admin consegue criar múltiplas API keys por tenant, rotacionar e revogar, com secret hasheado, prefixo visível, escopos canônicos selecionáveis por checkbox, expiração e auditoria; API keys só autenticam quando o tenant está `ACTIVE` e chamadas Diamond/REST são bloqueadas quando a chave não possui o escopo exigido.
 5. A área admin contempla compras, ativações, recebimentos, concessão/revogação/ajuste de créditos e histórico operacional por tenant.
 6. Tenant Admin B2B visualiza apenas dados do próprio tenant: perfil permitido, créditos, compras, API keys, usuários/equipe e status de ativação.
-6a. Platform Admin consegue listar, criar e editar usuários/equipe de qualquer tenant pelo Tenant Detail, ver status/papel/identidade externa, vínculo de Asset de perfil quando existir e Assets associados por ownership/delegação, com mutações auditadas.
+6a. Platform Admin consegue listar, criar e editar usuários/equipe de qualquer tenant pelo Tenant Detail, ver status/papel/identidade externa, CPF/documento único, vínculo de Asset de perfil quando existir e Assets associados por ownership/delegação, com mutações auditadas.
 7. Toda mutação privilegiada usa autorização server-side; esconder menu na UI não conta como controle de segurança.
 8. Eventos de auditoria registram actor, tenant, ação, timestamp e payload hash/referência para cada operação crítica.
 9. Créditos de uso da aplicação são geridos por ledger próprio, separado de saldo financeiro/on-chain; compra de créditos só altera crédito disponível após pagamento confirmado.
@@ -176,6 +177,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 14. Tenant Quantum existe como tenant canônico para B2C, com usuários/dependentes do `qc-dashboard` migrados para usuários tenant-scoped no backend.
 15. O backfill é idempotente, tem dry-run, execução completa, relatório de conflitos/órfãos/diffs e resolve ownership/credits/QTAGs quando a origem permite.
 16. O cutover B2C usa backend canônico para usuários, dependentes, créditos e ownership; banco local do dashboard fica limitado a sessão/preferências temporárias.
+16a. Fluxos de transferência B2C resolvem remetente/destinatário para `TenantUser` + Asset de perfil dentro do Tenant Quantum, usando CPF/documento como chave única normalizada/hasheada; transferir para um CPF desconhecido cria vínculo pendente de usuário/perfil, não um novo tenant.
 
 **Plans**: 7 plans, 6 waves
 
@@ -214,7 +216,11 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 **Tenant profile Asset decision:** A Fase 4 já cria o primeiro bridge operacional da visão "tudo é Asset": o perfil comercial do tenant deve ser editável no admin, materializado como `Asset` local com `externalId` determinístico `tenant-profile:<tenantId>` e registrado em `EventLog` aprovado para entrar na fila de ancoragem. A Fase 6 continua responsável por generalizar o modelo para perfis B2C, dependentes, pets, objetos, documentos e QTAGs.
 
-**Tenant user/admin decision:** A Fase 4 deve permitir que Platform Admin visualize, crie e edite usuários/equipe de qualquer tenant no Tenant Detail, incluindo vínculo de identidade externa, role/status, Asset de perfil quando existir e Assets associados por ownership/delegação. A Fase 5 fica responsável por transformar essa fundação em self-service B2B completo para Tenant Admin, com convites, operadores, políticas e limites próprios do tenant.
+**Tenant CNPJ decision:** CNPJ/taxId normalizado é chave única operacional de Tenant B2B. O backend deve bloquear duplicidade antes de criar/editar o perfil comercial, manter constraint única em `TenantCommercialProfile.taxId` e gravar no Asset/evento do tenant uma chave determinística derivada do CNPJ para rastreabilidade.
+
+**Tenant user/admin decision:** A Fase 4 deve permitir que Platform Admin visualize, crie e edite usuários/equipe de qualquer tenant no Tenant Detail, incluindo vínculo de identidade externa, role/status, CPF/documento único, Asset de perfil quando existir e Assets associados por ownership/delegação. Quando o perfil do usuário for registrado como Asset/on-chain, a transação deve conter uma chave determinística derivada do CPF normalizado, como hash, sem gravar CPF bruto em payload público ou imutável. A Fase 5 fica responsável por transformar essa fundação em self-service B2B completo para Tenant Admin, com convites, operadores, políticas e limites próprios do tenant.
+
+**User asset history/transfer decision:** Usuário final B2C não vira Tenant. Ele é `TenantUser` do Tenant Quantum e tem um Asset de perfil. O histórico consultável do usuário deve agregar dois eixos: eventos do próprio Asset de perfil e eventos dos Assets em que ele é owner/delegado/destinatário de transferência. Transferências devem registrar `fromProfileAssetId`, `toProfileAssetId` quando disponível, hashes de documento/ownerRef e evento de ownership na chain; CPF bruto não deve ser payload público/on-chain.
 
 **Tenant chain decision:** Como a plataforma será multichain, `Tenant.targetChain` é o roteador canônico de ancoragem do tenant. O padrão operacional é `STELLAR`; a UI admin deve permitir escolher outra chain suportada quando necessário, e o Tenant Quantum/Quantum Cert deve ser normalizado sempre com `targetChain=STELLAR`.
 
@@ -253,9 +259,11 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 **Success Criteria** (what must be TRUE):
 
 1. Todo caminho de criação de perfil, dependente, pet, objeto, documento ou QTAG passa pelo Asset Engine e cria um Asset local tenant-scoped antes de qualquer publicação.
-2. Cada Asset local recebe identidade Stellar própria (`asset_code + issuer`) e registro Soroban de proveniência, com identificadores públicos, hashes e vínculos suficientes para verificação sem expor PII.
+2. Cada Asset local recebe identidade Stellar própria (`asset_code + issuer`) e registro Soroban de proveniência, com identificadores públicos, hash do CPF/documento normalizado quando o Asset representar perfil de pessoa, hashes e vínculos suficientes para verificação sem expor PII.
 3. Eventos aprovados de lifecycle, ownership, delegação, QTAG, scan, documento e incidente são registrados na chain como trilha ordenada, com hash do payload e referência ao evento anterior quando aplicável.
 4. A API pública e o dashboard exibem uma visão única: dados públicos do app + prova on-chain + link Stellar Expert/contrato, sem divergência entre timeline local e timeline on-chain confirmada.
+4a. A consulta de histórico de um usuário retorna eventos do Asset de perfil do usuário e eventos dos Assets que pertencem/pertenceram a ele por ownership, delegação ou transferência.
+4b. Transferências de Asset entre usuários registram evento on-chain com vínculos para os Assets de perfil de origem/destino quando disponíveis e hashes de documento/ownerRef, sem expor CPF bruto.
 5. Backfill cria registros on-chain faltantes para assets existentes, em fila idempotente, com relatório de pendências, retries e conflitos.
 6. Uma QTAG/Device tem Asset próprio e vínculo obrigatório ao Asset protegido; eventos de emissão, commissioning, despacho, ativação e scan ficam rastreáveis na timeline/prova pública.
 

@@ -118,7 +118,7 @@ model TenantCommercialProfile {
   updatedAt DateTime @updatedAt
 
   @@index([tenantId])
-  @@index([taxId])
+  @@unique([taxId])
 }
 
 model TenantUser {

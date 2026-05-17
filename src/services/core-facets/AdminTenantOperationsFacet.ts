@@ -1,5 +1,5 @@
 import prisma from '../../config/prisma';
-import { randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import {
     AssetStatus,
     EventStatus,
@@ -94,6 +94,7 @@ const ADMIN_TENANT_ACTIONS = {
 const TENANT_PROFILE_ASSET_KIND = 'TENANT_PROFILE';
 const TENANT_PROFILE_EVENT_ORIGIN = 'SYSTEM_TENANT_PROFILE';
 const TENANT_PROFILE_PUBLIC_DATA_KEYS = ['assetKind', 'tenant'];
+const TAX_ID_ALREADY_EXISTS_CODE = 'TAX_ID_ALREADY_EXISTS';
 
 const TENANT_PROFILE_ASSET_SELECT = {
     id: true,
@@ -174,6 +175,7 @@ export class AdminTenantOperationsFacet {
         const profileData = buildCommercialProfileData(params.commercialProfile);
         profileData.contactEmail ??= params.contactEmail;
         profileData.legalName ??= params.name;
+        await this.ensureTaxIdAvailable(profileData.taxId);
 
         const result = await prisma.$transaction(async (tx) => {
             const tenant = await tx.tenant.create({
@@ -243,6 +245,7 @@ export class AdminTenantOperationsFacet {
 
         const tenantData = buildTenantUpdateData(params);
         const profileData = buildCommercialProfileData(params.commercialProfile);
+        await this.ensureTaxIdAvailable(profileData.taxId, tenantId);
 
         const result = await prisma.$transaction(async (tx) => {
             let tenant;
@@ -412,6 +415,24 @@ export class AdminTenantOperationsFacet {
 
         if (!tenant) {
             throw new AdminTenantError('TENANT_NOT_FOUND', `Tenant "${tenantId}" not found.`);
+        }
+    }
+
+    private static async ensureTaxIdAvailable(taxId?: string | null, currentTenantId?: string) {
+        if (!taxId) return;
+
+        const existingProfile = await prisma.tenantCommercialProfile.findFirst({
+            where: {
+                taxId,
+                ...(currentTenantId ? { tenantId: { not: currentTenantId } } : {}),
+            },
+            select: {
+                tenantId: true,
+            },
+        });
+
+        if (existingProfile) {
+            throw new AdminTenantError(TAX_ID_ALREADY_EXISTS_CODE, 'CNPJ já cadastrado para outro tenant.');
         }
     }
 
@@ -684,6 +705,7 @@ function buildPublicAssetUrl(assetId: string): string {
 }
 
 function buildTenantProfileAssetMetadata(tenant: any, commercialProfile: any): Prisma.InputJsonObject {
+    const tenantKey = buildTenantKeyMetadata(commercialProfile);
     return {
         assetKind: TENANT_PROFILE_ASSET_KIND,
         schemaVersion: 1,
@@ -698,6 +720,7 @@ function buildTenantProfileAssetMetadata(tenant: any, commercialProfile: any): P
             targetChain: tenant.targetChain || DEFAULT_TENANT_TARGET_CHAIN,
         },
         commercialProfile: normalizeCommercialProfileSnapshot(commercialProfile),
+        ...tenantKey,
         profileUpdatedAt: toIsoString(commercialProfile?.updatedAt),
     };
 }
@@ -710,6 +733,7 @@ function buildTenantProfileEventPayload(params: {
     actor: AdminActorContext;
     reason: string;
 }): Prisma.InputJsonObject {
+    const tenantKey = buildTenantKeyMetadata(params.commercialProfile);
     return {
         eventType: params.eventType,
         schemaVersion: 1,
@@ -725,10 +749,24 @@ function buildTenantProfileEventPayload(params: {
             targetChain: params.tenant.targetChain || DEFAULT_TENANT_TARGET_CHAIN,
         },
         commercialProfile: normalizeCommercialProfileSnapshot(params.commercialProfile),
+        ...tenantKey,
         reason: params.reason,
         updatedByActorId: params.actor.actorUserId,
         actorTenantId: params.actor.actorTenantId ?? null,
         recordedAt: new Date().toISOString(),
+    };
+}
+
+function buildTenantKeyMetadata(commercialProfile: any): Prisma.InputJsonObject {
+    const cnpj = normalizeTaxId(commercialProfile?.taxId);
+    if (!cnpj) return {};
+
+    return {
+        tenantKeyType: 'CNPJ',
+        tenantKeyValue: cnpj,
+        tenantKeyHash: createHash('sha256').update(cnpj).digest('hex'),
+        tenantKeyHashAlgorithm: 'SHA-256',
+        tenantKeyNormalization: 'digits-only',
     };
 }
 

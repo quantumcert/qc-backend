@@ -18,6 +18,7 @@ The platform has backend tenant/API-key primitives and `qc-dashboard` has an adm
 That creates operational risk:
 
 1. B2B customers can be created without a consistent activation/commercial state.
+1a. B2B customers can be duplicated under different tenants if CNPJ/taxId is not treated as a canonical unique key.
 2. API keys may be provisioned without a review, owner, expiration, rotation, or audit trail.
 3. Purchases and credit grants can drift from the tenant record and later break identity/backfill/on-chain phases.
 4. Platform admin and tenant admin responsibilities remain mixed.
@@ -55,6 +56,7 @@ Quantum platform admins can operate across tenants:
 - set tenant status: draft, pending review, active, suspended, archived;
 - define the tenant anchoring chain through `Tenant.targetChain`, with `STELLAR` as the default for new tenants and Tenant Quantum;
 - configure legal/commercial profile: company name, CNPJ/tax ID, contacts, billing owner, plan, limits, white-label metadata;
+- enforce CNPJ/taxId uniqueness for Tenant B2B creation and profile updates;
 - edit tenant profile through the admin UI and keep a canonical tenant-profile `Asset` with an approved anchoring event for every profile creation/update;
 - activate/deactivate tenant access;
 - create, rotate, revoke and audit API keys;
@@ -181,7 +183,7 @@ The planning phase must define API contracts for:
 - tenant activation workflow;
 - tenant plan/limit/commercial profile management;
 - tenant target-chain selection and persistence, defaulting to `STELLAR` and feeding the same `AnchorQueueService` routing used by normal assets;
-- tenant profile Asset upsert and anchoring event generation, using a deterministic `externalId` per tenant profile, `targetChain` metadata and the same `EventLog`/anchor queue used by normal assets;
+- tenant profile Asset upsert and anchoring event generation, using a deterministic `externalId` per tenant profile, `targetChain` metadata, deterministic CNPJ/taxId key metadata and the same `EventLog`/anchor queue used by normal assets;
 - API key lifecycle with multiple active keys per tenant, prefix display, hashed secret storage, expiration, rotation and revocation;
 - canonical API key scope catalog with selector/route mapping and role-based defaults for Reader, Operator and Admin keys;
 - purchase/order records or integration placeholders;
@@ -195,6 +197,7 @@ The planning phase must define API contracts for:
 - platform admin tenant-user list/detail/create/update/status/role operations;
 - tenant-user profile Asset visibility and associated Asset list by ownership/delegation;
 - external identity link/unlink contracts for tenant users, with conflict reporting instead of silent merge;
+- transfer/ownership lookup contracts that resolve sender and recipient to canonical tenant users/profile Assets when possible, using normalized/hashed CPF/document and preserving pending recipients instead of creating tenants;
 - audit log query by tenant and by actor;
 - tenant-admin self-service views constrained to current tenant.
 
@@ -223,7 +226,8 @@ Add or confirm canonical backend storage for:
 
 - tenant commercial profile;
 - tenant target chain through `Tenant.targetChain`, with `STELLAR` as default and supported multichain values validated by backend/admin schemas;
-- canonical tenant profile Asset with deterministic `externalId`, profile metadata and approved event log for blockchain anchoring;
+- canonical tenant CNPJ/taxId uniqueness, including backend validation and database constraint on normalized taxId;
+- canonical tenant profile Asset with deterministic `externalId`, profile metadata, CNPJ/taxId key metadata and approved event log for blockchain anchoring;
 - tenant activation status and activation timestamps;
 - API key metadata, hashed secret, prefix, scopes, expiration and revoked metadata;
 - selector/route-to-scope policy used at runtime to reject unmapped or unauthorized API-key calls;
@@ -241,13 +245,15 @@ Add or confirm canonical backend storage for:
 - backend tenant-scoped user, external identity and membership records;
 - migration run/checkpoint/report records for idempotent dashboard backfill;
 - strong optional link from `Owner.ownerRef` to a backend tenant user while preserving legacy references;
+- transfer records/events mapped to canonical `TenantUser` and profile Asset references when a sender/recipient is known, plus document hash for pending recipients;
 - migrated credit/QTAG state needed for B2C operational continuity.
 
 ## Acceptance Criteria
 
 1. A Quantum platform admin can create a B2B client/company from the admin area without direct DB access.
 2. A created B2B client becomes a backend `Tenant` with status, commercial profile, limits, target chain and activation state. If no chain is selected, the backend persists `STELLAR`.
-2a. Every tenant profile create/update creates or updates a canonical profile `Asset` and appends an approved `EventLog` with `signatureHash` and `targetChain` context so the same profile mutation is visible to the application and anchor queue.
+2a. Tenant CNPJ/taxId is unique across tenants; duplicate creation/update is rejected before creating a second tenant record.
+2b. Every tenant profile create/update creates or updates a canonical profile `Asset` and appends an approved `EventLog` with `signatureHash`, `targetChain` context and deterministic CNPJ/taxId key metadata so the same profile mutation is visible to the application and anchor queue.
 3. A platform admin can create multiple API keys, rotate and revoke them, and only key prefix/metadata are visible after creation. API keys authenticate only while the tenant is `ACTIVE`; suspension blocks usage without automatic revocation. Creation uses checkbox-selected canonical scopes; invalid scopes are rejected and Diamond/REST calls are denied when the key lacks the required scope.
 4. A platform admin can grant or adjust credits with a mandatory reason and auditable ledger entry.
 5. Purchases/activation/receivable records are visible on the tenant detail page and are linked to the tenant.
@@ -265,7 +271,8 @@ Add or confirm canonical backend storage for:
 17. Existing B2C ownership references that match `openId` or migrated aliases are resolvable to canonical backend users while preserving `Owner.ownerRef`.
 18. Existing B2C credit/QTAG state required for continuity is represented in backend ledgers without changing the locked rule that registration flows alter credits, not wallet balance.
 19. Platform Admin can list, create and edit users for any tenant from the tenant detail Team/Usuários tab, see their role/status/external identity, profile Asset state and owned/associated Assets, and every mutation is tenant-scoped and audited.
-20. This phase produces the tenant/API-key/credit/QTAG/backfill/user-admin foundation required for Phase 5 B2B external readiness.
+20. B2C transfer flows resolve sender/recipient as `TenantUser` + profile Asset under Tenant Quantum when available; unknown CPF recipients remain pending user/profile links and never become tenants.
+21. This phase produces the tenant/API-key/credit/QTAG/backfill/user-admin foundation required for Phase 5 B2B external readiness.
 
 ## Out of Scope
 

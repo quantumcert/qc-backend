@@ -21,6 +21,7 @@ const {
   const mockTenantCommercialProfile = {
     create: vi.fn(),
     upsert: vi.fn(),
+    findFirst: vi.fn(),
   };
   const mockAdminAuditLog = {
     create: vi.fn(),
@@ -119,6 +120,7 @@ describe('AdminTenantOperationsFacet', () => {
       updatedAt: new Date('2026-05-17T12:01:00.000Z'),
     });
     mockEventLog.findFirst.mockResolvedValue(null);
+    mockTenantCommercialProfile.findFirst.mockResolvedValue(null);
     mockProcessQueue.mockResolvedValue({ processed: 0, items: [] });
   });
 
@@ -246,6 +248,32 @@ describe('AdminTenantOperationsFacet', () => {
     }));
   });
 
+  it('rejects tenant creation when CNPJ is already assigned to another tenant', async () => {
+    mockTenant.findUnique.mockResolvedValue(null);
+    mockTenantCommercialProfile.findFirst.mockResolvedValue({
+      tenantId: 'tenant-existing',
+      taxId: '12345678000199',
+    });
+
+    await expect(AdminTenantOperationsFacet.createTenant(platformActor, {
+      name: 'Cliente Duplicado',
+      slug: 'cliente-duplicado',
+      contactEmail: 'ops@duplicado.com',
+      commercialProfile: {
+        legalName: 'Cliente Duplicado Ltda',
+        taxId: '12.345.678/0001-99',
+        taxIdType: 'CNPJ',
+      },
+      reason: 'validar cnpj unico',
+    })).rejects.toMatchObject({
+      code: 'TAX_ID_ALREADY_EXISTS',
+      message: 'CNPJ já cadastrado para outro tenant.',
+    });
+
+    expect(mockTenant.create).not.toHaveBeenCalled();
+    expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
   it('anchors tenant profile edits through a canonical profile asset event', async () => {
     mockTenant.findUnique
       .mockResolvedValueOnce({ id: 'tenant-b2b' })
@@ -334,6 +362,9 @@ describe('AdminTenantOperationsFacet', () => {
             taxId: '12345678000199',
             contactEmail: 'comercial@cliente.com',
           }),
+          tenantKeyType: 'CNPJ',
+          tenantKeyValue: '12345678000199',
+          tenantKeyHash: expect.any(String),
         }),
         publicDataKeys: ['assetKind', 'tenant'],
       }),
@@ -358,6 +389,9 @@ describe('AdminTenantOperationsFacet', () => {
           tenantId: 'tenant-b2b',
           profileAssetId: 'asset-tenant-profile',
           updatedByActorId: 'user-platform',
+          tenantKeyType: 'CNPJ',
+          tenantKeyValue: '12345678000199',
+          tenantKeyHash: expect.any(String),
         }),
         signatureHash: expect.any(String),
         dltTxId: null,
