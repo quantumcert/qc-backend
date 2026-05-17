@@ -1,7 +1,7 @@
 # ROADMAP — Quantum Cert Backend
 
 _Generated: 2026-05-08 | Granularity: standard | Mode: mvp_
-_Coverage: 72 requirements mapped (41 original/current + 31 architecture transition requirements)_
+_Coverage: 73 requirements mapped_
 _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 ---
@@ -31,7 +31,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 - [x] **Phase 1: Core Gap Closure + Production Hardening** _(4/4 plans complete)_ — Fechar falhas de segurança críticas e conectar features inacessíveis antes de qualquer expansão
 - [ ] **Phase 2: Document Verification + QTAG Production** _(3/3 plans complete; human UAT pending)_ — Verificação pública de documentos e NFC commissioning funcionando em produção
 - [x] **Phase 3: Pluggable DLT Workers — Stellar/Soroban Priority** _(complete; UAT passed; PRs merged)_ — Adapter Stellar para hackathon + infraestrutura multi-chain
-- [ ] **Phase 4: B2B Admin Operations Console** — Área admin no `qc-dashboard` para cadastrar empresas/tenants, ativações, API keys, compras, recebimentos via provider, concessão de créditos, saldo/fila QTAG e operação comercial B2B
+- [ ] **Phase 4: B2B Admin Operations Console** _(7 plans ready)_ — Área admin no `qc-dashboard` para cadastrar empresas/tenants, ativações, API keys, compras, recebimentos via provider, concessão de créditos, saldo/fila QTAG, Tenant Quantum, backfill e operação comercial B2B
 - [ ] **Phase 5: B2B Tenant External Readiness** — Tenants B2B externos operam com admins, operadores, API keys, créditos, QTAGs, auditoria e boundaries white-label/publicos próprios após Tenant Quantum/backfill da Phase 4
 - [ ] **Phase 6: On-chain Asset Identity + Provenance** — Todo perfil, dependente, pet, objeto, documento e QTAG tem Asset local + Asset/registro on-chain e rastreabilidade por eventos na Stellar/Soroban
 - [ ] **Phase 7: Scale + Observability Infrastructure** — Redis, Pino, Sentry, BullMQ — plataforma multi-instância pronta para carga real
@@ -175,7 +175,33 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 15. O backfill é idempotente, tem dry-run, execução completa, relatório de conflitos/órfãos/diffs e resolve ownership/credits/QTAGs quando a origem permite.
 16. O cutover B2C usa backend canônico para usuários, dependentes, créditos e ownership; banco local do dashboard fica limitado a sessão/preferências temporárias.
 
-**Plans**: TBD
+**Plans**: 7 plans, 6 waves
+
+**Wave 0**
+
+- [ ] 04-01-PLAN.md — Canonical schema, Platform/Tenant Admin authorization, Tenant Quantum/backfill foundation: ADMIN-01, ADMIN-07, ADMIN-08, ID-01, ID-02
+
+**Wave 1** _(blocked on Wave 0)_
+
+- [ ] 04-02-PLAN.md — Platform admin tenant lifecycle, commercial profile, activation/suspension and dashboard tenant hub: ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-07, ADMIN-08
+
+**Wave 2** _(blocked on Wave 1 for tenant contracts; plans can run in parallel)_
+
+- [ ] 04-03-PLAN.md — API key initial issue/list/rotate/revoke plus sanitized request audit: ADMIN-01, ADMIN-04, ADMIN-08
+- [ ] 04-04-PLAN.md — Credit ledger, purchase/payment/provider boundary and payment queue: ADMIN-05, ADMIN-06, ADMIN-08, ADMIN-09, ADMIN-10
+
+**Wave 3** _(blocked on schema, tenant lifecycle and credit/provider foundation)_
+
+- [ ] 04-05-PLAN.md — QTAG entitlement ledger, fulfillment order, operational queue and commissioning activation link: ADMIN-08, ADMIN-11, ADMIN-12, ADMIN-13
+
+**Wave 4** _(blocked on schema, credit ledger and QTAG ledger)_
+
+- [ ] 04-06-PLAN.md — Tenant Quantum, complete B2C backfill, ownership/credits/QTAG reconciliation and dashboard B2C cutover: ADMIN-08, ADMIN-09, ID-01, ID-02, ID-03, ID-04, ID-05, ID-06
+
+**Wave 5** _(blocked on operational slices)_
+
+- [ ] 04-07-PLAN.md — Platform queues, Tenant Admin constrained view, cross-repo verification and UAT closure: ADMIN-01..13, ID-01..06
+
 **Cross-repo note:** `qc-dashboard` implementa a interface; `qc-backend` define os contratos, autorização, tenant/API-key/credit ledger, QTAG entitlement ledger, QTAG fulfillment queue, purchase/payment intents, provider adapter e auditoria; `qc-record-module` executa gravação/commissioning físico; `qc-business` define regras comerciais, planos, pricing, compras, política de concessão de créditos/TAGs e escolha final do provider de recebimento.
 
 **Placement decision:** começar no `qc-dashboard` porque reduz duplicação e usa a autenticação/experiência operacional atual. Separar em `qc-admin` só quando houver necessidade real de deploy separado, SSO interno, boundary de compliance, marca própria ou escala de manutenção.
@@ -350,8 +376,8 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 | 1. Core Gap Closure + Production Hardening          | [M#1](https://github.com/quantumcert/qc-backend/milestone/1) | #5, #7, #8 | 4/4            | Complete          | 2026-05-09 |
 | 2. Document Verification + QTAG Production          | [M#2](https://github.com/quantumcert/qc-backend/milestone/2) | #12, #2    | 3/3            | Human UAT pending | -          |
 | 3. Pluggable DLT Workers — Stellar/Soroban Priority | [M#3](https://github.com/quantumcert/qc-backend/milestone/3) | #11        | 3/3            | Complete; PRs merged | 2026-05-14 |
-| 4. B2B Admin Operations Console                     | TBD                                                          | TBD        | 0/?            | Approved for planning | -       |
-| 5. Unified Tenant Identity + Data Backfill          | TBD                                                          | TBD        | 0/?            | Approved after Phase 4 | -      |
+| 4. B2B Admin Operations Console                     | TBD                                                          | TBD        | 0/7            | Planned; ready for execution | - |
+| 5. B2B Tenant External Readiness                    | TBD                                                          | TBD        | 0/?            | Approved after Phase 4 | -      |
 | 6. On-chain Asset Identity + Provenance             | TBD                                                          | TBD        | 0/?            | Approved after Phase 5 | -      |
 | 7. Scale + Observability Infrastructure             | [M#4](https://github.com/quantumcert/qc-backend/milestone/4) | #13        | 0/?            | Deferred behind Phase 5/6 | -    |
 | 8. EscrowFacet + Time-Lock Oracle + M2M             | [M#5](https://github.com/quantumcert/qc-backend/milestone/5) | #3         | 0/?            | Deferred behind Phase 7 | -       |

@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase 04 UI-SPEC approved — ready for plan-phase
-last_updated: "2026-05-17T06:07:39Z"
+status: Phase 04 planned — ready for execute-phase
+last_updated: "2026-05-17T07:20:00Z"
 progress:
   total_phases: 9
   completed_phases: 3
-  total_plans: 10
+  total_plans: 17
   completed_plans: 10
   percent: 33
 ---
@@ -24,20 +24,20 @@ _Initialized: 2026-05-08_
 
 **Workspace Scope**: Produto multi-repo — `qc-backend`, `qc-dashboard`, `qc-home`, `qc-record-module`; decisões de negócio em `qc-business`.
 
-**Current Focus**: Phase 4 — B2B Admin Operations Console (UI-SPEC approved; ready for plan-phase)
+**Current Focus**: Phase 4 — B2B Admin Operations Console (planned; ready for execute-phase)
 
 ---
 
 ## Current Position
 
-Phase: 04 (b2b-admin-operations-console) — UI-SPEC APPROVED
-Plan: TBD
+Phase: 04 (b2b-admin-operations-console) — PLANNED
+Plan: 01 of 07 ready
 | Field | Value |
 |-------|-------|
 | Milestone | TBD |
 | Phase | 4 — B2B Admin Operations Console |
-| Plan | TBD |
-| Status | UI-SPEC approved after Visual Companion review on 2026-05-17; ready for plan-phase |
+| Plan | 01 of 07 ready |
+| Status | Planned on 2026-05-17 with 7 execution plans covering ADMIN-01..13 and ID-01..06; ready for execute-phase |
 
 **Progress**:
 
@@ -45,7 +45,7 @@ Plan: TBD
 Phase 1 [██████████] 100% (Plan 01: SEC-01/02/03 | Plan 02: SEC-04/05/06 | Plan 03: CORE-01/02/03/04 | Plan 04: CORE-05/06)
 Phase 2 [██████████] 100% (3/3 plans complete; backend verified; physical QTAG UAT blocked)
 Phase 3 [██████████] 100% (3/3 plans complete; Stellar UAT passed; PRs merged)
-Phase 4 [          ] 0% (B2B Admin Operations Console — UI-SPEC approved, ready for plan-phase)
+Phase 4 [          ] 0% (B2B Admin Operations Console — 7/7 plans written, ready for execute-phase)
 Phase 5 [          ] 0% (B2B Tenant External Readiness — approved after Phase 4)
 Phase 6 [          ] 0% (On-chain Asset Identity + Provenance — approved after Phase 5)
 Phase 7 [          ] 0% (Scale + Observability — deferred behind identity/on-chain transition)
@@ -68,9 +68,9 @@ Phase 9 [          ] 0% (Specialized Domain Facets)
 | Metric                  | Value                      |
 | ----------------------- | -------------------------- |
 | Phases total            | 9                          |
-| Requirements total (v1) | 72 (41 prior + 31 transition) |
-| Requirements mapped     | 72/72                      |
-| Plans written           | 10                         |
+| Requirements total (v1) | 73                         |
+| Requirements mapped     | 73/73                      |
+| Plans written           | 17                         |
 | Plans complete          | 10                         |
 
 ---
@@ -82,6 +82,13 @@ Phase 9 [          ] 0% (Specialized Domain Facets)
 | Phase 03 P01 | 12 min   | 3 tasks | 9 files |
 | Phase 03 P02 | 6 min    | 3 tasks | 9 files |
 | Phase 03 P03 | 5 min    | 3 tasks | 6 files |
+| Phase 04 P01 | planned  | 3 tasks | 7 files |
+| Phase 04 P02 | planned  | 3 tasks | 12 files |
+| Phase 04 P03 | planned  | 3 tasks | 12 files |
+| Phase 04 P04 | planned  | 3 tasks | 12 files |
+| Phase 04 P05 | planned  | 3 tasks | 10 files |
+| Phase 04 P06 | planned  | 3 tasks | 10 files |
+| Phase 04 P07 | planned  | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -134,7 +141,7 @@ Phase 9 [          ] 0% (Specialized Domain Facets)
 ### Todos
 
 - Plan/update `qc-record-module` integration so a real NTAG 424 DNA can be written, locked, scanned, and approved through `/api/v1/scan`.
-- Plan Phase 4 around `qc-dashboard` admin module, backend tenant/API-key contracts, B2B activation, purchases, Transfero/provider receivables, credit ledger/grants, QTAG entitlement/fulfillment queue, admin audit, Tenant Quantum and complete B2C dashboard backfill/cutover.
+- Execute Phase 4 from 7 plans: canonical schema/admin authorization; tenant lifecycle/dashboard shell; API keys/request audit; credits/receivables; QTAG entitlement/fulfillment; Tenant Quantum/backfill/B2C cutover; cross-repo admin UAT.
 - Plan Phase 5 around B2B external tenant readiness after Phase 4: tenant admins/operators, tenant API consumption, white-label/public boundaries, B2B pilot and `qc-business` commercial packaging decisions.
 - Plan Phase 6 after Phase 5 so on-chain Asset identity uses stable tenant/user/ownership references.
 - Before executing a requirement with product/business ambiguity, check whether the decision belongs in `qc-business` and whether acceptance depends on `qc-dashboard`, `qc-home`, or `qc-record-module`.
@@ -157,7 +164,7 @@ Phase 9 [          ] 0% (Specialized Domain Facets)
 
 **Phase 3 merge**: 2026-05-16 — backend PR #23 and dashboard PR #23 merged to `main`.
 
-**Next action**: Plan Phase 4 — B2B Admin Operations Console using `.planning/phases/04-b2b-admin-operations-console/04-UI-SPEC.md`.
+**Next action**: Execute Phase 4 — start with `.planning/phases/04-b2b-admin-operations-console/04-01-PLAN.md`.
 
 **Context for next session**:
 
