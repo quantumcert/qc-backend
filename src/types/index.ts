@@ -92,6 +92,8 @@ export const DiamondFacets = {
     RATE_LIMITER: 'RateLimiterFacet',
     ADMIN_TENANT_OPERATIONS: 'AdminTenantOperationsFacet',
     ADMIN_API_KEY_OPERATIONS: 'AdminApiKeyOperationsFacet',
+    CREDIT_LEDGER: 'CreditLedgerFacet',
+    RECEIVABLES_PROVIDER: 'ReceivablesProviderFacet',
 
     // Phase 2: Asset Engine & Zero-Knowledge Security
     ASSET_REGISTRY: 'AssetRegistryFacet',
@@ -166,6 +168,9 @@ export const ResourceTypes = {
     TENANT: 'Tenant',
     API_KEY: 'ApiKey',
     RATE_LIMIT: 'RateLimitCounter',
+    CREDIT_LEDGER_ENTRY: 'CreditLedgerEntry',
+    PURCHASE_ORDER: 'PurchaseOrder',
+    PAYMENT_EVENT: 'PaymentEvent',
     ASSET: 'Asset',
     OWNER: 'Owner',
     DEVICE: 'Device',

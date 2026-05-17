@@ -44,8 +44,8 @@ created: 2026-05-17
 | 04-02-01 | 02 | 1 | ADMIN-02, ADMIN-03 | T-04-02 | Tenant status changes require platform authorization and audit | unit/integration | `npm test -- --run tests/admin-tenant-lifecycle.test.ts` | yes | green |
 | 04-03-01 | 03 | 1 | ADMIN-04, ADMIN-08 | T-04-03 | API key raw secret is one-time only; active keys list has prefix/metadata only | unit/integration | `npm test -- --run tests/admin-api-keys.test.ts` | yes | green |
 | 04-03-02 | 03 | 1 | ADMIN-04, ADMIN-08 | T-04-04 | API request audit stores no raw API key or sensitive payload | unit/integration | `npm test -- --run tests/api-request-audit.test.ts` | yes | green |
-| 04-04-01 | 04 | 2 | ADMIN-05, ADMIN-06, ADMIN-09, ADMIN-10 | T-04-05 | Credit ledger reserves, consumes and releases idempotently | unit/integration | `npm test -- --run tests/credit-ledger.test.ts` | no | pending |
-| 04-04-02 | 04 | 2 | ADMIN-10 | T-04-06 | Payment event processing deduplicates provider events before crediting | unit/integration | `npm test -- --run tests/payment-provider-boundary.test.ts` | no | pending |
+| 04-04-01 | 04 | 2 | ADMIN-05, ADMIN-06, ADMIN-09, ADMIN-10 | T-04-05 | Credit ledger reserves, consumes and releases idempotently | unit/integration | `npm test -- --run tests/credit-ledger.test.ts` | yes | green |
+| 04-04-02 | 04 | 2 | ADMIN-10 | T-04-06 | Payment event processing deduplicates provider events before crediting | unit/integration | `npm test -- --run tests/payment-provider-boundary.test.ts` | yes | green |
 | 04-05-01 | 05 | 2 | ADMIN-11, ADMIN-12, ADMIN-13 | T-04-07 | QTAG reservation/activation cannot consume entitlement twice | unit/integration | `npm test -- --run tests/qtag-fulfillment.test.ts` | no | pending |
 | 04-05-02 | 05 | 2 | ADMIN-12, ADMIN-13 | T-04-08 | Commissioning confirm validates tenant/session/UID and links `Asset.deviceId` | unit/integration | `npm test -- --run tests/commissioning.test.ts` | yes | pending |
 | 04-06-01 | 06 | 3 | ID-01, ID-02, ID-03, ID-04, ID-05, ID-06 | T-04-09 | Backfill maps B2C users under Tenant Quantum idempotently and cuts over B2C domain writes | integration | `npm test -- --run tests/tenant-backfill.test.ts` | no | pending |
@@ -61,7 +61,9 @@ created: 2026-05-17
 - [x] `tests/admin-tenant-lifecycle.test.ts` - tenant status/profile audit stubs
 - [x] `tests/admin-api-keys.test.ts` - initial issue/list/rotate/revoke stubs
 - [x] `tests/api-request-audit.test.ts` - request audit sanitization stubs
-- [ ] `tests/credit-ledger.test.ts` - reserve/consume/release/grant/adjust stubs
+- [x] `tests/credit-ledger.test.ts` - reserve/consume/release/grant/adjust stubs
+- [x] `tests/payment-provider-boundary.test.ts` - provider boundary, assinatura inválida, dedupe e crédito pós-confirmação
+- [x] `../qc-dashboard/server/admin.credits.test.ts` - procedures tRPC de créditos, compras e fila de pagamentos
 - [ ] `tests/payment-provider-boundary.test.ts` - provider event idempotency stubs
 - [ ] `tests/qtag-fulfillment.test.ts` - QTAG entitlement/fulfillment stubs
 - [x] `tests/tenant-backfill.test.ts` - Tenant Quantum migration dry-run/execute stubs

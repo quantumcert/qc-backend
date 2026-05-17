@@ -1,6 +1,7 @@
 // src/routes/v1/webhookRoutes.ts
 import { Router } from 'express';
 import { WebhookController } from '../../controllers/WebhookController';
+import { ReceivablesWebhookController } from '../../controllers/ReceivablesWebhookController';
 
 const router = Router();
 
@@ -52,5 +53,6 @@ const router = Router();
  *               $ref: '#/components/schemas/ErrorResponse'
  */
 router.post('/mercadopago', WebhookController.handleMercadoPago);
+router.post('/receivables/:provider', ReceivablesWebhookController.handleProviderWebhook);
 
 export default router;

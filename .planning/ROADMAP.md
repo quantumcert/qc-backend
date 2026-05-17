@@ -31,7 +31,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 - [x] **Phase 1: Core Gap Closure + Production Hardening** _(4/4 plans complete)_ — Fechar falhas de segurança críticas e conectar features inacessíveis antes de qualquer expansão
 - [ ] **Phase 2: Document Verification + QTAG Production** _(3/3 plans complete; human UAT pending)_ — Verificação pública de documentos e NFC commissioning funcionando em produção
 - [x] **Phase 3: Pluggable DLT Workers — Stellar/Soroban Priority** _(complete; UAT passed; PRs merged)_ — Adapter Stellar para hackathon + infraestrutura multi-chain
-- [ ] **Phase 4: B2B Admin Operations Console** _(3/7 plans complete; in progress)_ — Área admin no `qc-dashboard` para cadastrar empresas/tenants, ativações, API keys, compras, recebimentos via provider, concessão de créditos, saldo/fila QTAG, Tenant Quantum, backfill e operação comercial B2B
+- [ ] **Phase 4: B2B Admin Operations Console** _(4/7 plans complete; in progress)_ — Área admin no `qc-dashboard` para cadastrar empresas/tenants, ativações, API keys, compras, recebimentos via provider, concessão de créditos, saldo/fila QTAG, Tenant Quantum, backfill e operação comercial B2B
 - [ ] **Phase 5: B2B Tenant External Readiness** — Tenants B2B externos operam com admins, operadores, API keys, créditos, QTAGs, auditoria e boundaries white-label/públicos próprios após Tenant Quantum/backfill da Phase 4
 - [ ] **Phase 6: On-chain Asset Identity + Provenance** — Todo perfil, dependente, pet, objeto, documento e QTAG tem Asset local + Asset/registro on-chain e rastreabilidade por eventos na Stellar/Soroban
 - [ ] **Phase 7: Scale + Observability Infrastructure** — Redis, Pino, Sentry, BullMQ — plataforma multi-instância pronta para carga real
@@ -188,7 +188,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 **Wave 2** _(blocked on Wave 1 for tenant contracts; plans can run in parallel)_
 
 - [x] 04-03-PLAN.md — API key initial issue/list/rotate/revoke plus sanitized request audit: ADMIN-01, ADMIN-04, ADMIN-08 — DONE 2026-05-17
-- [ ] 04-04-PLAN.md — Credit ledger, purchase/payment/provider boundary and payment queue: ADMIN-05, ADMIN-06, ADMIN-08, ADMIN-09, ADMIN-10
+- [x] 04-04-PLAN.md — Credit ledger, purchase/payment/provider boundary and payment queue: ADMIN-05, ADMIN-06, ADMIN-08, ADMIN-09, ADMIN-10 — DONE 2026-05-17
 
 **Wave 3** _(blocked on schema, tenant lifecycle and credit/provider foundation)_
 

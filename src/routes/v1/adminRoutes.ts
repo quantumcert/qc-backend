@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { AdminApiKeyController } from '../../controllers/AdminApiKeyController';
+import { AdminCreditController } from '../../controllers/AdminCreditController';
 import { AdminTenantController } from '../../controllers/AdminTenantController';
 import { requireAdminReason, requirePlatformAdmin } from '../../middleware/platformAdminAuth';
 
@@ -38,6 +39,42 @@ router.post(
 router.get(
     '/platform/tenants/:tenantId/request-audit',
     AdminApiKeyController.listRequestAudit
+);
+router.get(
+    '/platform/tenants/:tenantId/credits/summary',
+    AdminCreditController.getCreditSummary
+);
+router.get(
+    '/platform/tenants/:tenantId/credits/ledger',
+    AdminCreditController.listCreditLedger
+);
+router.post(
+    '/platform/tenants/:tenantId/credits/grants',
+    requireAdminReason,
+    AdminCreditController.grantCredits
+);
+router.post(
+    '/platform/tenants/:tenantId/credits/adjustments',
+    requireAdminReason,
+    AdminCreditController.adjustCredits
+);
+router.post(
+    '/platform/tenants/:tenantId/credits/revocations',
+    requireAdminReason,
+    AdminCreditController.revokeCredits
+);
+router.post(
+    '/platform/tenants/:tenantId/credit-purchases',
+    requireAdminReason,
+    AdminCreditController.createCreditPurchaseIntent
+);
+router.get(
+    '/platform/tenants/:tenantId/purchase-orders',
+    AdminCreditController.listPurchaseOrders
+);
+router.get(
+    '/platform/payments/events',
+    AdminCreditController.listPaymentEvents
 );
 router.get(
     '/platform/tenants/:tenantId/api-keys',
