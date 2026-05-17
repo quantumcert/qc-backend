@@ -10,6 +10,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { Response, NextFunction } from 'express';
+import crypto from 'crypto';
 import { ApiKeyManagementFacet, ApiKeyError } from '../services/core-facets/ApiKeyManagementFacet';
 import { AuthenticatedRequest } from '../types';
 
@@ -37,6 +38,7 @@ export const requireApiKey = async (
         req.apiKeyId = result.apiKeyId;
         req.apiKeyRole = result.role;
         req.apiKeyPrefix = result.apiKeyPrefix;
+        req.correlationId = getCorrelationId(req);
 
         next();
     } catch (error) {
@@ -80,6 +82,7 @@ export const optionalApiKey = async (
             req.apiKeyId = result.apiKeyId;
             req.apiKeyRole = result.role;
             req.apiKeyPrefix = result.apiKeyPrefix;
+            req.correlationId = getCorrelationId(req);
         }
 
         next();
@@ -106,4 +109,16 @@ function extractApiKey(req: AuthenticatedRequest): string | null {
     }
 
     return null;
+}
+
+function getCorrelationId(req: AuthenticatedRequest): string {
+    return getHeader(req, 'x-correlation-id')
+        || getHeader(req, 'x-request-id')
+        || crypto.randomUUID();
+}
+
+function getHeader(req: AuthenticatedRequest, name: string): string | undefined {
+    const value = req.headers[name.toLowerCase()];
+    if (Array.isArray(value)) return value[0];
+    return typeof value === 'string' ? value : undefined;
 }

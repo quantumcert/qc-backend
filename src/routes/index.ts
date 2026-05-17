@@ -16,8 +16,11 @@ import contributionRoutes from './v1/contributionRoutes';
 import adminRoutes from './v1/adminRoutes';
 import { DiamondProxy } from '../diamond/DiamondProxy';
 import { requireApiKey } from '../middleware/apiKeyAuth';
+import { apiRequestAudit } from '../middleware/apiRequestAudit';
 
 const router = Router();
+
+router.use(apiRequestAudit);
 
 // ═══════════════════════════════════════════════════════════
 // PHASE 1: Multi-Tenant Engine & Access Control

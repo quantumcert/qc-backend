@@ -22,6 +22,7 @@ export interface AuthenticatedRequest extends Request {
     adminActor?: AdminActorContext;
     adminScope?: AdminScope;
     correlationId?: string;
+    apiRequestAuditError?: string;
 }
 
 export type AdminScope = 'PLATFORM' | 'TENANT';
