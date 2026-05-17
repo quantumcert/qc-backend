@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import bcrypt from 'bcryptjs';
 import {
   ApiKeyRole,
   TenantMembershipRole,
@@ -155,6 +156,32 @@ describe('AdminApiKeyOperationsFacet', () => {
     }));
   });
 
+  it('bloqueia uso de API key quando o tenant não está ACTIVE sem revogar a chave', async () => {
+    vi.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+    mockApiKey.findMany.mockResolvedValue([
+      apiKeyFixture({
+        keyHash: 'bcrypt-hash-only',
+        tenant: {
+          id: 'tenant-b2b',
+          slug: 'tenant-b2b',
+          isActive: true,
+          status: TenantStatus.SUSPENDED,
+          planTier: 'ENTERPRISE',
+          maxRequestsPerMinute: null,
+          maxRequestsPerDay: null,
+        },
+      }),
+    ]);
+
+    await expect(
+      ApiKeyManagementFacet.validateApiKey('qc_test_raw_secret_value')
+    ).rejects.toMatchObject({
+      code: 'TENANT_INACTIVE',
+    });
+
+    expect(mockApiKey.update).not.toHaveBeenCalled();
+  });
+
   it('lists only key prefixes and metadata without raw secret or hash', async () => {
     mockTenant.findUnique.mockResolvedValue({ id: 'tenant-b2b' });
     mockApiKey.findMany.mockResolvedValue([apiKeyFixture()]);
@@ -190,7 +217,7 @@ describe('AdminApiKeyOperationsFacet', () => {
       platformActor,
       'tenant-b2b',
       'api-key-old',
-      { reason: 'rotacao solicitada pelo cliente' }
+      { reason: 'rotação solicitada pelo cliente' }
     );
 
     expect(result).toMatchObject({
@@ -204,7 +231,7 @@ describe('AdminApiKeyOperationsFacet', () => {
       data: expect.objectContaining({
         isActive: false,
         revokedByActorId: 'user-platform',
-        revocationReason: 'rotacao solicitada pelo cliente',
+        revocationReason: 'rotação solicitada pelo cliente',
       }),
     }));
     expect(mockApiKey.create).toHaveBeenCalledWith(expect.objectContaining({
@@ -218,7 +245,7 @@ describe('AdminApiKeyOperationsFacet', () => {
     expect(mockAdminAuditLog.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
         action: 'API_KEY_ROTATED',
-        reason: 'rotacao solicitada pelo cliente',
+        reason: 'rotação solicitada pelo cliente',
       }),
     }));
   });

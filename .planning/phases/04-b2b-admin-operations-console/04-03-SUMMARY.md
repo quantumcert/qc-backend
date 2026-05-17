@@ -11,6 +11,7 @@
 - Mantido segredo bruto de API key como exibição única apenas na criação/rotação; respostas de listagem expõem somente prefixo e metadados.
 - Adicionado middleware de auditoria sanitizada de requests com API key, persistindo metadados de método/path/selector/status/latência/correlation sem raw key, headers ou payload de body.
 - Adicionada listagem backend de request audit em `/api/v1/admin/platform/tenants/:tenantId/request-audit`.
+- Fortalecido o gate central de API keys: uma chave só autentica quando o tenant está `ACTIVE`; tenant suspenso/inativo bloqueia uso sem revogar automaticamente a chave.
 - Travada a identidade do tenant plataforma Quantum Cert como canônica e não sobrescrevível: slug `quantum-cert-platform`, nome `Quantum Cert`, contato `platform@quantumcert.com`.
 - Ajustado `seed-bootstrap` para normalizar o tenant Quantum Cert em toda execução, incluindo status Enterprise ativo e limpeza de flags de suspensão/arquivamento.
 - Feito backfill dos aliases locais de Platform Admin para `dev-user-001`, `dev@localhost` e `dev@local.host`.
@@ -40,6 +41,7 @@
 ### qc-backend
 
 - `npm test -- --run tests/admin-authorization.test.ts tests/admin-api-keys.test.ts tests/api-request-audit.test.ts` - passou, 18 testes
+- `npm test -- --run tests/admin-api-keys.test.ts` - passou, 7 testes, incluindo bloqueio de tenant suspenso sem revogação automática
 - `npm run build` - passou
 - `npm run seed:bootstrap` - passou; normalizou o tenant Quantum Cert `cmoj5dsj90000pv6aexegffxc` com slug `quantum-cert-platform`
 - `curl /api/v1/admin/platform/tenants/cmoj5dsj90000pv6aexegffxc/api-keys` com `X-Admin-User-Id: dev@localhost` - retornou 200 e somente metadados da chave ativa

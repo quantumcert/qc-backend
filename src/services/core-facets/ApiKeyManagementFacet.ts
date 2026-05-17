@@ -15,7 +15,7 @@
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import prisma from '../../config/prisma';
-import { ApiKeyRole } from '@prisma/client';
+import { ApiKeyRole, TenantStatus } from '@prisma/client';
 import { AuditActions, ResourceTypes, DiamondFacets } from '../../types';
 
 export class ApiKeyManagementFacet {
@@ -50,7 +50,7 @@ export class ApiKeyManagementFacet {
             throw new ApiKeyError('TENANT_NOT_FOUND', `Tenant "${tenantId}" not found.`);
         }
 
-        if (!tenant.isActive) {
+        if (!tenant.isActive || tenant.status !== TenantStatus.ACTIVE) {
             throw new ApiKeyError('TENANT_INACTIVE', `Cannot generate API key for inactive tenant.`);
         }
 
@@ -120,6 +120,7 @@ export class ApiKeyManagementFacet {
                         id: true,
                         slug: true,
                         isActive: true,
+                        status: true,
                         planTier: true,
                         maxRequestsPerMinute: true,
                         maxRequestsPerDay: true,
@@ -152,7 +153,7 @@ export class ApiKeyManagementFacet {
             throw new ApiKeyError('KEY_EXPIRED', 'This API key has expired.');
         }
 
-        if (!apiKey.tenant.isActive) {
+        if (!apiKey.tenant.isActive || apiKey.tenant.status !== TenantStatus.ACTIVE) {
             throw new ApiKeyError('TENANT_INACTIVE', 'The tenant associated with this key is inactive.');
         }
 

@@ -31,7 +31,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 - [x] **Phase 1: Core Gap Closure + Production Hardening** _(4/4 plans complete)_ — Fechar falhas de segurança críticas e conectar features inacessíveis antes de qualquer expansão
 - [ ] **Phase 2: Document Verification + QTAG Production** _(3/3 plans complete; human UAT pending)_ — Verificação pública de documentos e NFC commissioning funcionando em produção
 - [x] **Phase 3: Pluggable DLT Workers — Stellar/Soroban Priority** _(complete; UAT passed; PRs merged)_ — Adapter Stellar para hackathon + infraestrutura multi-chain
-- [ ] **Phase 4: B2B Admin Operations Console** _(2/7 plans complete; in progress)_ — Área admin no `qc-dashboard` para cadastrar empresas/tenants, ativações, API keys, compras, recebimentos via provider, concessão de créditos, saldo/fila QTAG, Tenant Quantum, backfill e operação comercial B2B
+- [ ] **Phase 4: B2B Admin Operations Console** _(3/7 plans complete; in progress)_ — Área admin no `qc-dashboard` para cadastrar empresas/tenants, ativações, API keys, compras, recebimentos via provider, concessão de créditos, saldo/fila QTAG, Tenant Quantum, backfill e operação comercial B2B
 - [ ] **Phase 5: B2B Tenant External Readiness** — Tenants B2B externos operam com admins, operadores, API keys, créditos, QTAGs, auditoria e boundaries white-label/públicos próprios após Tenant Quantum/backfill da Phase 4
 - [ ] **Phase 6: On-chain Asset Identity + Provenance** — Todo perfil, dependente, pet, objeto, documento e QTAG tem Asset local + Asset/registro on-chain e rastreabilidade por eventos na Stellar/Soroban
 - [ ] **Phase 7: Scale + Observability Infrastructure** — Redis, Pino, Sentry, BullMQ — plataforma multi-instância pronta para carga real
@@ -161,7 +161,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 1. O admin operacional é entregue como módulo isolado dentro do `qc-dashboard`, com rotas/admin shell próprios; `qc-admin` fica como extração futura, não como requisito desta fase.
 2. Platform Admin Quantum consegue cadastrar cliente/empresa B2B, criar o Tenant correspondente, preencher perfil comercial, contatos, plano, limites e status.
 3. Platform Admin consegue ativar, suspender e arquivar tenants com fluxo auditável.
-4. Platform Admin consegue criar, rotacionar e revogar API keys por tenant, com secret hasheado, prefixo visível, escopos, expiração e auditoria.
+4. Platform Admin consegue criar, rotacionar e revogar API keys por tenant, com secret hasheado, prefixo visível, escopos, expiração e auditoria; API keys só autenticam quando o tenant está `ACTIVE`.
 5. A área admin contempla compras, ativações, recebimentos, concessão/revogação/ajuste de créditos e histórico operacional por tenant.
 6. Tenant Admin B2B visualiza apenas dados do próprio tenant: perfil permitido, créditos, compras, API keys, usuários/equipe e status de ativação.
 7. Toda mutação privilegiada usa autorização server-side; esconder menu na UI não conta como controle de segurança.

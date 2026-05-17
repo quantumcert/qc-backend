@@ -224,7 +224,7 @@ Add or confirm canonical backend storage for:
 
 1. A Quantum platform admin can create a B2B client/company from the admin area without direct DB access.
 2. A created B2B client becomes a backend `Tenant` with status, commercial profile, limits and activation state.
-3. A platform admin can create, rotate and revoke API keys, and only key prefix/metadata are visible after creation.
+3. A platform admin can create, rotate and revoke API keys, and only key prefix/metadata are visible after creation. API keys authenticate only while the tenant is `ACTIVE`; suspension blocks usage without automatic revocation.
 4. A platform admin can grant or adjust credits with a mandatory reason and auditable ledger entry.
 5. Purchases/activation/receivable records are visible on the tenant detail page and are linked to the tenant.
 6. Tenant admins can view only their own tenant operational data.
