@@ -1,7 +1,7 @@
 # ROADMAP — Quantum Cert Backend
 
 _Generated: 2026-05-08 | Granularity: standard | Mode: mvp_
-_Coverage: 66 requirements mapped (41 original/current + 25 architecture transition requirements)_
+_Coverage: 72 requirements mapped (41 original/current + 31 architecture transition requirements)_
 _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 ---
@@ -32,7 +32,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 - [ ] **Phase 2: Document Verification + QTAG Production** _(3/3 plans complete; human UAT pending)_ — Verificação pública de documentos e NFC commissioning funcionando em produção
 - [x] **Phase 3: Pluggable DLT Workers — Stellar/Soroban Priority** _(complete; UAT passed; PRs merged)_ — Adapter Stellar para hackathon + infraestrutura multi-chain
 - [ ] **Phase 4: B2B Admin Operations Console** — Área admin no `qc-dashboard` para cadastrar empresas/tenants, ativações, API keys, compras, recebimentos via provider, concessão de créditos, saldo/fila QTAG e operação comercial B2B
-- [ ] **Phase 5: Unified Tenant Identity + Data Backfill** — Backend vira fonte canônica de tenants, usuários B2C/B2B, dependentes, carteiras/créditos e vínculos de ownership; dashboard deixa de ter banco de domínio
+- [ ] **Phase 5: B2B Tenant External Readiness** — Tenants B2B externos operam com admins, operadores, API keys, créditos, QTAGs, auditoria e boundaries white-label/publicos próprios após Tenant Quantum/backfill da Phase 4
 - [ ] **Phase 6: On-chain Asset Identity + Provenance** — Todo perfil, dependente, pet, objeto, documento e QTAG tem Asset local + Asset/registro on-chain e rastreabilidade por eventos na Stellar/Soroban
 - [ ] **Phase 7: Scale + Observability Infrastructure** — Redis, Pino, Sentry, BullMQ — plataforma multi-instância pronta para carga real
 - [ ] **Phase 8: EscrowFacet + Time-Lock Oracle + M2M** — Escrow on-chain com time-lock e registro de agentes IoT
@@ -150,12 +150,12 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 ### Phase 4: B2B Admin Operations Console
 
-**Goal**: Quantum Cert tem uma área admin operacional no `qc-dashboard` para cadastrar e administrar clientes/empresas B2B, tenants, ativações, API keys, compras, recebimentos via provider, concessão de créditos, saldo/fila QTAG e demais fluxos comerciais antes da unificação de identidade
+**Goal**: Quantum Cert tem uma área admin operacional no `qc-dashboard` para cadastrar e administrar clientes/empresas B2B, tenants, ativações, API keys, compras, recebimentos via provider, concessão de créditos, saldo/fila QTAG, Tenant Quantum, backfill e cutover B2C, deixando a Phase 5 para prontidão B2B externa
 **Mode:** mvp
 **GitHub Milestone**: TBD
 **GitHub Issues**: TBD
 **Depends on**: Phase 3
-**Requirements**: ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-04, ADMIN-05, ADMIN-06, ADMIN-07, ADMIN-08, ADMIN-09, ADMIN-10, ADMIN-11, ADMIN-12, ADMIN-13
+**Requirements**: ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-04, ADMIN-05, ADMIN-06, ADMIN-07, ADMIN-08, ADMIN-09, ADMIN-10, ADMIN-11, ADMIN-12, ADMIN-13, ID-01, ID-02, ID-03, ID-04, ID-05, ID-06
 **Success Criteria** (what must be TRUE):
 
 1. O admin operacional é entregue como módulo isolado dentro do `qc-dashboard`, com rotas/admin shell próprios; `qc-admin` fica como extração futura, não como requisito desta fase.
@@ -171,6 +171,9 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 11. Compra de TAG física gera saldo/entitlement de QTAG disponível, separado de créditos de registro e exibido ao cliente.
 12. Ao usar uma QTAG, o usuário deve selecionar um Asset existente; o sistema reserva/consome uma unidade de saldo QTAG e cria pedido de emissão/gravação vinculado ao Asset.
 13. A fila admin operacional mostra QTAGs pendentes de emissão, gravação, QA, falha/retry, despacho e tracking; a TAG só fica ativa após confirmação de gravação/commissioning físico, não na compra.
+14. Tenant Quantum existe como tenant canônico para B2C, com usuários/dependentes do `qc-dashboard` migrados para usuários tenant-scoped no backend.
+15. O backfill é idempotente, tem dry-run, execução completa, relatório de conflitos/órfãos/diffs e resolve ownership/credits/QTAGs quando a origem permite.
+16. O cutover B2C usa backend canônico para usuários, dependentes, créditos e ownership; banco local do dashboard fica limitado a sessão/preferências temporárias.
 
 **Plans**: TBD
 **Cross-repo note:** `qc-dashboard` implementa a interface; `qc-backend` define os contratos, autorização, tenant/API-key/credit ledger, QTAG entitlement ledger, QTAG fulfillment queue, purchase/payment intents, provider adapter e auditoria; `qc-record-module` executa gravação/commissioning físico; `qc-business` define regras comerciais, planos, pricing, compras, política de concessão de créditos/TAGs e escolha final do provider de recebimento.
@@ -181,35 +184,27 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 **QTAG purchase/fulfillment decision:** QTAG física é entitlement/saldo separado de créditos. Comprar TAG não ativa chip nem cria vínculo físico final; apenas aumenta `availableQTags`. O uso acontece quando o cliente escolhe qual Asset deve receber a TAG. Nesse momento uma unidade é reservada/consumida, um pedido de emissão é criado, e a fila operacional conduz gravação, QA e despacho. A ativação da TAG acontece somente após `commissioning.confirm(success=true)` ou evento operacional equivalente definido no plano.
 
-### Phase 5: Unified Tenant Identity + Data Backfill
+### Phase 5: B2B Tenant External Readiness
 
-**Goal**: O backend passa a ser a fonte canônica de Tenant, usuários, dependentes, carteiras/créditos e vínculos de ownership; o Tenant Quantum concentra usuários B2C, enquanto clientes B2B permanecem tenants próprios criados/operados pela Phase 4
+**Goal**: Tenants B2B externos ficam prontos para operar com admins, operadores, API keys, créditos, QTAGs, auditoria, consumo por API e boundaries white-label/publicos próprios, partindo do Tenant Quantum/backfill e da fundação admin entregues na Phase 4
 **Mode:** mvp
 **GitHub Milestone**: TBD
 **GitHub Issues**: TBD
 **Depends on**: Phase 4
-**Requirements**: ID-01, ID-02, ID-03, ID-04, ID-05, ID-06
+**Requirements**: B2B-01, B2B-02, B2B-03, B2B-04, B2B-05, B2B-06
 **Success Criteria** (what must be TRUE):
 
-1. Existe um Tenant Quantum canônico, e todos os usuários B2C atuais do `qc-dashboard` estão migrados para usuários tenant-scoped nesse tenant.
-2. Usuários B2C, dependentes e admins não vivem mais apenas no banco do dashboard; o backend expõe endpoints/Facets para login, perfil, dependentes, carteira/créditos e vínculo com assets.
-3. Todo `Owner` de asset pode ser resolvido para um usuário tenant-scoped quando o owner nasceu do fluxo B2C/B2B, preservando `ownerRef` legado para compatibilidade.
-4. O backfill é idempotente, preserva `legacyDashboardUserId`, `legacyOpenId`, `identityAssetId`/equivalentes e gera relatório de órfãos/conflitos antes de bloquear o cutover.
-5. O `qc-dashboard` deixa de usar seu banco como fonte de domínio; no máximo mantém sessão/preferências temporárias, enquanto domínio e identidade canônica vêm do `qc-backend`.
-6. A separação de áreas fica explícita: Platform Admin Quantum opera todos os tenants; Tenant Admin B2B opera seu tenant; usuário B2C opera apenas seus próprios assets sob o Tenant Quantum.
+1. Um tenant B2B criado/ativado na Phase 4 tem admins e operadores tenant-scoped separados do Tenant Quantum.
+2. Tenant Admin B2B gerencia equipe, API keys permitidas, créditos, QTAGs, compras e auditoria apenas do próprio tenant.
+3. API keys B2B têm scopes, auditoria de requisições, limites e visibilidade de consumo adequados para tenants externos.
+4. Tenant Admin B2B não acessa rotas Platform Admin, grants globais, ativação cross-tenant nem auditoria de outros tenants.
+5. Boundaries white-label/publicos por tenant ficam explícitos e não vazam payloads privados de admin/billing.
+6. Um tenant B2B piloto completa onboarding -> chamada API -> operação de créditos/QTAG -> consulta pública usando contratos tenant-scoped.
 
 **Plans**: TBD
-**Cross-repo note:** Esta fase é transversal a `qc-backend` e `qc-dashboard`; depende da Phase 4 para tenants/API keys/créditos B2B; `qc-home` pode depender dela para signup público e `qc-business` deve confirmar regras comerciais/planos/white-label antes de ativar tenants B2B self-service.
+**Cross-repo note:** Esta fase é transversal a `qc-backend`, `qc-dashboard` e `qc-home`; depende da Phase 4 para admin operacional, Tenant Quantum/backfill, API keys, créditos e QTAG ledgers; `qc-business` deve confirmar regras comerciais/planos/white-label antes do piloto B2B.
 
-**Backfill order:**
-
-1. Criar/validar Tenant Quantum canônico.
-2. Migrar `qc-dashboard.users` para usuários tenant-scoped no backend.
-3. Migrar dependentes por `guardianId`.
-4. Criar/vincular Asset de identidade para cada usuário/dependente.
-5. Resolver `Owner.ownerRef` para usuário canônico e preencher vínculo forte sem apagar `ownerRef` legado.
-6. Migrar carteira/créditos B2C para backend e validar o rule lock: ações consomem apenas `creditsBalance`.
-7. Trocar dashboard para leitura/escrita canônica via backend.
+**Phase 4 dependency:** Tenant Quantum, canonical B2C users, migration engine, complete dashboard user/dependent backfill, B2B admin console, tenant/API key foundation, credit/QTAG ledgers and fulfillment queues are delivered by Phase 4. Phase 5 starts from those artifacts and focuses on B2B external tenant readiness.
 
 ### Phase 6: On-chain Asset Identity + Provenance
 
@@ -229,7 +224,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 6. Uma QTAG/Device tem Asset próprio e vínculo obrigatório ao Asset protegido; eventos de emissão, commissioning, despacho, ativação e scan ficam rastreáveis na timeline/prova pública.
 
 **Plans**: TBD
-**Cross-repo note:** Esta fase depende da identidade/ownership canônica da Phase 5. O `qc-dashboard` consome a prova unificada; `qc-record-module` deve parear QTAG físico com Asset existente sem expor internals de tenant.
+**Cross-repo note:** Esta fase depende da identidade/ownership canônica da Phase 4 e dos boundaries B2B da Phase 5. O `qc-dashboard` consome a prova unificada; `qc-record-module` deve parear QTAG físico com Asset existente sem expor internals de tenant.
 
 ### Phase 7: Scale + Observability Infrastructure
 

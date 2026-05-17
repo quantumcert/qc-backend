@@ -1,6 +1,6 @@
 # Requirements — Quantum Cert Backend
 
-_Generated: 2026-05-08 | updated 2026-05-17 with B2B admin operations, receivables/credits, QTAG fulfillment, tenant identity, data unification and on-chain asset identity transition_
+_Generated: 2026-05-08 | updated 2026-05-17 with B2B admin operations, receivables/credits, QTAG fulfillment, Tenant Quantum/backfill, B2B tenant readiness and on-chain asset identity transition_
 
 ---
 
@@ -59,14 +59,23 @@ _Generated: 2026-05-08 | updated 2026-05-17 with B2B admin operations, receivabl
 - [ ] **ADMIN-12**: Associação obrigatória QTAG→Asset — usuário escolhe um Asset existente para usar uma QTAG; o saldo disponível é reservado/consumido e um pedido de emissão/gravação é criado
 - [ ] **ADMIN-13**: Fila operacional de emissão e despacho QTAG — admin acompanha gravação, QA, falha/retry, despacho, tracking e ativação; TAG só ativa após confirmação de gravação/commissioning físico, não na compra
 
-### ID — Unified Tenant Identity + Data Backfill
+### ID — Tenant Quantum Identity + Backfill
 
 - [ ] **ID-01**: Tenant Quantum canônico — criar/garantir tenant operacional da Quantum para usuários B2C, sem transformar consumidores em tenants
 - [ ] **ID-02**: Usuário tenant-scoped no backend — adicionar modelo canônico para usuários, roles, dependentes, perfil, credenciais/identidades externas e vínculo com tenant
 - [ ] **ID-03**: Migração do banco do dashboard — migrar `qc-dashboard.users` para o backend preservando `legacyDashboardUserId`, `legacyOpenId`, CPF/email e metadados de dependentes
 - [ ] **ID-04**: Ownership forte entre usuários e assets — resolver `Owner.ownerRef` para usuário canônico quando aplicável, mantendo compatibilidade com `ownerRef` legado
 - [ ] **ID-05**: Carteira/créditos B2C no backend — mover `creditsBalance`/fluxos de compra/consumo para o backend, preservando a regra "não mexer no saldo, somente no crédito"
-- [ ] **ID-06**: Cutover do dashboard para backend canônico — dashboard passa a ler/escrever usuários, dependentes, carteira e assets via backend; banco local fica no máximo para sessão/preferências temporárias
+- [ ] **ID-06**: Cutover B2C pós-backfill — dashboard passa a ler/escrever usuários, dependentes, carteira e assets B2C via backend; banco local fica no máximo para sessão/preferências temporárias
+
+### B2B — Tenant External Readiness
+
+- [ ] **B2B-01**: Tenant B2B canônico — clientes externos permanecem tenants próprios, separados do Tenant Quantum, com perfil, plano, limites e status operacional
+- [ ] **B2B-02**: Identidade e equipe B2B — tenant admins, operadores e membros são usuários tenant-scoped com roles e convites próprios
+- [ ] **B2B-03**: API tenant-ready — tenants B2B usam API keys, scopes, auditoria de requisições, rate limits e documentação/SDK de consumo sem depender de acesso interno Quantum
+- [ ] **B2B-04**: Área tenant admin B2B — `/admin/tenant` entrega operação própria do tenant, sem acesso cross-tenant, para equipe, API keys, créditos, QTAGs, compras e auditoria
+- [ ] **B2B-05**: White-label/public boundary — consulta pública e superfícies white-label por tenant são separadas da administração interna Quantum e preservam isolamento de dados
+- [ ] **B2B-06**: Cutover piloto B2B — um tenant B2B real/piloto consegue operar onboarding, API, créditos, QTAG fulfillment e consulta pública com regras comerciais confirmadas em `qc-business`
 
 ### OCHAIN — On-chain Asset Identity + Provenance
 
@@ -142,7 +151,7 @@ Quantum Cert é um workspace multi-repo composto por `qc-backend`, `qc-dashboard
 
 ## Traceability
 
-_Updated: 2026-05-17 — requisitos ADMIN/ID/OCHAIN adicionados para administrar B2B, recebimentos/créditos, QTAG fulfillment, unificar usuários/tenants/bancos e garantir Asset on-chain por entidade_
+_Updated: 2026-05-17 — requisitos ADMIN/ID/B2B/OCHAIN adicionados para administrar B2B, recebimentos/créditos, QTAG fulfillment, migrar Tenant Quantum/backfill, preparar tenants B2B externos e garantir Asset on-chain por entidade_
 
 | REQ-ID   | Phase   | Status                          |
 | -------- | ------- | ------------------------------- |
@@ -181,12 +190,18 @@ _Updated: 2026-05-17 — requisitos ADMIN/ID/OCHAIN adicionados para administrar
 | ADMIN-11 | Phase 4 | Approved for planning           |
 | ADMIN-12 | Phase 4 | Approved for planning           |
 | ADMIN-13 | Phase 4 | Approved for planning           |
-| ID-01    | Phase 5 | Approved for planning           |
-| ID-02    | Phase 5 | Approved for planning           |
-| ID-03    | Phase 5 | Approved for planning           |
-| ID-04    | Phase 5 | Approved for planning           |
-| ID-05    | Phase 5 | Approved for planning           |
-| ID-06    | Phase 5 | Approved for planning           |
+| ID-01    | Phase 4 | Absorbed into Phase 4 by 2026-05-17 user decision |
+| ID-02    | Phase 4 | Absorbed into Phase 4 by 2026-05-17 user decision |
+| ID-03    | Phase 4 | Absorbed into Phase 4 by 2026-05-17 user decision |
+| ID-04    | Phase 4 | Absorbed into Phase 4 by 2026-05-17 user decision |
+| ID-05    | Phase 4 | Absorbed into Phase 4 by 2026-05-17 user decision |
+| ID-06    | Phase 4 | Absorbed into Phase 4 by 2026-05-17 user decision |
+| B2B-01   | Phase 5 | Approved after Tenant Quantum/backfill in Phase 4 |
+| B2B-02   | Phase 5 | Approved after Tenant Quantum/backfill in Phase 4 |
+| B2B-03   | Phase 5 | Approved after Tenant Quantum/backfill in Phase 4 |
+| B2B-04   | Phase 5 | Approved after Tenant Quantum/backfill in Phase 4 |
+| B2B-05   | Phase 5 | Approved after Tenant Quantum/backfill in Phase 4 |
+| B2B-06   | Phase 5 | Approved after Tenant Quantum/backfill in Phase 4 |
 | OCHAIN-01 | Phase 6 | Approved for planning          |
 | OCHAIN-02 | Phase 6 | Approved for planning          |
 | OCHAIN-03 | Phase 6 | Approved for planning          |

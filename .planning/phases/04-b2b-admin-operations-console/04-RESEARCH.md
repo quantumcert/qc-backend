@@ -11,7 +11,7 @@ Answer what the planner needs to know before creating executable plans for Phase
 - how to evolve `qc-backend` from tenant/API-key primitives into a B2B operational admin foundation;
 - how to expose `/admin/platform` and `/admin/tenant` in `qc-dashboard` without relying on UI-only authorization;
 - how to model credits, receivables, QTAG entitlements and fulfillment without custodial client-wallet assumptions;
-- how to handle the user's confirmed decision that complete Tenant Quantum/backfill must be absorbed by Phase 4, even though Phase 5 still owns that scope in its current SPEC/roadmap text.
+- how to handle the user's confirmed decision that Tenant Quantum, complete B2C backfill and B2C cutover must be absorbed by Phase 4, leaving Phase 5 for B2B external readiness.
 
 ## Sources Read
 
@@ -95,27 +95,20 @@ But these primitives are not sufficient for the approved Phase 4 model:
 
 The planner must not treat these as UI tasks. The first plans need backend contracts, schema, authorization, audit and migration foundations before the dashboard can be a trustworthy operations surface.
 
-## Scope Alignment Blocker: Phase 4 vs Phase 5
+## Scope Alignment Decision: Phase 4 vs Phase 5
 
-The user confirmed `10B`: execute complete backfill in Phase 4.
+The user confirmed `10B`: execute complete Tenant Quantum/backfill in Phase 4. The follow-up correction is that Phase 5 should be left for B2B, not for B2C cutover.
 
-This conflicts with current artifacts:
+Updated planning implication:
 
-- `04-CONTEXT.md` states Phase 4 must include complete Tenant Quantum/backfill.
-- `04-SPEC.md` still says this phase creates foundations before the unified identity/backfill phase.
-- `05-SPEC.md` defines unified tenant identity and backfill as the Phase 5 core.
-- `ROADMAP.md` still lists Phase 5 as `Unified Tenant Identity + Data Backfill`.
-
-Planning implication:
-
-1. Phase 4 planning must include a blocking alignment task before implementation.
-2. Either update `04-SPEC.md`, `05-SPEC.md` and `ROADMAP.md` so Phase 4 absorbs backfill execution, or explicitly split Phase 4 into foundation + complete migration and demote Phase 5 to cutover/hardening.
-3. Do not create implementation plans that duplicate the same backfill work in Phase 4 and Phase 5.
+1. Phase 4 planning must include Tenant Quantum creation, canonical B2C user/membership models, migration engine, complete dashboard user/dependent backfill, B2C ownership/credit migration and B2C cutover to backend contracts.
+2. Phase 5 must not duplicate the B2C Tenant Quantum/backfill path. It should focus on B2B external readiness: tenant admins/operators, tenant API consumption, white-label/public boundary and B2B pilot cutover.
+3. Do not create implementation plans that move B2B external-readiness work into Phase 4 unless required as foundation for the admin console.
 
 Recommended target boundary:
 
-- Phase 4: admin B2B foundation, canonical membership/user foundation required for admin/backfill, credit/QTAG/provider foundations, Tenant Quantum creation, migration engine, complete B2C backfill execution report, admin operational UI.
-- Phase 5: dashboard cutover/hardening, removal of local domain writes, UAT around login/profile/dependents/wallet/assets, cleanup of legacy dashboard state after validation.
+- Phase 4: admin B2B foundation, canonical membership/user foundation required for admin/backfill, credit/QTAG/provider foundations, Tenant Quantum creation, migration engine, complete B2C backfill execution report, B2C cutover and admin operational UI.
+- Phase 5: B2B external tenant readiness, tenant admin/operator lifecycle, tenant API consumption, white-label/public boundary, commercial packaging confirmation and B2B pilot UAT.
 
 ## Backend Architecture Findings
 

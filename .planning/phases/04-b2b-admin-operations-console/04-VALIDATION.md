@@ -48,7 +48,7 @@ created: 2026-05-17
 | 04-04-02 | 04 | 2 | ADMIN-10 | T-04-06 | Payment event processing deduplicates provider events before crediting | unit/integration | `npm test -- --run tests/payment-provider-boundary.test.ts` | no | pending |
 | 04-05-01 | 05 | 2 | ADMIN-11, ADMIN-12, ADMIN-13 | T-04-07 | QTAG reservation/activation cannot consume entitlement twice | unit/integration | `npm test -- --run tests/qtag-fulfillment.test.ts` | no | pending |
 | 04-05-02 | 05 | 2 | ADMIN-12, ADMIN-13 | T-04-08 | Commissioning confirm validates tenant/session/UID and links `Asset.deviceId` | unit/integration | `npm test -- --run tests/commissioning.test.ts` | yes | pending |
-| 04-06-01 | 06 | 3 | ADMIN-01, ADMIN-02, ADMIN-07 | T-04-09 | Backfill maps B2C users under Tenant Quantum idempotently | integration | `npm test -- --run tests/tenant-backfill.test.ts` | no | pending |
+| 04-06-01 | 06 | 3 | ID-01, ID-02, ID-03, ID-04, ID-05, ID-06 | T-04-09 | Backfill maps B2C users under Tenant Quantum idempotently and cuts over B2C domain writes | integration | `npm test -- --run tests/tenant-backfill.test.ts` | no | pending |
 | 04-07-01 | 07 | 3 | ADMIN-01, ADMIN-04, ADMIN-05, ADMIN-11, ADMIN-13 | T-04-10 | Dashboard admin procedures enforce platform/tenant scoping server-side | integration | `cd ../qc-dashboard && pnpm test -- admin` | no | pending |
 
 *Status: pending / green / red / flaky*

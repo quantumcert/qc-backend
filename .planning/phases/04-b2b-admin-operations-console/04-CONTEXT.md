@@ -1,7 +1,7 @@
 # Phase 4: B2B Admin Operations Console - Context
 
 **Gathered:** 2026-05-17
-**Status:** Ready for planning, with Phase 4/5 scope alignment required for backfill
+**Status:** Ready for planning; Phase 4 includes Tenant Quantum/backfill and Phase 5 is reserved for B2B external readiness
 
 <domain>
 ## Phase Boundary
@@ -71,7 +71,7 @@ Os requisitos estao travados em `04-SPEC.md`, `REQUIREMENTS.md` (`ADMIN-01` a `A
 ### Tenant Quantum and Backfill
 - **D-19:** O usuario escolheu executar o backfill completo nesta fase (`10B`), nao apenas dry-run. Isso altera a fronteira anterior em que Phase 5 era a fase principal de identity/data backfill.
 - **D-20:** O planejamento da Phase 4 deve incluir criacao/garantia do Tenant Quantum, migracao/associacao dos usuarios B2C existentes ao Tenant Quantum, associacao de assets/dependentes/pets/objetos/creditos/saldos QTAG aos tenants corretos e verificacao pos-migracao.
-- **D-21:** Como `ROADMAP.md` e `04-SPEC.md` ainda descrevem Phase 5 como `Unified Tenant Identity + Data Backfill`, o plano deve tratar esta decisao como alinhamento obrigatorio: antes da implementacao, atualizar SPEC/roadmap ou explicitar que Phase 4 absorve a execucao completa do backfill e Phase 5 vira cutover/validacao/hardening.
+- **D-21:** Phase 4 absorve Tenant Quantum, backfill completo e cutover B2C; Phase 5 fica reservada para prontidao B2B externa (admins/operators por tenant, API tenant-ready, white-label/public boundary e piloto B2B).
 - **D-22:** O backfill deve ser auditable e reversivel no nivel operacional: dry-run, relatorio de diffs, execucao idempotente, checkpoints, contagem de registros por origem/destino e trilha de auditoria por lote.
 
 ### the agent's Discretion
@@ -89,7 +89,7 @@ Os requisitos estao travados em `04-SPEC.md`, `REQUIREMENTS.md` (`ADMIN-01` a `A
 ### Phase Scope and Requirements
 - `.planning/phases/04-b2b-admin-operations-console/04-SPEC.md` - requisitos travados, boundaries, criterios de aceite, modelo admin/creditos/QTAG.
 - `.planning/ROADMAP.md` - fase 4, dependencia da fase 3, relacao com fase 5 e notas cross-repo.
-- `.planning/REQUIREMENTS.md` - requisitos `ADMIN-01` a `ADMIN-13`.
+- `.planning/REQUIREMENTS.md` - requisitos `ADMIN-01` a `ADMIN-13` e `ID-01` a `ID-06` absorvidos na Phase 4.
 - `.planning/STATE.md` - decisoes atuais do milestone e proxima acao.
 - `.planning/PROJECT.md` - regra de modelo canonico domain-agnostic e separacao de responsabilidades entre repos.
 
@@ -147,7 +147,7 @@ Os requisitos estao travados em `04-SPEC.md`, `REQUIREMENTS.md` (`ADMIN-01` a `A
 - Transfero deve ser tratada como candidata preferencial de anchor/provider de recebimentos, mas o contrato final continua TBD.
 - Saldo QTAG e exibido ao cliente como disponivel/reservado/em fulfillment/ativo/falha, sem misturar com creditos.
 - Tenant detail deve funcionar como cockpit operacional; filas separadas servem para trabalho diario de operadores Quantum.
-- Backfill completo nesta fase e decisao do usuario, mas exige alinhamento explicito com a Phase 5 existente antes do plano final.
+- Backfill completo e cutover B2C nesta fase sao decisao do usuario; Phase 5 deve permanecer focada em B2B externo, nao em Tenant Quantum.
 
 </specifics>
 

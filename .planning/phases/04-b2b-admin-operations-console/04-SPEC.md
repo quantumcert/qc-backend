@@ -7,9 +7,9 @@
 
 ## Goal
 
-Create the operational admin surface Quantum Cert needs before tenant identity migration and on-chain asset rollout. Platform admins must be able to register and manage B2B clients/companies, activate tenants, create API keys, manage purchases/receivables, grant credits, operate QTAG fulfillment, and operate the commercial lifecycle from one controlled interface.
+Create the operational admin surface Quantum Cert needs before on-chain asset rollout. Platform admins must be able to register and manage B2B clients/companies, activate tenants, create API keys, manage purchases/receivables, grant credits, operate QTAG fulfillment, operate the commercial lifecycle from one controlled interface, and execute the Tenant Quantum/user backfill needed to make backend identity canonical.
 
-This phase must come before the unified identity/backfill phase because B2B tenants, API keys, activation state, credit grants, QTAG entitlements, purchase records, receivables and commercial terms need to exist before users/assets are migrated onto the canonical backend model.
+The user decision on 2026-05-17 moved Tenant Quantum, complete B2C user backfill and B2C dashboard cutover into this phase. Phase 5 is therefore reserved for B2B tenant external readiness after Phase 4 creates the canonical backend identity, migration engine and B2C execution report.
 
 ## Current Problem
 
@@ -23,6 +23,7 @@ That creates operational risk:
 4. Platform admin and tenant admin responsibilities remain mixed.
 5. Wallet/credit terminology can drift into direct client-wallet custody, which must be avoided for the production commercial model.
 6. QTAG purchases can drift into physical fulfillment without an Asset selection, making tags impossible to trace back to the protected asset.
+7. B2C users remain split between the dashboard database and backend assets, blocking a single operational view for Tenant Quantum.
 
 ## Product Boundary
 
@@ -213,6 +214,11 @@ Add or confirm canonical backend storage for:
 - purchase/order records or integration reference IDs;
 - admin audit log entries tied to actor, tenant, action and payload hash;
 - tenant admin membership and role assignments.
+- Tenant Quantum canonical record for B2C users;
+- backend tenant-scoped user, external identity and membership records;
+- migration run/checkpoint/report records for idempotent dashboard backfill;
+- strong optional link from `Owner.ownerRef` to a backend tenant user while preserving legacy references;
+- migrated credit/QTAG state needed for B2C operational continuity.
 
 ## Acceptance Criteria
 
@@ -229,7 +235,12 @@ Add or confirm canonical backend storage for:
 11. Assigning a QTAG to an Asset reserves/consumes one available unit and creates an operational fulfillment order linked to that Asset.
 12. The admin queue allows operators to process engraving/encoding, retry failures, record dispatch/tracking and see pending work.
 13. The physical tag becomes active only after successful commissioning confirmation, and a failed/cancelled order can release the reserved unit through the QTAG ledger.
-14. This phase produces the tenant/API-key/credit/QTAG foundation required by Phase 5 identity/backfill.
+14. Tenant Quantum exists as canonical backend tenant for B2C users.
+15. Existing `qc-dashboard.users` B2C users/dependents are migrated into backend tenant-scoped users with idempotent dry-run and execution reports.
+16. B2C dashboard domain writes for users, dependents, credits and asset ownership are cut over to backend canonical contracts; the local dashboard database remains only for session/preferences compatibility.
+17. Existing B2C ownership references that match `openId` or migrated aliases are resolvable to canonical backend users while preserving `Owner.ownerRef`.
+18. Existing B2C credit/QTAG state required for continuity is represented in backend ledgers without changing the locked rule that registration flows alter credits, not wallet balance.
+19. This phase produces the tenant/API-key/credit/QTAG/backfill foundation required for Phase 5 B2B external readiness.
 
 ## Out of Scope
 
