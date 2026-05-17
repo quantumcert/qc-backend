@@ -187,7 +187,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 
 **Wave 2** _(blocked on Wave 1 for tenant contracts; plans can run in parallel)_
 
-- [ ] 04-03-PLAN.md — API key initial issue/list/rotate/revoke plus sanitized request audit: ADMIN-01, ADMIN-04, ADMIN-08
+- [x] 04-03-PLAN.md — API key initial issue/list/rotate/revoke plus sanitized request audit: ADMIN-01, ADMIN-04, ADMIN-08 — DONE 2026-05-17
 - [ ] 04-04-PLAN.md — Credit ledger, purchase/payment/provider boundary and payment queue: ADMIN-05, ADMIN-06, ADMIN-08, ADMIN-09, ADMIN-10
 
 **Wave 3** _(blocked on schema, tenant lifecycle and credit/provider foundation)_

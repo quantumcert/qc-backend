@@ -164,7 +164,7 @@ Phase 9 [          ] 0% (Specialized Domain Facets)
 
 **Phase 3 merge**: 2026-05-16 — backend PR #23 and dashboard PR #23 merged to `main`.
 
-**Next action**: Execute Phase 4 Plan 03 — `.planning/phases/04-b2b-admin-operations-console/04-03-PLAN.md`.
+**Next action**: Execute Phase 4 Plan 04 — `.planning/phases/04-b2b-admin-operations-console/04-04-PLAN.md`.
 
 **Context for next session**:
 
@@ -175,4 +175,5 @@ Phase 9 [          ] 0% (Specialized Domain Facets)
 - Phase 4 approved 2026-05-17: build isolated admin module inside `qc-dashboard` for B2B company/tenant registration, activation, API keys, purchases, provider-based receivables, credit ledger/grants, QTAG entitlement balance, QTAG fulfillment/engraving/dispatch queue, tenant admin operations and audit; also create Tenant Quantum and execute complete B2C dashboard backfill/cutover. Separate `qc-admin` app is deferred until there is a concrete deploy/auth/compliance/brand need. Transfero is the preferred receivables/anchor candidate to research first, with final implementation to define.
 - Phase 5 approved 2026-05-17: focus B2B external tenant readiness after Phase 4, including tenant admins/operators, API consumption, white-label/public boundaries and pilot cutover; B2C Tenant Quantum/backfill is not Phase 5 scope.
 - Phase 6 approved 2026-05-17: every profile/dependent/pet/object/document/QTAG must be represented as local Asset plus on-chain Asset/registry proof with event provenance.
-- Phase 4 Plan 02 completed 2026-05-17: backend `/api/v1/admin/platform/tenants` lifecycle/profile routes, `AdminTenantOperationsFacet`, admin audit, dashboard `adminRouter`, `QCBackendClient.admin.tenants.*`, and `/admin/platform/tenants` + `/admin/platform/tenants/:tenantId` UI are implemented and verified. Local UI shows the expected admin error state until the dev user is backfilled as canonical Platform Admin.
+- Phase 4 Plan 02 completed 2026-05-17: backend `/api/v1/admin/platform/tenants` lifecycle/profile routes, `AdminTenantOperationsFacet`, admin audit, dashboard `adminRouter`, `QCBackendClient.admin.tenants.*`, and `/admin/platform/tenants` + `/admin/platform/tenants/:tenantId` UI are implemented and verified.
+- Phase 4 Plan 03 completed 2026-05-17: backend admin API-key lifecycle, sanitized API request audit, dashboard API Keys tab, `/admin/platform/audit`, and canonical Quantum Cert seed invariant are implemented and verified. `dev@localhost` resolves as Platform Admin and `Quantum Cert` appears in admin listing with slug `quantum-cert-platform`.
