@@ -6,6 +6,7 @@ import {
     TenantStatus,
 } from '@prisma/client';
 import { AdminActorContext, DiamondFacets, ResourceTypes } from '../../types';
+import { normalizeApiKeyScopes, resolveEffectiveApiKeyScopes } from '../../security/apiKeyScopes';
 import { AdminAuthorizationFacet } from './AdminAuthorizationFacet';
 import { ApiKeyManagementFacet } from './ApiKeyManagementFacet';
 
@@ -116,9 +117,9 @@ export class AdminApiKeyOperationsFacet {
             );
         }
 
-        const role = params.role || ApiKeyRole.OPERATOR;
-        const scopes = normalizeScopes(params.scopes);
         const label = normalizeRequiredLabel(params.label);
+        const role = params.role || ApiKeyRole.OPERATOR;
+        const scopes = normalizeApiKeyScopes(params.scopes, role);
         const { rawKey, keyHash, keyPrefix } = await ApiKeyManagementFacet.buildKeyMaterial();
 
         const apiKey = await prisma.$transaction(async (tx) => {
@@ -228,6 +229,7 @@ export class AdminApiKeyOperationsFacet {
 
         const { rawKey, keyHash, keyPrefix } = await ApiKeyManagementFacet.buildKeyMaterial();
         const now = new Date();
+        const scopes = resolveEffectiveApiKeyScopes(existingKey.scopes, existingKey.role);
 
         const apiKey = await prisma.$transaction(async (tx) => {
             await tx.apiKey.update({
@@ -248,7 +250,7 @@ export class AdminApiKeyOperationsFacet {
                     keyPrefix,
                     label: normalizeOptionalLabel(params.label) ?? existingKey.label,
                     role: existingKey.role,
-                    scopes: existingKey.scopes,
+                    scopes,
                     expiresAt: params.expiresAt === undefined ? existingKey.expiresAt : params.expiresAt,
                     createdByActorId: actor.actorUserId,
                     rotatedFromApiKeyId: apiKeyId,
@@ -267,7 +269,7 @@ export class AdminApiKeyOperationsFacet {
                     previousKeyPrefix: existingKey.keyPrefix,
                     newKeyPrefix: keyPrefix,
                     role: existingKey.role,
-                    scopes: existingKey.scopes,
+                    scopes,
                     facet: DiamondFacets.ADMIN_API_KEY_OPERATIONS,
                 },
                 ipAddress: params.ipAddress,
@@ -465,11 +467,6 @@ function normalizeOptionalLabel(value?: string): string | undefined {
     if (value === undefined) return undefined;
     const normalized = value.trim();
     return normalized || undefined;
-}
-
-function normalizeScopes(value?: string[]): string[] {
-    if (!value) return [];
-    return Array.from(new Set(value.map((scope) => scope.trim()).filter(Boolean)));
 }
 
 function normalizePage(value?: number): number {

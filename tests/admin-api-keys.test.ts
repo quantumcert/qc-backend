@@ -122,7 +122,7 @@ describe('AdminApiKeyOperationsFacet', () => {
     const result = await AdminApiKeyOperationsFacet.createInitialApiKey(platformActor, 'tenant-b2b', {
       label: ' Main integration ',
       role: ApiKeyRole.OPERATOR,
-      scopes: ['assets:write', 'assets:write', ' events:read '],
+      scopes: ['assets:write', 'assets:write', ' events:write '],
       reason: 'primeira chave do tenant aprovada',
     });
 
@@ -139,7 +139,7 @@ describe('AdminApiKeyOperationsFacet', () => {
         keyPrefix: 'qc_test_prefix01',
         label: 'Main integration',
         role: ApiKeyRole.OPERATOR,
-        scopes: ['assets:write', 'events:read'],
+        scopes: ['assets:write', 'events:write'],
         createdByActorId: 'user-platform',
       }),
     }));
@@ -152,6 +152,55 @@ describe('AdminApiKeyOperationsFacet', () => {
         action: 'API_KEY_INITIAL_CREATED',
         resourceType: 'ApiKey',
         reason: 'primeira chave do tenant aprovada',
+      }),
+    }));
+  });
+
+  it('rejects API key scopes outside the canonical catalog', async () => {
+    mockTenant.findUnique.mockResolvedValue({
+      id: 'tenant-b2b',
+      isActive: true,
+      status: TenantStatus.ACTIVE,
+    });
+    mockApiKey.findFirst.mockResolvedValue(null);
+
+    await expect(
+      AdminApiKeyOperationsFacet.createInitialApiKey(platformActor, 'tenant-b2b', {
+        label: 'Unsafe integration',
+        role: ApiKeyRole.OPERATOR,
+        scopes: ['assets:read', 'wallet:drain'],
+        reason: 'teste de escopo invalido',
+      })
+    ).rejects.toMatchObject({
+      code: 'INVALID_API_KEY_SCOPE',
+    });
+
+    expect(mockApiKey.create).not.toHaveBeenCalled();
+    expect(mockAdminAuditLog.create).not.toHaveBeenCalled();
+  });
+
+  it('applies role-based default scopes when no explicit scope is selected', async () => {
+    mockTenant.findUnique.mockResolvedValue({
+      id: 'tenant-b2b',
+      isActive: true,
+      status: TenantStatus.ACTIVE,
+    });
+    mockApiKey.findFirst.mockResolvedValue(null);
+    mockApiKey.create.mockResolvedValue(apiKeyFixture({
+      role: ApiKeyRole.READER,
+      scopes: ['assets:read', 'qtags:read', 'agents:read', 'escrow:read', 'public:read'],
+    }));
+
+    await AdminApiKeyOperationsFacet.createInitialApiKey(platformActor, 'tenant-b2b', {
+      label: 'Read only integration',
+      role: ApiKeyRole.READER,
+      reason: 'primeira chave somente leitura',
+    });
+
+    expect(mockApiKey.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        role: ApiKeyRole.READER,
+        scopes: ['assets:read', 'qtags:read', 'agents:read', 'escrow:read', 'public:read'],
       }),
     }));
   });

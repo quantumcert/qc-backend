@@ -6,6 +6,12 @@
 
 import { Request, Response } from 'express';
 import { FacetRegistry } from './FacetRegistry';
+import { ApiKeyRole } from '@prisma/client';
+import {
+    ApiKeyScopeError,
+    assertApiKeyCanAccessSelector,
+    resolveEffectiveApiKeyScopes,
+} from '../security/apiKeyScopes';
 
 export class DiamondProxy {
     /**
@@ -33,12 +39,28 @@ export class DiamondProxy {
                 return res.status(404).json({ success: false, error: `Facet function '${selector}' not found in registry.` });
             }
 
+            const apiKeyScopes = resolveRequestApiKeyScopes(req);
+
+            try {
+                assertApiKeyCanAccessSelector(selector, apiKeyScopes);
+            } catch (error) {
+                if (error instanceof ApiKeyScopeError) {
+                    return res.status(403).json({
+                        success: false,
+                        error: error.message,
+                        code: error.code,
+                    });
+                }
+                throw error;
+            }
+
             // RED TEAM HOTFIX 1 (IDOR): Secure Server-Side Context Injection
             // Force the context to derive from secure middleware headers, NOT user payload.
             const secureContext = {
                 tenantId: (req as any).tenantId,
                 apiKeyId: (req as any).apiKeyId,
-                role: (req as any).apiKeyRole
+                role: (req as any).apiKeyRole,
+                scopes: apiKeyScopes || [],
             };
 
             // Execute the Facet logic headlessly
@@ -71,4 +93,15 @@ export class DiamondProxy {
             });
         }
     }
+}
+
+function resolveRequestApiKeyScopes(req: Request) {
+    const role = (req as any).apiKeyRole as ApiKeyRole | undefined;
+    const scopes = (req as any).apiKeyScopes as string[] | undefined;
+
+    if (!role) {
+        return scopes;
+    }
+
+    return resolveEffectiveApiKeyScopes(scopes, role);
 }

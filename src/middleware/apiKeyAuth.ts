@@ -37,6 +37,7 @@ export const requireApiKey = async (
         req.tenantId = result.tenant.id;
         req.apiKeyId = result.apiKeyId;
         req.apiKeyRole = result.role;
+        req.apiKeyScopes = result.scopes;
         req.apiKeyPrefix = result.apiKeyPrefix;
         req.correlationId = getCorrelationId(req);
 
@@ -81,6 +82,7 @@ export const optionalApiKey = async (
             req.tenantId = result.tenant.id;
             req.apiKeyId = result.apiKeyId;
             req.apiKeyRole = result.role;
+            req.apiKeyScopes = result.scopes;
             req.apiKeyPrefix = result.apiKeyPrefix;
             req.correlationId = getCorrelationId(req);
         }

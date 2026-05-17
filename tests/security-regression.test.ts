@@ -229,7 +229,7 @@ describe('Red Team Security Regression Suite', () => {
                 }
             });
 
-        expect(response.status).toBe(500);
-        expect(response.body.error).toBe('Internal Server Error');
+        expect(response.status).toBe(403);
+        expect(response.body.code).toBe('API_KEY_SCOPE_DENIED');
     });
 });

@@ -162,7 +162,7 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 2. Platform Admin Quantum consegue cadastrar cliente/empresa B2B, criar o Tenant correspondente, preencher perfil comercial, contatos, plano, limites e status.
 2a. Perfil do tenant é editável no admin e cada criação/alteração mantém um `Asset` canônico `tenant-profile:<tenantId>` com `EventLog` aprovado e `signatureHash` pronto para ancoragem.
 3. Platform Admin consegue ativar, suspender e arquivar tenants com fluxo auditável.
-4. Platform Admin consegue criar, rotacionar e revogar API keys por tenant, com secret hasheado, prefixo visível, escopos, expiração e auditoria; API keys só autenticam quando o tenant está `ACTIVE`.
+4. Platform Admin consegue criar, rotacionar e revogar API keys por tenant, com secret hasheado, prefixo visível, escopos canônicos selecionáveis por checkbox, expiração e auditoria; API keys só autenticam quando o tenant está `ACTIVE` e chamadas Diamond são bloqueadas quando a chave não possui o escopo exigido pelo selector.
 5. A área admin contempla compras, ativações, recebimentos, concessão/revogação/ajuste de créditos e histórico operacional por tenant.
 6. Tenant Admin B2B visualiza apenas dados do próprio tenant: perfil permitido, créditos, compras, API keys, usuários/equipe e status de ativação.
 7. Toda mutação privilegiada usa autorização server-side; esconder menu na UI não conta como controle de segurança.
@@ -212,6 +212,8 @@ _GitHub Project: https://github.com/orgs/quantumcert/projects/1_
 **QTAG purchase/fulfillment decision:** QTAG física é entitlement/saldo separado de créditos. Comprar TAG não ativa chip nem cria vínculo físico final; apenas aumenta `availableQTags`. O uso acontece quando o cliente escolhe qual Asset deve receber a TAG. Nesse momento uma unidade é reservada/consumida, um pedido de emissão é criado, e a fila operacional conduz gravação, QA e despacho. A ativação da TAG acontece somente após `commissioning.confirm(success=true)` ou evento operacional equivalente definido no plano.
 
 **Tenant profile Asset decision:** A Fase 4 já cria o primeiro bridge operacional da visão "tudo é Asset": o perfil comercial do tenant deve ser editável no admin, materializado como `Asset` local com `externalId` determinístico `tenant-profile:<tenantId>` e registrado em `EventLog` aprovado para entrar na fila de ancoragem. A Fase 6 continua responsável por generalizar o modelo para perfis B2C, dependentes, pets, objetos, documentos e QTAGs.
+
+**API key scope decision:** Escopos de API key são catálogo canônico, não texto livre. O cadastro no dashboard usa checkboxes, dashboard/backend rejeitam escopos fora do catálogo, defaults dependem da role (`READER`, `OPERATOR`, `ADMIN`) e o `DiamondProxy` aplica a permissão por selector antes da execução.
 
 ### Phase 5: B2B Tenant External Readiness
 

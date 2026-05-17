@@ -5,6 +5,7 @@ import {
     AdminApiKeyOperationsError,
     AdminApiKeyOperationsFacet,
 } from '../services/core-facets/AdminApiKeyOperationsFacet';
+import { API_KEY_SCOPES, ApiKeyScopeError } from '../security/apiKeyScopes';
 import { AdminAuthorizationError } from '../services/core-facets/AdminAuthorizationFacet';
 import { AuthenticatedRequest, DiamondFacets } from '../types';
 
@@ -41,7 +42,7 @@ const requestAuditListSchema = z.object({
 const createInitialApiKeySchema = z.object({
     label: z.string().trim().min(1).max(100),
     role: z.nativeEnum(ApiKeyRole).optional(),
-    scopes: z.array(z.string().trim().min(1)).max(50).optional(),
+    scopes: z.array(z.enum(API_KEY_SCOPES as [string, ...string[]])).max(API_KEY_SCOPES.length).optional(),
     expiresAt: dateSchema,
     reason: z.string().trim().min(1),
 });
@@ -183,11 +184,16 @@ function respondWithAdminApiKeyError(error: unknown, res: Response, logPrefix: s
         });
     }
 
-    if (error instanceof AdminApiKeyOperationsError || error instanceof AdminAuthorizationError) {
+    if (
+        error instanceof AdminApiKeyOperationsError
+        || error instanceof AdminAuthorizationError
+        || error instanceof ApiKeyScopeError
+    ) {
         const statusMap: Record<string, number> = {
             ADMIN_ACTOR_REQUIRED: 401,
             ADMIN_REASON_REQUIRED: 400,
             INVALID_LABEL: 400,
+            INVALID_API_KEY_SCOPE: 400,
             PLATFORM_ADMIN_REQUIRED: 403,
             TENANT_NOT_FOUND: 404,
             TENANT_NOT_ACTIVE: 409,

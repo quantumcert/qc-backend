@@ -17,6 +17,7 @@ import bcrypt from 'bcryptjs';
 import prisma from '../../config/prisma';
 import { ApiKeyRole, TenantStatus } from '@prisma/client';
 import { AuditActions, ResourceTypes, DiamondFacets } from '../../types';
+import { resolveEffectiveApiKeyScopes } from '../../security/apiKeyScopes';
 
 export class ApiKeyManagementFacet {
     static async buildKeyMaterial() {
@@ -56,6 +57,7 @@ export class ApiKeyManagementFacet {
 
         // Generate cryptographically secure key. Raw key is returned once only.
         const { rawKey, keyHash, keyPrefix } = await this.buildKeyMaterial();
+        const scopes = resolveEffectiveApiKeyScopes(undefined, role);
 
         // Transactional creation: ApiKey + Audit Log
         const apiKey = await prisma.$transaction(async (tx) => {
@@ -66,6 +68,7 @@ export class ApiKeyManagementFacet {
                     keyPrefix,
                     label,
                     role,
+                    scopes,
                     expiresAt,
                 },
             });
@@ -80,6 +83,7 @@ export class ApiKeyManagementFacet {
                     resourceId: newKey.id,
                     metadata: {
                         role,
+                        scopes,
                         label,
                         hasExpiration: !!expiresAt,
                         facet: DiamondFacets.API_KEY_MANAGEMENT,
@@ -167,6 +171,7 @@ export class ApiKeyManagementFacet {
             apiKeyId: apiKey.id,
             apiKeyPrefix: apiKey.keyPrefix,
             role: apiKey.role,
+            scopes: resolveEffectiveApiKeyScopes(apiKey.scopes, apiKey.role),
             tenant: apiKey.tenant,
         };
     }
@@ -260,6 +265,7 @@ export class ApiKeyManagementFacet {
         }
 
         const { rawKey, keyHash, keyPrefix: newKeyPrefix } = await this.buildKeyMaterial();
+        const scopes = resolveEffectiveApiKeyScopes(existingKey.scopes, existingKey.role);
 
         const result = await prisma.$transaction(async (tx) => {
             // Revoke old key
@@ -279,6 +285,7 @@ export class ApiKeyManagementFacet {
                     keyPrefix: newKeyPrefix,
                     label: existingKey.label,
                     role: existingKey.role,
+                    scopes,
                     expiresAt: existingKey.expiresAt,
                 },
             });
@@ -296,6 +303,7 @@ export class ApiKeyManagementFacet {
                         previousKeyPrefix: existingKey.keyPrefix,
                         newKeyPrefix,
                         role: existingKey.role,
+                        scopes,
                         facet: DiamondFacets.API_KEY_MANAGEMENT,
                     },
                     ipAddress,
@@ -339,6 +347,7 @@ export class ApiKeyManagementFacet {
                 keyPrefix: true,
                 label: true,
                 role: true,
+                scopes: true,
                 isActive: true,
                 revokedAt: true,
                 lastUsedAt: true,

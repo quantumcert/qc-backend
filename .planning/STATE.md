@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase 04 Plan 02 complete — Plan 03 ready
-last_updated: "2026-05-17T06:51:00Z"
+status: Phase 04 Plan 05 complete — Plan 06 ready
+last_updated: "2026-05-17T08:06:00Z"
 progress:
   total_phases: 9
   completed_phases: 3
   total_plans: 17
-  completed_plans: 12
-  percent: 35
+  completed_plans: 15
+  percent: 41
 ---
 
 # STATE — Quantum Cert Backend
@@ -31,13 +31,13 @@ _Initialized: 2026-05-08_
 ## Current Position
 
 Phase: 04 (b2b-admin-operations-console) — IN_PROGRESS
-Plan: 03 of 07 ready
+Plan: 06 of 07 ready
 | Field | Value |
 |-------|-------|
 | Milestone | TBD |
 | Phase | 4 — B2B Admin Operations Console |
-| Plan | 03 of 07 ready |
-| Status | Plan 02 completed on 2026-05-17; tenant lifecycle backend, dashboard admin router and Tenant List/Detail UI are complete |
+| Plan | 06 of 07 ready |
+| Status | Plan 05 completed on 2026-05-17; QTAG entitlement/fulfillment is complete and Tenant Quantum/backfill/cutover is next |
 
 **Progress**:
 
@@ -120,6 +120,7 @@ Phase 9 [          ] 0% (Specialized Domain Facets)
 | QTAG tem saldo próprio e fulfillment operacional           | Compra de TAG física gera entitlement/saldo QTAG separado de créditos; uso exige selecionar Asset, cria pedido de emissão e entra na fila admin de gravação/despacho                                                | 4     |
 | QTAG ativa somente após commissioning físico               | Compra ou reserva não ativa chip; TAG fica ativa apenas após gravação/commissioning confirmado e sempre vinculada a um Asset                                                                                        | 4     |
 | Perfil de tenant como Asset canônico                       | Perfil comercial do tenant é editável no admin e toda criação/alteração mantém um `Asset` `tenant-profile:<tenantId>` com `EventLog` aprovado para ancoragem                                                       | 4     |
+| Escopos de API key são catálogo canônico                   | Cadastro usa checkboxes no dashboard; dashboard/backend rejeitam escopos fora do catálogo; defaults dependem da role e o `DiamondProxy` bloqueia selectors sem o escopo exigido                                    | 4     |
 | B2C sob Tenant Quantum na Phase 4                         | Usuários consumidores não viram tenants; vivem como usuários tenant-scoped do Tenant Quantum, com dependentes e assets próprios; Tenant Quantum/backfill ficam na Phase 4                                          | 4     |
 | B2B permanece tenant real                                 | Clientes B2B precisam de tenant próprio, admins, operadores, API keys, limites, billing e white-label; Phase 5 fica focada nessa prontidão B2B externa                                                             | 5     |
 | Backend vira fonte canônica de usuários e domínio         | O banco do dashboard hoje guarda usuários/dependentes, mas a transição de Tenant Quantum/backfill B2C deve ser executada na Phase 4 antes dos boundaries B2B da Phase 5                                             | 4     |
@@ -181,3 +182,4 @@ Phase 9 [          ] 0% (Specialized Domain Facets)
 - Fase 4 Plano 04 concluído em 2026-05-17: ledger operacional de créditos, boundary genérico de recebíveis, provider fake/local, webhook deduplicado, rotas admin de créditos/pagamentos, aba Credits no Tenant Detail e fila `/admin/platform/queues/payments` foram implementados e verificados. Créditos continuam separados de `UserWallet`; Transfero permanece candidata/TBD.
 - Fase 4 Plano 05 concluído em 2026-05-17: ledger QTAG, reserva por Asset, fulfillment order, link de commissioning com `fulfillmentOrderId`, atualização de `Asset.deviceId`, rotas admin QTAG, aba QTAGs e fila `/admin/platform/queues/qtags` foram implementados e verificados.
 - Fase 4 atualização cross-cutting em 2026-05-17: aba Perfil do tenant no dashboard ficou editável e o backend passou a manter `Asset` canônico `tenant-profile:<tenantId>` + `EventLog` aprovado com `signatureHash` para cada criação/alteração de perfil comercial.
+- Fase 4 atualização cross-cutting em 2026-05-17: escopos de API key passaram a ser catálogo canônico com defaults por role, validação dashboard/backend, seleção por checkbox na criação e enforcement por selector no `DiamondProxy`.

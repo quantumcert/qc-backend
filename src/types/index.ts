@@ -17,6 +17,7 @@ export interface AuthenticatedRequest extends Request {
     tenantId?: string;
     apiKeyId?: string;
     apiKeyRole?: ApiKeyRole;
+    apiKeyScopes?: string[];
     apiKeyPrefix?: string;
     agentId?: string; // set by requireAgentSignature when request comes from a machine identity
     adminActor?: AdminActorContext;
