@@ -23,6 +23,7 @@ import { AnchorQueueService } from '../AnchorQueueService';
 import { AssetAnchoringService } from '../AssetAnchoringService';
 import { AdminAuthorizationFacet } from './AdminAuthorizationFacet';
 import { AdminActorContext, DiamondFacets, ResourceTypes } from '../../types';
+import { RegistrationCreditFacet } from './RegistrationCreditFacet';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -45,6 +46,13 @@ export type TenantUserUpsertInput = {
     metadata?: JsonRecord | null;
     migratedAt?: Date | string | null;
     source?: string;
+};
+
+export type TenantUserDependentWithCreditInput = TenantUserUpsertInput & {
+    idempotencyKey?: string;
+    reason?: string;
+    ipAddress?: string;
+    userAgent?: string;
 };
 
 export type TenantUserProfileUpdateInput = {
@@ -272,6 +280,86 @@ export class TenantUserFacet {
             role: TenantUserRole.DEPENDENT,
             source: input.source || 'dependent-create',
         });
+    }
+
+    static async createDependentWithRegistrationCredit(
+        guardianTenantUserId: string,
+        input: TenantUserDependentWithCreditInput
+    ) {
+        const guardian = await prisma.tenantUser.findUnique({
+            where: { id: guardianTenantUserId },
+            select: { id: true, tenantId: true },
+        });
+        if (!guardian) {
+            throw new TenantUserError('TENANT_USER_NOT_FOUND', 'Guardian tenant user not found.');
+        }
+
+        const baseIdempotencyKey = input.idempotencyKey || buildDependentRegistrationIdempotencyKey(
+            guardian.id,
+            input
+        );
+        const referenceId = input.legacyOpenId || input.email || input.document || baseIdempotencyKey;
+        const metadata = {
+            guardianId: guardian.id,
+            source: input.source || 'dependent-registration-credit',
+            ipAddress: input.ipAddress,
+            userAgent: input.userAgent,
+        };
+
+        await RegistrationCreditFacet.reserveForDependentRegistration({
+            tenantId: guardian.tenantId,
+            userId: guardian.id,
+            idempotencyKey: `${baseIdempotencyKey}:reserve`,
+            referenceId,
+            reason: input.reason || 'dependent registration',
+            metadata,
+        });
+
+        let dependent: Awaited<ReturnType<typeof this.upsertB2CUser>> | null = null;
+        try {
+            dependent = await this.upsertB2CUser({
+                ...input,
+                tenantId: guardian.tenantId,
+                guardianId: guardian.id,
+                role: TenantUserRole.DEPENDENT,
+                source: input.source || 'dependent-registration-credit',
+            });
+
+            await RegistrationCreditFacet.consumeReservedForDependentRegistration({
+                tenantId: guardian.tenantId,
+                userId: guardian.id,
+                idempotencyKey: `${baseIdempotencyKey}:consume`,
+                referenceId: dependent.id,
+                reason: input.reason || 'dependent registration',
+                metadata,
+            });
+        } catch (error) {
+            await RegistrationCreditFacet.releaseForDependentRegistration({
+                tenantId: guardian.tenantId,
+                userId: guardian.id,
+                idempotencyKey: `${baseIdempotencyKey}:release`,
+                referenceId,
+                reason: input.reason || 'dependent registration failed',
+                metadata,
+            }).catch(() => undefined);
+
+            if (dependent?.id) {
+                await prisma.tenantUser.update({
+                    where: { id: dependent.id },
+                    data: {
+                        status: TenantUserStatus.ARCHIVED,
+                        metadata: {
+                            ...normalizeJsonObject(dependent.metadata),
+                            registrationCreditFailedAt: new Date().toISOString(),
+                        },
+                    },
+                }).catch(() => undefined);
+            }
+            throw error;
+        }
+
+        const creditSummary = await RegistrationCreditFacet.getSummary(guardian.tenantId, guardian.id);
+        return { dependent, creditSummary };
     }
 
     static async updateProfile(tenantUserId: string, input: TenantUserProfileUpdateInput) {
@@ -1267,6 +1355,21 @@ function normalizeNullableString(value?: string | null): string | null {
 function normalizeJsonObject(value: unknown): Prisma.InputJsonObject {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
     return value as Prisma.InputJsonObject;
+}
+
+function buildDependentRegistrationIdempotencyKey(
+    guardianId: string,
+    input: TenantUserDependentWithCreditInput
+) {
+    return createHash('sha256')
+        .update(JSON.stringify({
+            guardianId,
+            email: input.email ?? null,
+            document: input.document ?? input.cpf ?? null,
+            displayName: input.displayName ?? null,
+            legacyOpenId: input.legacyOpenId ?? null,
+        }))
+        .digest('hex');
 }
 
 function normalizeDate(value?: Date | string | null): Date | undefined {

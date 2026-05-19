@@ -5,6 +5,10 @@ import {
     TenantUserError,
     TenantUserFacet,
 } from '../services/core-facets/TenantUserFacet';
+import {
+    RegistrationCreditFacet,
+} from '../services/core-facets/RegistrationCreditFacet';
+import { CreditLedgerError } from '../services/core-facets/CreditLedgerFacet';
 import { AdminAuthorizationError } from '../services/core-facets/AdminAuthorizationFacet';
 import { AuthenticatedRequest, DiamondFacets } from '../types';
 
@@ -52,6 +56,18 @@ const tenantUserProfileSchema = z.object({
 
 const tenantUserAdminCreateSchema = tenantUserUpsertSchema.extend({
     reason: z.string().trim().min(1),
+});
+
+const tenantUserDependentWithCreditSchema = tenantUserUpsertSchema.extend({
+    idempotencyKey: z.string().trim().min(1).optional(),
+    reason: z.string().trim().min(1).optional(),
+});
+
+const registrationCreditConsumptionSchema = z.object({
+    idempotencyKey: z.string().trim().min(1),
+    referenceId: z.string().trim().min(1).optional(),
+    reason: z.string().trim().min(1).optional(),
+    metadata: jsonObjectSchema.optional(),
 });
 
 const tenantUserAdminUpdateSchema = tenantUserProfileSchema.extend({
@@ -143,6 +159,51 @@ export class TenantUserController {
             return res.status(201).json({ success: true, data: dependent, meta: buildMeta() });
         } catch (error) {
             return respondWithTenantUserError(error, res, '[TenantUserController.createDependent]');
+        }
+    }
+
+    static async createDependentWithRegistrationCredit(req: AuthenticatedRequest, res: Response) {
+        try {
+            const payload = tenantUserDependentWithCreditSchema.parse(req.body);
+            const result = await TenantUserFacet.createDependentWithRegistrationCredit(
+                req.params.userId,
+                {
+                    ...payload,
+                    ipAddress: req.ip,
+                    userAgent: req.headers['user-agent'],
+                }
+            );
+            return res.status(201).json({ success: true, data: result, meta: buildMeta() });
+        } catch (error) {
+            return respondWithTenantUserError(error, res, '[TenantUserController.createDependentWithRegistrationCredit]');
+        }
+    }
+
+    static async registrationCreditSummary(req: AuthenticatedRequest, res: Response) {
+        try {
+            const user = await TenantUserFacet.getCurrentUser({ id: req.params.userId });
+            const summary = await RegistrationCreditFacet.getSummary(user.tenantId, user.id);
+            return res.json({ success: true, data: summary, meta: buildMeta() });
+        } catch (error) {
+            return respondWithTenantUserError(error, res, '[TenantUserController.registrationCreditSummary]');
+        }
+    }
+
+    static async consumeAssetRegistrationCredit(req: AuthenticatedRequest, res: Response) {
+        try {
+            const payload = registrationCreditConsumptionSchema.parse(req.body);
+            const user = await TenantUserFacet.getCurrentUser({ id: req.params.userId });
+            const summary = await RegistrationCreditFacet.consumeForAssetRegistration({
+                tenantId: user.tenantId,
+                userId: user.id,
+                idempotencyKey: payload.idempotencyKey,
+                referenceId: payload.referenceId,
+                reason: payload.reason || 'asset registration',
+                metadata: payload.metadata as any,
+            });
+            return res.json({ success: true, data: summary, meta: buildMeta() });
+        } catch (error) {
+            return respondWithTenantUserError(error, res, '[TenantUserController.consumeAssetRegistrationCredit]');
         }
     }
 
@@ -321,7 +382,7 @@ function respondWithTenantUserError(error: unknown, res: Response, logPrefix: st
         });
     }
 
-    if (error instanceof TenantUserError || error instanceof AdminAuthorizationError) {
+    if (error instanceof TenantUserError || error instanceof AdminAuthorizationError || error instanceof CreditLedgerError) {
         const statusMap: Record<string, number> = {
             ADMIN_ACTOR_REQUIRED: 401,
             ADMIN_REASON_REQUIRED: 400,
@@ -330,6 +391,9 @@ function respondWithTenantUserError(error: unknown, res: Response, logPrefix: st
             TENANT_USER_NOT_FOUND: 404,
             INVALID_EXTERNAL_IDENTITY: 400,
             CPF_ALREADY_EXISTS: 409,
+            INSUFFICIENT_CREDITS: 402,
+            INSUFFICIENT_RESERVED_CREDITS: 409,
+            IDEMPOTENCY_KEY_REQUIRED: 400,
         };
 
         return res.status(statusMap[error.code] || 400).json({
