@@ -146,6 +146,8 @@ model TenantUser {
   externalIdentities ExternalIdentity[]
   memberships        TenantMembership[]
   invitedMemberships TenantMembership[] @relation("MembershipInviter")
+  credential         TenantUserCredential?
+  sessions           TenantUserSession[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -174,6 +176,43 @@ enum TenantUserStatus {
   ACTIVE
   SUSPENDED
   ARCHIVED
+}
+
+model TenantUserCredential {
+  id           String     @id @default(cuid())
+  tenantUserId String     @unique
+  tenantUser   TenantUser @relation(fields: [tenantUserId], references: [id], onDelete: Cascade)
+
+  passwordHash      String
+  passwordUpdatedAt DateTime @default(now())
+  failedAttempts    Int      @default(0)
+  lockedUntil       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantUserId])
+  @@index([lockedUntil])
+}
+
+model TenantUserSession {
+  id           String     @id @default(cuid())
+  tenantUserId String
+  tenantUser   TenantUser @relation(fields: [tenantUserId], references: [id], onDelete: Cascade)
+
+  tokenHash        String    @unique
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  lastSeenAt       DateTime?
+  createdIp        String?
+  createdUserAgent String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantUserId])
+  @@index([expiresAt])
+  @@index([revokedAt])
 }
 
 model ExternalIdentity {

@@ -8,6 +8,7 @@ import apiKeyRoutes from './v1/apiKeyRoutes';
 import assetRoutes from './v1/assetRoutes';
 import deviceRoutes from './v1/deviceRoutes';
 import publicRoutes from './v1/publicRoutes';
+import authRoutes from './v1/authRoutes';
 import webhookRoutes from './v1/webhookRoutes';
 import walletRoutes from './v1/walletRoutes';
 import circuitBreakerRoutes from './v1/circuitBreakerRoutes';
@@ -22,6 +23,9 @@ import { apiRequestAudit } from '../middleware/apiRequestAudit';
 const router = Router();
 
 router.use(apiRequestAudit);
+
+// Human auth — public browser/session routes; never requires tenant API key.
+router.use('/v1/auth', authRoutes);
 
 // ═══════════════════════════════════════════════════════════
 // PHASE 1: Multi-Tenant Engine & Access Control
