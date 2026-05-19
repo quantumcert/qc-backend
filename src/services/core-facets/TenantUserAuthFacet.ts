@@ -5,7 +5,7 @@ import prisma from '../../config/prisma';
 import { TenantUserFacet } from './TenantUserFacet';
 
 const SESSION_TOKEN_PREFIX = 'qcs_';
-const DEFAULT_SESSION_TTL_HOURS = 12;
+const DEFAULT_SESSION_TTL_HOURS = 6;
 const BCRYPT_ROUNDS = 10;
 const INVALID_CREDENTIALS_MESSAGE = 'Email ou senha inválidos.';
 
