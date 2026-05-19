@@ -43,6 +43,7 @@ const {
   };
   const mockEventLog = {
     create: vi.fn(),
+    findFirst: vi.fn(),
   };
   const mockProcessQueue = vi.fn();
   const mockTransaction = vi.fn(async (callback) => callback({
@@ -127,6 +128,7 @@ describe('TenantUserAuthFacet', () => {
     mockAsset.findUnique.mockResolvedValue(null);
     mockAsset.upsert.mockResolvedValue({ id: 'profile-asset', status: 'ACTIVE' });
     mockEventLog.create.mockResolvedValue({ id: 'event-profile' });
+    mockEventLog.findFirst.mockResolvedValue(null);
     mockProcessQueue.mockResolvedValue({ processed: 0 });
     mockTenantUserCredential.findFirst.mockResolvedValue(null);
     mockTenantUserCredential.upsert.mockResolvedValue({
@@ -217,6 +219,22 @@ describe('TenantUserAuthFacet', () => {
   });
 
   it('returns current user for a valid unexpired session and revokes logout by token hash', async () => {
+    mockAsset.findUnique.mockResolvedValue({
+      id: 'profile-asset',
+      externalId: `tenant-user-profile:${tenantUser.id}`,
+      publicUrl: 'http://localhost:3001/public/verify/profile-asset',
+      status: 'ACTIVE',
+      metadata: {},
+      updatedAt: new Date('2026-05-19T00:00:00.000Z'),
+    });
+    mockEventLog.findFirst.mockResolvedValue({
+      id: 'event-profile',
+      status: 'APPROVED',
+      dltTxId: 'stellar-tx-profile',
+      signatureHash: 'signature-profile',
+      createdAt: new Date('2026-05-19T00:00:00.000Z'),
+      updatedAt: new Date('2026-05-19T00:00:00.000Z'),
+    });
     mockTenantUserSession.findUnique.mockResolvedValue({
       id: 'session-1',
       tenantUserId: tenantUser.id,
@@ -227,7 +245,16 @@ describe('TenantUserAuthFacet', () => {
     });
 
     const current = await TenantUserAuthFacet.current('qcs_valid-token');
-    expect(current).toMatchObject({ id: tenantUser.id });
+    expect(current).toMatchObject({
+      id: tenantUser.id,
+      profileAsset: {
+        id: 'profile-asset',
+        externalId: `tenant-user-profile:${tenantUser.id}`,
+        lastAnchorEvent: {
+          dltTxId: 'stellar-tx-profile',
+        },
+      },
+    });
 
     await TenantUserAuthFacet.logout('qcs_valid-token');
     expect(mockTenantUserSession.update).toHaveBeenCalledWith(expect.objectContaining({

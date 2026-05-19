@@ -139,8 +139,10 @@ export class TenantUserAuthFacet {
             userAgent: input.userAgent,
         });
 
+        const user = await withProfileAsset(credential.tenantUser);
+
         return {
-            user: credential.tenantUser,
+            user,
             sessionToken: session.token,
             expiresAt: session.expiresAt,
         };
@@ -173,7 +175,7 @@ export class TenantUserAuthFacet {
             data: { lastSeenAt: new Date() },
         })).catch(() => undefined);
 
-        return session.tenantUser;
+        return withProfileAsset(session.tenantUser);
     }
 
     static async logout(sessionToken: string) {
@@ -205,6 +207,75 @@ export class TenantUserAuthFacet {
 
         return { token, expiresAt };
     }
+}
+
+async function withProfileAsset<T extends {
+    id: string;
+    tenantId: string;
+    legacyDashboardUserId?: string | null;
+    legacyOpenId?: string | null;
+}>(tenantUser: T) {
+    const profileAsset = await findTenantUserProfileAsset(tenantUser);
+    return { ...tenantUser, profileAsset };
+}
+
+async function findTenantUserProfileAsset(user: {
+    id: string;
+    tenantId: string;
+    legacyDashboardUserId?: string | null;
+    legacyOpenId?: string | null;
+}) {
+    for (const externalId of tenantUserProfileExternalIdCandidates(user)) {
+        const asset = await prisma.asset.findUnique({
+            where: {
+                tenantId_externalId: {
+                    tenantId: user.tenantId,
+                    externalId,
+                },
+            },
+            select: {
+                id: true,
+                externalId: true,
+                publicUrl: true,
+                status: true,
+                metadata: true,
+                updatedAt: true,
+            },
+        });
+        if (asset) {
+            const lastAnchorEvent = await prisma.eventLog.findFirst({
+                where: {
+                    tenantId: user.tenantId,
+                    assetId: asset.id,
+                    origin: 'SYSTEM_TENANT_USER_PROFILE',
+                },
+                orderBy: { createdAt: 'desc' },
+                select: {
+                    id: true,
+                    status: true,
+                    dltTxId: true,
+                    signatureHash: true,
+                    createdAt: true,
+                    updatedAt: true,
+                },
+            });
+            return { ...asset, lastAnchorEvent };
+        }
+    }
+
+    return null;
+}
+
+function tenantUserProfileExternalIdCandidates(user: {
+    id: string;
+    legacyDashboardUserId?: string | null;
+    legacyOpenId?: string | null;
+}) {
+    return [
+        `tenant-user-profile:${user.id}`,
+        user.legacyDashboardUserId ? `qc:user:${user.legacyDashboardUserId}` : null,
+        user.legacyOpenId ? `identity:${user.legacyOpenId}` : null,
+    ].filter((value): value is string => Boolean(value));
 }
 
 function normalizeEmail(value: string) {
