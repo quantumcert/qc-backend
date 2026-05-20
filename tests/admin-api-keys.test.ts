@@ -78,7 +78,7 @@ function apiKeyFixture(overrides = {}) {
   return {
     id: 'api-key-1',
     tenantId: 'tenant-b2b',
-    keyPrefix: 'qc_test_prefix01',
+    keyPrefix: 'qc_test',
     label: 'Main integration',
     role: ApiKeyRole.OPERATOR,
     scopes: ['assets:write'],
@@ -100,9 +100,9 @@ describe('AdminApiKeyOperationsFacet', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(ApiKeyManagementFacet, 'buildKeyMaterial').mockResolvedValue({
-      rawKey: 'qc_test_raw_secret_value',
+      rawKey: 'qc_test_key',
       keyHash: 'bcrypt-hash-only',
-      keyPrefix: 'qc_test_prefix01',
+      keyPrefix: 'qc_test',
     });
     mockTransaction.mockImplementation(async (callback) => callback({
       apiKey: mockApiKey,
@@ -128,15 +128,15 @@ describe('AdminApiKeyOperationsFacet', () => {
 
     expect(result).toMatchObject({
       id: 'api-key-1',
-      rawKey: 'qc_test_raw_secret_value',
-      keyPrefix: 'qc_test_prefix01',
+      rawKey: 'qc_test_key',
+      keyPrefix: 'qc_test',
       role: ApiKeyRole.OPERATOR,
     });
     expect(mockApiKey.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
         tenantId: 'tenant-b2b',
         keyHash: 'bcrypt-hash-only',
-        keyPrefix: 'qc_test_prefix01',
+        keyPrefix: 'qc_test',
         label: 'Main integration',
         role: ApiKeyRole.OPERATOR,
         scopes: ['assets:write', 'events:write'],
@@ -144,7 +144,7 @@ describe('AdminApiKeyOperationsFacet', () => {
       }),
     }));
     const persistedPayload = JSON.stringify(mockApiKey.create.mock.calls);
-    expect(persistedPayload).not.toContain('qc_test_raw_secret_value');
+    expect(persistedPayload).not.toContain('qc_test_key');
     expect(mockAdminAuditLog.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
         tenantId: 'tenant-b2b',
@@ -179,8 +179,8 @@ describe('AdminApiKeyOperationsFacet', () => {
 
     expect(result).toMatchObject({
       id: 'api-key-new',
-      rawKey: 'qc_test_raw_secret_value',
-      keyPrefix: 'qc_test_prefix01',
+      rawKey: 'qc_test_key',
+      keyPrefix: 'qc_test',
       role: ApiKeyRole.READER,
     });
     expect(mockApiKey.update).not.toHaveBeenCalled();
@@ -267,7 +267,7 @@ describe('AdminApiKeyOperationsFacet', () => {
     ]);
 
     await expect(
-      ApiKeyManagementFacet.validateApiKey('qc_test_raw_secret_value')
+      ApiKeyManagementFacet.validateApiKey('qc_test_key')
     ).rejects.toMatchObject({
       code: 'TENANT_INACTIVE',
     });
@@ -287,7 +287,7 @@ describe('AdminApiKeyOperationsFacet', () => {
     expect(result.apiKeys).toHaveLength(1);
     expect(result.apiKeys[0]).not.toHaveProperty('rawKey');
     expect(result.apiKeys[0]).not.toHaveProperty('keyHash');
-    expect(JSON.stringify(result)).not.toContain('qc_test_raw_secret_value');
+    expect(JSON.stringify(result)).not.toContain('qc_test_key');
     expect(mockApiKey.findMany).toHaveBeenCalledWith(expect.objectContaining({
       select: expect.not.objectContaining({
         keyHash: expect.anything(),
@@ -317,11 +317,11 @@ describe('AdminApiKeyOperationsFacet', () => {
   it('rotates an API key by revoking the old key and returning only the new raw key', async () => {
     mockApiKey.findFirst.mockResolvedValue(apiKeyFixture({
       id: 'api-key-old',
-      keyPrefix: 'qc_test_oldpref',
+      keyPrefix: 'qc_old',
     }));
     mockApiKey.create.mockResolvedValue(apiKeyFixture({
       id: 'api-key-new',
-      keyPrefix: 'qc_test_prefix01',
+      keyPrefix: 'qc_test',
       rotatedFromApiKeyId: 'api-key-old',
     }));
 
@@ -335,7 +335,7 @@ describe('AdminApiKeyOperationsFacet', () => {
     expect(result).toMatchObject({
       id: 'api-key-new',
       previousKeyId: 'api-key-old',
-      rawKey: 'qc_test_raw_secret_value',
+      rawKey: 'qc_test_key',
       rotatedFromApiKeyId: 'api-key-old',
     });
     expect(mockApiKey.update).toHaveBeenCalledWith(expect.objectContaining({
@@ -353,7 +353,7 @@ describe('AdminApiKeyOperationsFacet', () => {
         createdByActorId: 'user-platform',
       }),
     }));
-    expect(JSON.stringify(mockApiKey.create.mock.calls)).not.toContain('qc_test_raw_secret_value');
+    expect(JSON.stringify(mockApiKey.create.mock.calls)).not.toContain('qc_test_key');
     expect(mockAdminAuditLog.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({
         action: 'API_KEY_ROTATED',
@@ -365,7 +365,7 @@ describe('AdminApiKeyOperationsFacet', () => {
   it('revokes an API key with actor and reason in admin audit', async () => {
     mockApiKey.findFirst.mockResolvedValue(apiKeyFixture({
       id: 'api-key-1',
-      keyPrefix: 'qc_test_prefix01',
+      keyPrefix: 'qc_test',
     }));
     mockApiKey.update.mockResolvedValue(apiKeyFixture({
       id: 'api-key-1',
@@ -427,7 +427,7 @@ describe('AdminApiKeyOperationsFacet', () => {
           id: 'audit-1',
           tenantId: 'tenant-b2b',
           apiKeyId: 'api-key-1',
-          keyPrefix: 'qc_test_prefix01',
+          keyPrefix: 'qc_test',
           role: ApiKeyRole.OPERATOR,
           method: 'POST',
           path: '/api/v1/diamond',

@@ -201,41 +201,41 @@ describe('CreditLedgerFacet', () => {
         amount: 4,
         availableDelta: -4,
         reservedDelta: 4,
-        idempotencyKey: 'reserve-activation-1',
+        idempotencyKey: 'reserve-1',
       }))
       .mockResolvedValueOnce(ledgerEntryFixture({
         entryType: CreditLedgerEntryType.CONSUMED,
         amount: 2,
         availableDelta: 0,
         reservedDelta: -2,
-        idempotencyKey: 'consume-activation-1',
+        idempotencyKey: 'consume-1',
       }))
       .mockResolvedValueOnce(ledgerEntryFixture({
         entryType: CreditLedgerEntryType.RELEASED,
         amount: 2,
         availableDelta: 2,
         reservedDelta: -2,
-        idempotencyKey: 'release-activation-1',
+        idempotencyKey: 'release-1',
       }));
 
     await CreditLedgerFacet.reserveCredits({
       tenantId: 'tenant-b2b',
       amount: 4,
-      idempotencyKey: 'reserve-activation-1',
+      idempotencyKey: 'reserve-1',
       referenceType: 'activation',
       referenceId: 'activation-1',
     });
     await CreditLedgerFacet.consumeReservedCredits({
       tenantId: 'tenant-b2b',
       amount: 2,
-      idempotencyKey: 'consume-activation-1',
+      idempotencyKey: 'consume-1',
       referenceType: 'activation',
       referenceId: 'activation-1',
     });
     await CreditLedgerFacet.releaseReservedCredits({
       tenantId: 'tenant-b2b',
       amount: 2,
-      idempotencyKey: 'release-activation-1',
+      idempotencyKey: 'release-1',
       referenceType: 'activation',
       referenceId: 'activation-1',
     });
@@ -264,14 +264,14 @@ describe('CreditLedgerFacet', () => {
 
     mockCreditLedgerEntry.findUnique.mockResolvedValueOnce(ledgerEntryFixture({
       entryType: CreditLedgerEntryType.RESERVED,
-      idempotencyKey: 'reserve-activation-1',
+      idempotencyKey: 'reserve-1',
     }));
     mockCreditLedgerEntry.create.mockClear();
 
     await CreditLedgerFacet.reserveCredits({
       tenantId: 'tenant-b2b',
       amount: 4,
-      idempotencyKey: 'reserve-activation-1',
+      idempotencyKey: 'reserve-1',
     });
 
     expect(mockCreditLedgerEntry.create).not.toHaveBeenCalled();
