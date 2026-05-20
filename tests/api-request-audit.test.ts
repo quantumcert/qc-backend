@@ -38,7 +38,7 @@ function createApp() {
   app.post('/api/v1/diamond', (req: AuthenticatedRequest, res) => {
     req.tenantId = 'tenant-a';
     req.apiKeyId = 'api-key-a';
-    req.apiKeyPrefix = 'qc_test_prefix01';
+    req.apiKeyPrefix = 'qc_test';
     req.apiKeyRole = ApiKeyRole.OPERATOR;
     req.correlationId = 'corr-from-auth';
 
@@ -48,10 +48,10 @@ function createApp() {
   app.post('/api/v1/diamond-error', (req: AuthenticatedRequest, res) => {
     req.tenantId = 'tenant-a';
     req.apiKeyId = 'api-key-a';
-    req.apiKeyPrefix = 'qc_test_prefix01';
+    req.apiKeyPrefix = 'qc_test';
     req.apiKeyRole = ApiKeyRole.OPERATOR;
     req.correlationId = 'corr-error';
-    req.apiRequestAuditError = 'Invalid payload for qc_test_secret_should_not_leak';
+    req.apiRequestAuditError = 'Invalid payload for qc_test_key';
 
     res.status(422).json({ success: false, error: 'Invalid payload' });
   });
@@ -80,7 +80,7 @@ describe('apiRequestAudit', () => {
   });
 
   it('persists sanitized API-key request metadata without raw key or body payload', async () => {
-    const rawKey = 'qc_test_secret_should_not_leak';
+    const rawKey = 'qc_test_key';
 
     await request(createApp())
       .post('/api/v1/diamond?debug=true')
@@ -100,7 +100,7 @@ describe('apiRequestAudit', () => {
       data: expect.objectContaining({
         tenantId: 'tenant-a',
         apiKeyId: 'api-key-a',
-        keyPrefix: 'qc_test_prefix01',
+        keyPrefix: 'qc_test',
         role: ApiKeyRole.OPERATOR,
         method: 'POST',
         path: '/api/v1/diamond',

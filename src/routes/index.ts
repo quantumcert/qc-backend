@@ -225,8 +225,8 @@ router.use('/v1/admin', adminRoutes);
  *                     sessionId: "encoding-session-id"
  *                     layout: "base64-layout-144-bytes"
  *                     pages: ["AQAEXA==", "j4IyIQ=="]
- *                     sdmMacKey: "d9c12fff5ea810b5edfb8b7730272c1b"
- *                     writeKey: "85a2d097370e1843bbd30529112b74f9"
+ *                     sdmMacKey: "<SDM_MAC_KEY_HEX_16_BYTES>"
+ *                     writeKey: "<WRITE_KEY_HEX_16_BYTES>"
  *                     lockAfterWrite: true
  *                   meta:
  *                     selector: commissioning.start
