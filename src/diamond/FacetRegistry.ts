@@ -16,6 +16,9 @@ import { TransferRegistryFacet } from '../services/core-facets/TransferRegistryF
 import { CommissioningFacet } from '../services/core-facets/CommissioningFacet';
 import { AgentRegistryFacet } from '../services/core-facets/AgentRegistryFacet';
 import { EscrowFacet } from '../services/core-facets/EscrowFacet';
+import { TikinEscrowFacet } from '../services/core-facets/TikinEscrowFacet';
+
+
 import { DocumentVerificationFacet } from '../services/core-facets/DocumentVerificationFacet';
 import { ERecycleFacet } from '../services/core-facets/ERecycleFacet';
 
@@ -64,10 +67,10 @@ export const FacetRegistry: Record<string, FacetFunction> = {
     'agent.status': AgentRegistryFacet.status,
 
     // ESCROW TIME-LOCK
-    'escrow.lock':    (ctx: any, payload: any) => EscrowFacet.lock(ctx, payload),
-    'escrow.release': (ctx: any, payload: any) => EscrowFacet.release(ctx, payload),
-    'escrow.cancel':  (ctx: any, payload: any) => EscrowFacet.cancel(ctx, payload),
-    'escrow.status':  (ctx: any, payload: any) => EscrowFacet.getStatus(ctx, payload),
+'escrow.lock':    (ctx: any, payload: any) => TikinEscrowFacet.lock(ctx, payload),
+'escrow.release': (ctx: any, payload: any) => TikinEscrowFacet.release(ctx, payload),
+'escrow.cancel':  (ctx: any, payload: any) => TikinEscrowFacet.cancel(ctx, payload),
+'escrow.status':  (ctx: any, payload: any) => EscrowFacet.getStatus(ctx, payload),
 
     // DOCUMENT VERIFICATION (public — ctx is ignored, only payload.hash is used)
     'document.verify': (_ctx: any, payload: any) => DocumentVerificationFacet.verifyByHash(payload.hash),

@@ -16,10 +16,12 @@ import { QuantumSignerService } from '../QuantumSignerService';
 import {
   IDLTAdapter,
   AnchorOptions,
-  EscrowParams,
   TransferParams,
   ReceiveParams,
+  DLTTransitionPayload,
+  EscrowParams,
 } from '../../interfaces/IDLTAdapter';
+
 
 const POLYGON_CHAIN_ID = 137;
 
@@ -39,8 +41,34 @@ const TRANSFER_FACET_ABI = [
   'event AnchorEvent(bytes32 indexed eventIdHash, bytes32 indexed payloadHash, uint256 anchoredAt)',
 ];
 
-export class PolygonAdapter implements IDLTAdapter {
+export class PolygonAdapter implements IDLTAdapter { 
+  async executeGenericTransition(payload: DLTTransitionPayload): Promise<string> {
+    switch (payload.operation) {
+      case 'LOCK': {
+        const params: EscrowParams = {
+          escrowId: payload.transitionId,
+          sender: payload.sender,
+          receiver: payload.receiver,
+          amount: payload.amount,
+          assetAddress: payload.assetAddress,
+          unlockTimestamp: payload.unlockTimestamp ?? 0,
+
+          pqcProof: payload.pqcProof,
+          tripleSign: payload.tripleSign,
+        };
+        return this.createEscrow(params);
+      }
+      case 'RELEASE':
+        return this.releaseEscrow(payload.transitionId, payload.transitionId);
+      case 'CANCEL':
+        return this.cancelEscrow(payload.transitionId, payload.transitionId);
+      default:
+        throw new Error(`Unsupported operation ${(payload as any).operation}`);
+    }
+  }
+
   private provider: ethers.JsonRpcProvider;
+
   private wallet: ethers.Wallet;
   private facetContract: ethers.Contract | null;
 

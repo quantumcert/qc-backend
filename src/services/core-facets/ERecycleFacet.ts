@@ -4,8 +4,8 @@
 //
 // Golden Rules:
 //  - Payloads Opacos: o core NÃO valida regras de negócio
-//    (ex.: weightKg positivo, wasteType válido). Apenas armazena
-//    e ancora conforme o contrato.
+//    (ex.: peso/ tipo). Apenas armazena e ancora conforme o contrato.
+
 //  - Criptografia: o hash do EventLog DEVE usar SHA3-512.
 //  - Nomenclatura: seguir rigorosamente os nomes de campos definidos no contrato.
 // ═══════════════════════════════════════════════════════════
@@ -17,6 +17,7 @@ import { AnchorQueueService } from '../AnchorQueueService';
 export class ERecycleFacet {
   static async recordWaste(
     secureContext: { tenantId: string; apiKeyId?: string; role: string },
+
     payload: {
       containerId: string;
       wasteType: string;
