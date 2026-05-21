@@ -252,7 +252,82 @@ describe('TenantUserFacet canonical contracts', () => {
     }));
   });
 
-  it('records tenant user status changes in the profile asset history for on-chain anchoring', async () => {
+  it('updates profile metadata without removing onboarding completion markers', async () => {
+    const existingMetadata = {
+      onboardingCompletedAt: '2026-05-20T21:31:00.000Z',
+      digitalIdentityGeneratedAt: '2026-05-20T21:31:00.000Z',
+      registrationIdentity: {
+        cpfVerified: true,
+        birthDateMatches: true,
+        ageEligible: true,
+      },
+      consent: {
+        termsAccepted: true,
+        dataConsentAccepted: true,
+      },
+      avatarUrl: 'https://cdn.example.com/avatar-old.png',
+    };
+    mockTenantUser.findUnique.mockResolvedValue({
+      id: 'tenant-user-1',
+      tenantId: 'tenant-quantum',
+      legacyDashboardUserId: '42',
+      legacyOpenId: 'dev@localhost',
+      email: 'dev@localhost',
+      phone: null,
+      document: '34888015864',
+      documentType: 'CPF',
+      displayName: 'Developer User',
+      role: TenantUserRole.MEMBER,
+      status: TenantUserStatus.ACTIVE,
+      guardianId: null,
+      profile: {},
+      metadata: existingMetadata,
+    });
+    mockTenantUser.update.mockImplementation(async ({ data }) => ({
+      id: 'tenant-user-1',
+      tenantId: 'tenant-quantum',
+      legacyDashboardUserId: data.legacyDashboardUserId,
+      legacyOpenId: data.legacyOpenId,
+      email: data.email,
+      phone: data.phone,
+      document: data.document,
+      documentType: data.documentType,
+      displayName: data.displayName,
+      role: data.role,
+      status: data.status,
+      guardianId: data.guardianId,
+      profile: data.profile,
+      metadata: data.metadata,
+    }));
+    mockAsset.findUnique.mockResolvedValue({
+      id: 'profile-asset-tenant-user-1',
+      externalId: 'tenant-user-profile:tenant-user-1',
+    });
+
+    const result = await TenantUserFacet.updateProfile('tenant-user-1', {
+      metadata: {
+        avatarUrl: 'https://cdn.example.com/avatar-new.png',
+      },
+      reason: 'profile photo update',
+    }) as any;
+
+    expect(mockTenantUser.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        metadata: expect.objectContaining({
+          onboardingCompletedAt: '2026-05-20T21:31:00.000Z',
+          digitalIdentityGeneratedAt: '2026-05-20T21:31:00.000Z',
+          registrationIdentity: existingMetadata.registrationIdentity,
+          consent: existingMetadata.consent,
+          avatarUrl: 'https://cdn.example.com/avatar-new.png',
+        }),
+      }),
+    }));
+    expect(result.metadata.onboardingCompletedAt).toBe('2026-05-20T21:31:00.000Z');
+    expect(mockEventLog.create).not.toHaveBeenCalled();
+    expect(mockProcessQueue).not.toHaveBeenCalled();
+  });
+
+  it('updates tenant user status without creating another profile blockchain event', async () => {
     mockTenantUser.findFirst.mockResolvedValue({
       id: 'tenant-user-1',
       tenantId: 'tenant-quantum',
@@ -273,6 +348,10 @@ describe('TenantUserFacet canonical contracts', () => {
       profile: {},
       metadata: {},
     });
+    mockAsset.findUnique.mockResolvedValue({
+      id: 'profile-asset-tenant-user-1',
+      externalId: 'tenant-user-profile:tenant-user-1',
+    });
 
     const result = await TenantUserFacet.setTenantUserStatus(
       platformActor,
@@ -283,27 +362,11 @@ describe('TenantUserFacet canonical contracts', () => {
     ) as any;
 
     expect(result.profileAsset).toEqual(expect.objectContaining({ status: 'ACTIVE' }));
-    expect(mockEventLog.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({
-        tenantId: 'tenant-quantum',
-        assetId: expect.any(String),
-        origin: 'SYSTEM_TENANT_USER_PROFILE',
-        payload: expect.objectContaining({
-          eventType: 'TENANT_USER_PROFILE_UPDATED',
-          tenantUserId: 'tenant-user-1',
-          profile: expect.objectContaining({
-            status: TenantUserStatus.SUSPENDED,
-          }),
-          reason: 'bloqueio operacional',
-        }),
-        signatureHash: expect.any(String),
-        dltTxId: null,
-      }),
-    }));
-    expect(mockProcessQueue).toHaveBeenCalledWith({ tenantId: 'tenant-quantum' });
+    expect(mockEventLog.create).not.toHaveBeenCalled();
+    expect(mockProcessQueue).not.toHaveBeenCalled();
   });
 
-  it('records tenant user role assignments in the profile asset history for on-chain anchoring', async () => {
+  it('updates tenant user role without creating another profile blockchain event', async () => {
     mockTenantUser.findFirst.mockResolvedValue({
       id: 'tenant-user-1',
       tenantId: 'tenant-quantum',
@@ -324,6 +387,10 @@ describe('TenantUserFacet canonical contracts', () => {
       profile: {},
       metadata: {},
     });
+    mockAsset.findUnique.mockResolvedValue({
+      id: 'profile-asset-tenant-user-1',
+      externalId: 'tenant-user-profile:tenant-user-1',
+    });
 
     const result = await TenantUserFacet.assignTenantUserRole(
       platformActor,
@@ -334,23 +401,7 @@ describe('TenantUserFacet canonical contracts', () => {
     ) as any;
 
     expect(result.profileAsset).toEqual(expect.objectContaining({ status: 'ACTIVE' }));
-    expect(mockEventLog.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({
-        tenantId: 'tenant-quantum',
-        assetId: expect.any(String),
-        origin: 'SYSTEM_TENANT_USER_PROFILE',
-        payload: expect.objectContaining({
-          eventType: 'TENANT_USER_PROFILE_UPDATED',
-          tenantUserId: 'tenant-user-1',
-          profile: expect.objectContaining({
-            role: TenantUserRole.TENANT_ADMIN,
-          }),
-          reason: 'promocao operacional',
-        }),
-        signatureHash: expect.any(String),
-        dltTxId: null,
-      }),
-    }));
-    expect(mockProcessQueue).toHaveBeenCalledWith({ tenantId: 'tenant-quantum' });
+    expect(mockEventLog.create).not.toHaveBeenCalled();
+    expect(mockProcessQueue).not.toHaveBeenCalled();
   });
 });
