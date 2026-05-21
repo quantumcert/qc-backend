@@ -1,5 +1,5 @@
 # Stage 1: Builder
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 # Install OpenSSL for Prisma
 RUN apk add --no-cache openssl
@@ -21,7 +21,7 @@ RUN npx prisma generate
 RUN npm run build
 
 # Stage 2: Production Runner
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 
 # Install OpenSSL for Prisma
 RUN apk add --no-cache openssl
