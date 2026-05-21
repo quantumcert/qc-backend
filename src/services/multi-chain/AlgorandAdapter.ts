@@ -21,13 +21,40 @@ import { QuantumSignerService } from '../QuantumSignerService';
 import {
   IDLTAdapter,
   AnchorOptions,
-  EscrowParams,
   TransferParams,
   ReceiveParams,
+  DLTTransitionPayload,
+  EscrowParams,
 } from '../../interfaces/IDLTAdapter';
+
 import { TripleSignPayload } from './types';
 
 export class AlgorandAdapter implements IDLTAdapter {
+  async executeGenericTransition(payload: DLTTransitionPayload): Promise<string> {
+    switch (payload.operation) {
+      case 'LOCK': {
+        return this.createEscrow({
+          escrowId: payload.transitionId,
+          sender: payload.sender,
+          receiver: payload.receiver,
+          amount: payload.amount,
+          assetAddress: payload.assetAddress,
+          unlockTimestamp: payload.unlockTimestamp,
+          pqcProof: payload.pqcProof,
+          tripleSign: payload.tripleSign,
+        });
+      }
+      case 'RELEASE': {
+        return this.releaseEscrow(payload.transitionId, payload.transitionId);
+      }
+      case 'CANCEL': {
+        return this.cancelEscrow(payload.transitionId, payload.transitionId);
+      }
+      default:
+        throw new Error(`Unsupported operation ${(payload as any).operation}`);
+    }
+  }
+
   private algodClient: algosdk.Algodv2;
   private masterAccount: algosdk.Account;
   private quantumSigner: QuantumSignerService;

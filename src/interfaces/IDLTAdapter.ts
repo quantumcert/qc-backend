@@ -15,7 +15,20 @@
 
 import { TripleSignPayload } from '../services/multi-chain/types';
 
+export interface EscrowParams {
+
+  escrowId: string;
+  sender: string;
+  receiver: string;
+  amount: string;
+  assetAddress?: string;
+  unlockTimestamp?: number;
+  pqcProof?: string;
+  tripleSign?: TripleSignPayload;
+}
+
 export type AnchorMode = 'LOG' | 'STATE';
+
 
 export interface AnchorOptions {
   /** Tenant that owns the anchored event; required for tenant-safe transaction logging. */
@@ -32,9 +45,10 @@ export interface AnchorOptions {
   tripleSign?: TripleSignPayload;
 }
 
-export interface EscrowParams {
-  /** Unique identifier for the escrow (correlates to DB). */
-  escrowId: string;
+export interface DLTTransitionPayload {
+
+  /** Correlation identifier (maps to DB record). */
+  transitionId: string;
   /** Sender wallet address. */
   sender: string;
   /** Receiver wallet address. */
@@ -43,11 +57,13 @@ export interface EscrowParams {
   amount: string;
   /** Optional asset/token contract address. Null for native currency. */
   assetAddress?: string;
-  /** Unix timestamp (seconds) when escrow can be released. 0 = immediate. */
-  unlockTimestamp: number;
+  /** Unix timestamp (seconds) controlling release/cancel logic. */
+  unlockTimestamp?: number;
+  /** Operation discriminator for the adapter (chain-specific). */
+  operation: 'LOCK' | 'RELEASE' | 'CANCEL';
   /** Falcon-512 PQC proof (Base64 encoded) for hybrid signature. */
   pqcProof?: string;
-  /** Triple-Signature Multi-Sig payload (Seller + Buyer + Quantum). */
+  /** Triple-Signature Multi-Sig payload. */
   tripleSign?: TripleSignPayload;
 }
 
@@ -93,6 +109,7 @@ export interface PqcParams {
 }
 
 export interface IDLTAdapter {
+
   /**
    * Anchors an event payload hash to the blockchain/DLT.
    * @param eventId The local event ID
@@ -110,27 +127,11 @@ export interface IDLTAdapter {
   verifyAnchor(txId: string, expectedHash?: string): Promise<boolean>;
 
   /**
-   * Creates an escrow holding funds/assets until conditions are met.
-   * @param params Escrow creation parameters including optional pqcProof
-   * @returns Transaction ID of the escrow creation
+   * Executes a generic state transition on-chain (chain-specific under the hood).
+   * Golden Rule: adapter interface must not include domain-specific terms.
    */
-  createEscrow(params: EscrowParams): Promise<string>;
+  executeGenericTransition(payload: DLTTransitionPayload): Promise<string>;
 
-  /**
-   * Releases escrowed funds/assets to the receiver.
-   * @param escrowId The escrow identifier
-   * @param txRef Correlation ID for transaction logging
-   * @returns Transaction ID of the release
-   */
-  releaseEscrow(escrowId: string, txRef: string): Promise<string>;
-
-  /**
-   * Cancels an escrow and returns funds/assets to the sender.
-   * @param escrowId The escrow identifier
-   * @param txRef Correlation ID for transaction logging
-   * @returns Transaction ID of the cancellation
-   */
-  cancelEscrow(escrowId: string, txRef: string): Promise<string>;
 
   /**
    * Sends assets/tokens to a destination address (direct transfer).

@@ -26,17 +26,45 @@ import {
   IDLTAdapter,
   AnchorOptions,
   AnchorMode,
-  EscrowParams,
   TransferParams,
   ReceiveParams,
+  DLTTransitionPayload,
+  EscrowParams,
 } from '../../interfaces/IDLTAdapter';
+
 
 // Discriminators matching the Anchor program
 const DISCRIMINATOR_LOG_A = Buffer.from([0x51, 0x43, 0x5f, 0x4c, 0x4f, 0x47, 0x5f, 0x41]);
 const DISCRIMINATOR_PDA_B = Buffer.from([0x51, 0x43, 0x5f, 0x50, 0x44, 0x41, 0x5f, 0x42]);
 
 export class SolanaAdapter implements IDLTAdapter {
+  async executeGenericTransition(payload: DLTTransitionPayload): Promise<string> {
+    switch (payload.operation) {
+      case 'LOCK': {
+        const params: EscrowParams = {
+          escrowId: payload.transitionId,
+          sender: payload.sender,
+          receiver: payload.receiver,
+          amount: payload.amount,
+          assetAddress: payload.assetAddress,
+          unlockTimestamp: payload.unlockTimestamp ?? 0,
+
+          pqcProof: payload.pqcProof,
+          tripleSign: payload.tripleSign,
+        };
+        return this.createEscrow(params);
+      }
+      case 'RELEASE':
+        return this.releaseEscrow(payload.transitionId, payload.transitionId);
+      case 'CANCEL':
+        return this.cancelEscrow(payload.transitionId, payload.transitionId);
+      default:
+        throw new Error(`Unsupported operation ${(payload as any).operation}`);
+    }
+  }
+
   private connection: Connection;
+
   private authority: Keypair;
   private programId: PublicKey;
 
