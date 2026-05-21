@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  AssetStatus,
+  EventStatus,
   TenantMembershipRole,
   TenantStatus,
   TenantUserRole,
@@ -327,7 +329,78 @@ describe('TenantUserFacet canonical contracts', () => {
     expect(mockProcessQueue).not.toHaveBeenCalled();
   });
 
-  it('updates tenant user status without creating another profile blockchain event', async () => {
+  it('returns canonical profile asset state when listing dependents', async () => {
+    const createdAt = new Date('2026-05-21T12:00:00.000Z');
+    mockTenantUser.findUnique.mockResolvedValue({
+      id: 'tenant-user-guardian',
+      tenantId: 'tenant-quantum',
+    });
+    mockTenantUser.findMany.mockResolvedValue([
+      {
+        id: 'tenant-user-dependent',
+        tenantId: 'tenant-quantum',
+        legacyDashboardUserId: '77',
+        legacyOpenId: 'dependent@quantum.local',
+        email: 'dependent@quantum.local',
+        phone: null,
+        document: '12345678901',
+        documentType: 'CPF',
+        displayName: 'Maria Dependente',
+        role: TenantUserRole.DEPENDENT,
+        status: TenantUserStatus.ACTIVE,
+        guardianId: 'tenant-user-guardian',
+        profile: { dateOfBirth: '2015-03-09' },
+        metadata: {},
+        createdAt,
+        updatedAt: createdAt,
+      },
+    ]);
+    mockAsset.findUnique.mockResolvedValue({
+      id: 'asset-dependent-profile',
+      tenantId: 'tenant-quantum',
+      externalId: 'tenant-user-profile:tenant-user-dependent',
+      publicUrl: '/api/v1/public/verify/asset-dependent-profile',
+      status: AssetStatus.ACTIVE,
+      createdAt,
+      updatedAt: createdAt,
+    });
+    mockEventLog.findFirst.mockResolvedValue({
+      id: 'event-dependent-anchor',
+      status: EventStatus.APPROVED,
+      dltTxId: 'stellar-dependent-tx',
+      signatureHash: 'dependent-profile-hash',
+      createdAt,
+      updatedAt: createdAt,
+    });
+
+    const result = await TenantUserFacet.listDependents('tenant-user-guardian') as any[];
+
+    expect(result[0]).toEqual(expect.objectContaining({
+      id: 'tenant-user-dependent',
+      profileAsset: expect.objectContaining({
+        id: 'asset-dependent-profile',
+        externalId: 'tenant-user-profile:tenant-user-dependent',
+        lastAnchorEvent: expect.objectContaining({
+          dltTxId: 'stellar-dependent-tx',
+        }),
+      }),
+    }));
+    expect(mockAsset.findUnique).toHaveBeenCalledWith(expect.objectContaining({
+      where: {
+        tenantId_externalId: {
+          tenantId: 'tenant-quantum',
+          externalId: 'tenant-user-profile:tenant-user-dependent',
+        },
+      },
+      select: expect.objectContaining({
+        id: true,
+        publicUrl: true,
+        status: true,
+      }),
+    }));
+  });
+
+  it('records tenant user status changes in the profile asset history for on-chain anchoring', async () => {
     mockTenantUser.findFirst.mockResolvedValue({
       id: 'tenant-user-1',
       tenantId: 'tenant-quantum',
