@@ -210,7 +210,11 @@ export class TenantUserController {
     static async updateDependent(req: AuthenticatedRequest, res: Response) {
         try {
             const payload = tenantUserProfileSchema.parse(req.body);
-            const dependent = await TenantUserFacet.updateProfile(req.params.dependentId, payload);
+            const dependent = await TenantUserFacet.updateDependent(
+                req.params.userId,
+                req.params.dependentId,
+                payload
+            );
             return res.json({ success: true, data: dependent, meta: buildMeta() });
         } catch (error) {
             return respondWithTenantUserError(error, res, '[TenantUserController.updateDependent]');

@@ -269,7 +269,7 @@ export class TenantUserFacet {
             throw new TenantUserError('TENANT_USER_NOT_FOUND', 'Tenant user not found.');
         }
 
-        return prisma.tenantUser.findMany({
+        const dependents = await prisma.tenantUser.findMany({
             where: {
                 tenantId: user.tenantId,
                 guardianId: tenantUserId,
@@ -277,6 +277,11 @@ export class TenantUserFacet {
             orderBy: { createdAt: 'desc' },
             include: TENANT_USER_INCLUDE,
         });
+
+        return Promise.all(dependents.map(async (dependent) => ({
+            ...dependent,
+            profileAsset: await this.getTenantUserProfileAssetForUser(dependent),
+        })));
     }
 
     static async createDependent(guardianTenantUserId: string, input: TenantUserUpsertInput) {
@@ -295,6 +300,34 @@ export class TenantUserFacet {
             role: TenantUserRole.DEPENDENT,
             source: input.source || 'dependent-create',
         });
+    }
+
+    static async updateDependent(
+        guardianTenantUserId: string,
+        dependentId: string,
+        input: TenantUserProfileUpdateInput
+    ) {
+        const guardian = await prisma.tenantUser.findUnique({
+            where: { id: guardianTenantUserId },
+            select: { id: true, tenantId: true },
+        });
+        if (!guardian) {
+            throw new TenantUserError('TENANT_USER_NOT_FOUND', 'Guardian tenant user not found.');
+        }
+
+        const dependent = await prisma.tenantUser.findFirst({
+            where: {
+                id: dependentId,
+                tenantId: guardian.tenantId,
+                guardianId: guardian.id,
+            },
+            select: { id: true },
+        });
+        if (!dependent) {
+            throw new TenantUserError('TENANT_USER_NOT_FOUND', 'Dependent tenant user not found for this guardian.');
+        }
+
+        return this.updateProfile(dependentId, input);
     }
 
     static async createDependentWithRegistrationCredit(
@@ -850,6 +883,10 @@ export class TenantUserFacet {
     ) {
         this.ensurePlatformActor(actor);
         const user = await this.ensureTenantUserExists(tenantId, userId);
+        return this.getTenantUserProfileAssetForUser(user);
+    }
+
+    private static async getTenantUserProfileAssetForUser(user: any) {
         const profileAsset = await this.findTenantUserProfileAsset(prisma, user, {
             id: true,
             tenantId: true,
@@ -864,7 +901,7 @@ export class TenantUserFacet {
 
         const lastAnchorEvent = await prisma.eventLog.findFirst({
             where: {
-                tenantId,
+                tenantId: user.tenantId,
                 assetId: profileAsset.id,
                 origin: TENANT_USER_PROFILE_EVENT_ORIGIN,
             },
