@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { TenantUserStatus } from '@prisma/client';
 import prisma from '../../config/prisma';
 import { TenantUserFacet } from './TenantUserFacet';
+import { RegistrationCreditFacet } from './RegistrationCreditFacet';
 
 const SESSION_TOKEN_PREFIX = 'qcs_';
 const DEFAULT_SESSION_TTL_HOURS = 6;
@@ -70,6 +71,12 @@ export class TenantUserAuthFacet {
                 failedAttempts: 0,
                 lockedUntil: null,
             },
+        });
+
+        await RegistrationCreditFacet.grantInitialRegistrationBonus({
+            tenantId: tenant.id,
+            userId: user.id,
+            email,
         });
 
         const session = await this.createSession({
