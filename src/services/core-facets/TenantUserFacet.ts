@@ -143,6 +143,7 @@ const TENANT_USER_INCLUDE = {
 const TENANT_USER_PROFILE_ASSET_KIND = 'TENANT_USER_PROFILE';
 const TENANT_USER_PROFILE_EVENT_ORIGIN = 'SYSTEM_TENANT_USER_PROFILE';
 const TENANT_USER_PUBLIC_DATA_KEYS = ['assetKind', 'profile'];
+const PROFILE_ASSET_ANCHOR_EVENT_CREATED = Symbol('profileAssetAnchorEventCreated');
 
 const TENANT_USER_ACTIONS = {
     TENANT_USER_CREATED: 'TENANT_USER_CREATED',
@@ -153,6 +154,19 @@ const TENANT_USER_ACTIONS = {
 } as const;
 
 export class TenantUserFacet {
+    private static profileAssetCreatedAnchorEvent(profileAsset: any) {
+        return Boolean(profileAsset?.[PROFILE_ASSET_ANCHOR_EVENT_CREATED]);
+    }
+
+    private static profileAssetWithAnchorEventState(profileAsset: any, lastAnchorEvent: any, anchorEventCreated: boolean) {
+        const result = { ...profileAsset, lastAnchorEvent };
+        Object.defineProperty(result, PROFILE_ASSET_ANCHOR_EVENT_CREATED, {
+            value: anchorEventCreated,
+            enumerable: false,
+        });
+        return result;
+    }
+
     static async ensureTenantQuantum(client: any = prisma) {
         const slug = getPlatformTenantSlug();
         const current = await client.tenant.findUnique({ where: { slug } });
@@ -233,7 +247,6 @@ export class TenantUserFacet {
             const profileAsset = await this.upsertTenantUserProfileAsset(tx, {
                 tenantId: tenant.id,
                 user,
-                eventType: existing ? 'TENANT_USER_PROFILE_UPDATED' : 'TENANT_USER_PROFILE_CREATED',
                 issuerId: input.legacyOpenId || input.email || user.id,
                 reason: input.source || 'canonical B2C user upsert',
             });
@@ -241,7 +254,9 @@ export class TenantUserFacet {
             return { ...user, profileAsset };
         });
 
-        AnchorQueueService.processQueue({ tenantId: tenant.id }).catch(console.error);
+        if (this.profileAssetCreatedAnchorEvent(result.profileAsset)) {
+            AnchorQueueService.processQueue({ tenantId: tenant.id }).catch(console.error);
+        }
         return result;
     }
 
@@ -383,7 +398,9 @@ export class TenantUserFacet {
             status: existing.status,
             guardianId: existing.guardianId,
             profile: input.profile !== undefined ? input.profile : normalizeJsonObject(existing.profile),
-            metadata: input.metadata !== undefined ? input.metadata : normalizeJsonObject(existing.metadata),
+            metadata: input.metadata !== undefined
+                ? mergeJsonObject(existing.metadata, input.metadata)
+                : normalizeJsonObject(existing.metadata),
             migratedAt: existing.migratedAt,
         });
 
@@ -399,7 +416,6 @@ export class TenantUserFacet {
             const profileAsset = await this.upsertTenantUserProfileAsset(tx, {
                 tenantId: user.tenantId,
                 user,
-                eventType: 'TENANT_USER_PROFILE_UPDATED',
                 issuerId: user.legacyOpenId || user.email || user.id,
                 reason: input.reason || 'profile update',
             });
@@ -407,7 +423,9 @@ export class TenantUserFacet {
             return { ...user, profileAsset };
         });
 
-        AnchorQueueService.processQueue({ tenantId: existing.tenantId }).catch(console.error);
+        if (this.profileAssetCreatedAnchorEvent(result.profileAsset)) {
+            AnchorQueueService.processQueue({ tenantId: existing.tenantId }).catch(console.error);
+        }
         return result;
     }
 
@@ -597,7 +615,9 @@ export class TenantUserFacet {
             status: input.status || current.status,
             guardianId: current.guardianId,
             profile: input.profile !== undefined ? input.profile : normalizeJsonObject(current.profile),
-            metadata: input.metadata !== undefined ? input.metadata : normalizeJsonObject(current.metadata),
+            metadata: input.metadata !== undefined
+                ? mergeJsonObject(current.metadata, input.metadata)
+                : normalizeJsonObject(current.metadata),
             migratedAt: current.migratedAt,
         });
 
@@ -635,7 +655,6 @@ export class TenantUserFacet {
             const profileAsset = await this.upsertTenantUserProfileAsset(tx, {
                 tenantId,
                 user,
-                eventType: 'TENANT_USER_PROFILE_UPDATED',
                 issuerId: actor.actorUserId,
                 reason,
             });
@@ -654,7 +673,9 @@ export class TenantUserFacet {
             return { ...user, profileAsset };
         });
 
-        AnchorQueueService.processQueue({ tenantId }).catch(console.error);
+        if (this.profileAssetCreatedAnchorEvent(result.profileAsset)) {
+            AnchorQueueService.processQueue({ tenantId }).catch(console.error);
+        }
         return result;
     }
 
@@ -684,7 +705,6 @@ export class TenantUserFacet {
             const profileAsset = await this.upsertTenantUserProfileAsset(tx, {
                 tenantId,
                 user,
-                eventType: 'TENANT_USER_PROFILE_UPDATED',
                 issuerId: actor.actorUserId,
                 reason,
             });
@@ -703,7 +723,9 @@ export class TenantUserFacet {
             return { ...user, profileAsset };
         });
 
-        AnchorQueueService.processQueue({ tenantId }).catch(console.error);
+        if (this.profileAssetCreatedAnchorEvent(result.profileAsset)) {
+            AnchorQueueService.processQueue({ tenantId }).catch(console.error);
+        }
         return result;
     }
 
@@ -746,7 +768,6 @@ export class TenantUserFacet {
             const profileAsset = await this.upsertTenantUserProfileAsset(tx, {
                 tenantId,
                 user,
-                eventType: 'TENANT_USER_PROFILE_UPDATED',
                 issuerId: actor.actorUserId,
                 reason,
             });
@@ -765,7 +786,9 @@ export class TenantUserFacet {
             return { ...user, profileAsset };
         });
 
-        AnchorQueueService.processQueue({ tenantId }).catch(console.error);
+        if (this.profileAssetCreatedAnchorEvent(result.profileAsset)) {
+            AnchorQueueService.processQueue({ tenantId }).catch(console.error);
+        }
         return result;
     }
 
@@ -981,7 +1004,6 @@ export class TenantUserFacet {
         params: {
             tenantId: string;
             user: any;
-            eventType: 'TENANT_USER_PROFILE_CREATED' | 'TENANT_USER_PROFILE_UPDATED';
             issuerId: string;
             reason: string;
         }
@@ -1020,8 +1042,26 @@ export class TenantUserFacet {
             },
         });
 
+        if (existingProfileAsset) {
+            const lastAnchorEvent = await tx.eventLog.findFirst({
+                where: {
+                    assetId: profileAsset.id,
+                    origin: TENANT_USER_PROFILE_EVENT_ORIGIN,
+                },
+                orderBy: { createdAt: 'desc' },
+                select: {
+                    id: true,
+                    status: true,
+                    dltTxId: true,
+                    signatureHash: true,
+                    createdAt: true,
+                    updatedAt: true,
+                },
+            });
+            return this.profileAssetWithAnchorEventState(profileAsset, lastAnchorEvent, false);
+        }
+
         const payload = buildTenantUserProfileEventPayload({
-            eventType: params.eventType,
             user: params.user,
             profileAsset,
             reason: params.reason,
@@ -1048,7 +1088,7 @@ export class TenantUserFacet {
             },
         });
 
-        return { ...profileAsset, lastAnchorEvent };
+        return this.profileAssetWithAnchorEventState(profileAsset, lastAnchorEvent, true);
     }
 
     private static async findTenantUserProfileAsset(client: any, user: any, select: any) {
@@ -1219,13 +1259,12 @@ function buildTenantUserProfileAssetMetadata(user: any): Prisma.InputJsonObject 
 }
 
 function buildTenantUserProfileEventPayload(params: {
-    eventType: 'TENANT_USER_PROFILE_CREATED' | 'TENANT_USER_PROFILE_UPDATED';
     user: any;
     profileAsset: any;
     reason: string;
 }): Prisma.InputJsonObject {
     return {
-        eventType: params.eventType,
+        eventType: 'TENANT_USER_PROFILE_CREATED',
         schemaVersion: 1,
         tenantUserId: params.user.id,
         profileAssetId: params.profileAsset.id,
@@ -1355,6 +1394,13 @@ function normalizeNullableString(value?: string | null): string | null {
 function normalizeJsonObject(value: unknown): Prisma.InputJsonObject {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
     return value as Prisma.InputJsonObject;
+}
+
+function mergeJsonObject(base: unknown, patch: unknown): Prisma.InputJsonObject {
+    return {
+        ...normalizeJsonObject(base),
+        ...normalizeJsonObject(patch),
+    };
 }
 
 function buildDependentRegistrationIdempotencyKey(
