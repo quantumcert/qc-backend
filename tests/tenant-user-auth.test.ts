@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import bcrypt from 'bcryptjs';
-import { TenantUserRole, TenantUserStatus } from '@prisma/client';
+import { CreditLedgerEntryType, TenantUserRole, TenantUserStatus } from '@prisma/client';
 
 const {
   mockTenant,
@@ -10,6 +10,7 @@ const {
   mockTenantMembership,
   mockAsset,
   mockEventLog,
+  mockCreditLedgerEntry,
   mockTransaction,
   mockProcessQueue,
 } = vi.hoisted(() => {
@@ -45,6 +46,11 @@ const {
     create: vi.fn(),
     findFirst: vi.fn(),
   };
+  const mockCreditLedgerEntry = {
+    findMany: vi.fn(),
+    findUnique: vi.fn(),
+    create: vi.fn(),
+  };
   const mockProcessQueue = vi.fn();
   const mockTransaction = vi.fn(async (callback) => callback({
     tenant: mockTenant,
@@ -54,6 +60,7 @@ const {
     tenantMembership: mockTenantMembership,
     asset: mockAsset,
     eventLog: mockEventLog,
+    creditLedgerEntry: mockCreditLedgerEntry,
   }));
 
   return {
@@ -64,6 +71,7 @@ const {
     mockTenantMembership,
     mockAsset,
     mockEventLog,
+    mockCreditLedgerEntry,
     mockTransaction,
     mockProcessQueue,
   };
@@ -78,6 +86,7 @@ vi.mock('../src/config/prisma', () => ({
     tenantMembership: mockTenantMembership,
     asset: mockAsset,
     eventLog: mockEventLog,
+    creditLedgerEntry: mockCreditLedgerEntry,
     $transaction: mockTransaction,
   },
 }));
@@ -129,6 +138,13 @@ describe('TenantUserAuthFacet', () => {
     mockAsset.upsert.mockResolvedValue({ id: 'profile-asset', status: 'ACTIVE' });
     mockEventLog.create.mockResolvedValue({ id: 'event-profile' });
     mockEventLog.findFirst.mockResolvedValue(null);
+    mockCreditLedgerEntry.findMany.mockResolvedValue([]);
+    mockCreditLedgerEntry.findUnique.mockResolvedValue(null);
+    mockCreditLedgerEntry.create.mockImplementation(({ data }) => Promise.resolve({
+      id: 'credit-entry-1',
+      ...data,
+      createdAt: new Date('2026-05-21T00:00:00.000Z'),
+    }));
     mockProcessQueue.mockResolvedValue({ processed: 0 });
     mockTenantUserCredential.findFirst.mockResolvedValue(null);
     mockTenantUserCredential.upsert.mockResolvedValue({
@@ -158,6 +174,7 @@ describe('TenantUserAuthFacet', () => {
       tenantMembership: mockTenantMembership,
       asset: mockAsset,
       eventLog: mockEventLog,
+      creditLedgerEntry: mockCreditLedgerEntry,
     }));
   });
 
@@ -187,6 +204,33 @@ describe('TenantUserAuthFacet', () => {
         tokenHash: expect.not.stringContaining('qcs_'),
         createdIp: '127.0.0.1',
         createdUserAgent: 'vitest',
+      }),
+    }));
+  });
+
+  it('grants the initial 5 registration credits on open account creation', async () => {
+    await TenantUserAuthFacet.registerOpen({
+      name: 'User Example',
+      email: 'USER@EXAMPLE.COM',
+      password: 'correct-password',
+    });
+
+    expect(mockCreditLedgerEntry.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        tenantId: tenant.id,
+        userId: tenantUser.id,
+        entryType: CreditLedgerEntryType.GRANTED,
+        amount: 5,
+        availableDelta: 5,
+        reservedDelta: 0,
+        idempotencyKey: `registration-bonus:${tenantUser.id}`,
+        referenceType: 'REGISTRATION_BONUS',
+        referenceId: tenantUser.id,
+        reason: 'initial registration bonus',
+        metadata: expect.objectContaining({
+          source: 'open-registration',
+          email: 'user@example.com',
+        }),
       }),
     }));
   });

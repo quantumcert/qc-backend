@@ -11,8 +11,17 @@ type RegistrationCreditParams = {
     metadata?: Prisma.InputJsonValue;
 };
 
+type RegistrationBonusGrantParams = {
+    tenantId: string;
+    userId: string;
+    email?: string | null;
+    metadata?: Prisma.InputJsonValue;
+};
+
 const DEPENDENT_REFERENCE_TYPE = 'DEPENDENT_REGISTRATION';
 const ASSET_REFERENCE_TYPE = 'ASSET_REGISTRATION';
+const REGISTRATION_BONUS_REFERENCE_TYPE = 'REGISTRATION_BONUS';
+const INITIAL_REGISTRATION_BONUS_CREDITS = 5;
 const LEDGER_SOURCE = 'qc-backend-credit-ledger';
 
 export class RegistrationCreditFacet {
@@ -65,6 +74,44 @@ export class RegistrationCreditFacet {
             idempotencyKey: `${params.idempotencyKey}:consume`,
         });
         return this.getSummary(params.tenantId, params.userId);
+    }
+
+    static async grantInitialRegistrationBonus(params: RegistrationBonusGrantParams) {
+        const idempotencyKey = `registration-bonus:${params.userId}`;
+
+        return prisma.$transaction(async (tx) => {
+            const existing = await tx.creditLedgerEntry.findUnique({
+                where: {
+                    tenantId_idempotencyKey: {
+                        tenantId: params.tenantId,
+                        idempotencyKey,
+                    },
+                },
+            });
+            if (existing) return existing;
+
+            return tx.creditLedgerEntry.create({
+                data: {
+                    tenantId: params.tenantId,
+                    userId: params.userId,
+                    entryType: CreditLedgerEntryType.GRANTED,
+                    amount: INITIAL_REGISTRATION_BONUS_CREDITS,
+                    availableDelta: INITIAL_REGISTRATION_BONUS_CREDITS,
+                    reservedDelta: 0,
+                    idempotencyKey,
+                    referenceType: REGISTRATION_BONUS_REFERENCE_TYPE,
+                    referenceId: params.userId,
+                    reason: 'initial registration bonus',
+                    metadata: {
+                        source: 'open-registration',
+                        ...(params.email ? { email: params.email } : {}),
+                        ...((params.metadata && typeof params.metadata === 'object' && !Array.isArray(params.metadata))
+                            ? params.metadata
+                            : {}),
+                    },
+                },
+            });
+        });
     }
 
     static reserveForDependentRegistration(params: RegistrationCreditParams) {
