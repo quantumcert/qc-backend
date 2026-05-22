@@ -1,7 +1,14 @@
 import algosdk from 'algosdk';
 import crypto from 'crypto';
 import prisma from '../../config/prisma';
-import { IDLTAdapter, AnchorOptions, EscrowParams, TransferParams, ReceiveParams } from '../../interfaces/IDLTAdapter';
+import {
+    IDLTAdapter,
+    AnchorOptions,
+    DLTTransitionPayload,
+    EscrowParams,
+    TransferParams,
+    ReceiveParams,
+} from '../../interfaces/IDLTAdapter';
 import { KMSService } from '../KMSService';
 import { QuantumSignerService } from '../QuantumSignerService';
 
@@ -139,6 +146,12 @@ export class AlgorandAnchorFacet implements IDLTAdapter {
     // ─────────────────────────────────────────────────────────
     // ESCROW -- Delegated to AlgorandAdapter
     // ─────────────────────────────────────────────────────────
+
+    async executeGenericTransition(payload: DLTTransitionPayload): Promise<string> {
+        const { AlgorandAdapter } = await import('../multi-chain/AlgorandAdapter');
+        const adapter = new AlgorandAdapter();
+        return adapter.executeGenericTransition(payload);
+    }
 
     async createEscrow(params: EscrowParams): Promise<string> {
         const { AlgorandAdapter } = await import('../multi-chain/AlgorandAdapter');

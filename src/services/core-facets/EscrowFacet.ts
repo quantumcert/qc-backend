@@ -1,6 +1,7 @@
 // src/services/core-facets/EscrowFacet.ts
 import prisma from '../../config/prisma';
 import { DLTAdapterFactory, SupportedChain } from '../DLTAdapterFactory';
+import type { DLTTransitionPayload } from '../../interfaces/IDLTAdapter';
 import { TripleSignPayload } from '../multi-chain/types';
 
 interface SecureContext {
@@ -91,16 +92,17 @@ export class EscrowFacet {
     });
 
     const adapter = DLTAdapterFactory.getAdapter(payload.chain);
-    const chainTxId = await adapter.createEscrow({
-      escrowId: payload.escrowId,
+    const chainTxId = await adapter.executeGenericTransition({
+      transitionId: payload.escrowId,
       sender: payload.sender,
       receiver: payload.receiver,
       amount: payload.amount,
       assetAddress: payload.assetAddress,
       unlockTimestamp: payload.unlockTimestamp,
+      operation: 'LOCK',
       pqcProof: payload.pqcProof,
       tripleSign: payload.tripleSign,
-    });
+    } satisfies DLTTransitionPayload);
 
     await prisma.escrow.update({
       where: { id: escrow.id },
@@ -160,7 +162,17 @@ export class EscrowFacet {
     }
 
     const adapter = DLTAdapterFactory.getAdapter(escrow.chain as SupportedChain);
-    const chainTxId = await adapter.releaseEscrow(escrow.escrowId, escrow.id);
+    const chainTxId = await adapter.executeGenericTransition({
+      transitionId: escrow.escrowId,
+      sender: escrow.sender,
+      receiver: escrow.receiver,
+      amount: escrow.amount,
+      assetAddress: escrow.assetAddress ?? undefined,
+      unlockTimestamp: escrow.unlockTimestamp
+        ? Math.floor(escrow.unlockTimestamp.getTime() / 1000)
+        : undefined,
+      operation: 'RELEASE',
+    } satisfies DLTTransitionPayload);
 
     const updateData: any = { status: 'RELEASED', chainTxId };
     if (!isWorker) {
@@ -215,7 +227,17 @@ export class EscrowFacet {
     }
 
     const adapter = DLTAdapterFactory.getAdapter(escrow.chain as SupportedChain);
-    const chainTxId = await adapter.cancelEscrow(escrow.escrowId, escrow.id);
+    const chainTxId = await adapter.executeGenericTransition({
+      transitionId: escrow.escrowId,
+      sender: escrow.sender,
+      receiver: escrow.receiver,
+      amount: escrow.amount,
+      assetAddress: escrow.assetAddress ?? undefined,
+      unlockTimestamp: escrow.unlockTimestamp
+        ? Math.floor(escrow.unlockTimestamp.getTime() / 1000)
+        : undefined,
+      operation: 'CANCEL',
+    } satisfies DLTTransitionPayload);
 
     await prisma.escrow.update({
       where: { id: escrow.id },

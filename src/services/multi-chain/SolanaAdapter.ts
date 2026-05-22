@@ -152,7 +152,7 @@ export class SolanaAdapter implements IDLTAdapter {
       }
     }
 
-    const { escrowId, sender, receiver, amount, unlockTimestamp, pqcProof, tripleSign } = params;
+    const { escrowId, sender, receiver, amount, unlockTimestamp = 0, pqcProof, tripleSign } = params;
 
     const [escrowPda] = PublicKey.findProgramAddressSync(
       [Buffer.from('qc_escrow'), Buffer.from(escrowId)],
@@ -532,4 +532,3 @@ export class SolanaAdapter implements IDLTAdapter {
     }
   }
 }
-

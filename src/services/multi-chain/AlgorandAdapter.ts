@@ -161,7 +161,7 @@ export class AlgorandAdapter implements IDLTAdapter {
       }
     }
 
-    const { escrowId, receiver, amount, unlockTimestamp, pqcProof, tripleSign } = params;
+    const { escrowId, receiver, amount, unlockTimestamp = 0, pqcProof, tripleSign } = params;
 
     const noteBuffer = Buffer.from(`ESCROW|${escrowId}|${unlockTimestamp}`);
     const paramsTx = await this.algodClient.getTransactionParams().do();
