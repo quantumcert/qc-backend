@@ -136,6 +136,15 @@ export class AlgorandAnchorFacet implements IDLTAdapter {
         }
     }
 
+    /**
+     * Executes a generic state transition.
+     * Legacy facet not supporting generic transitions.
+     */
+    async executeGenericTransition(payload: any): Promise<any> {
+        throw new Error('Generic transition not implemented/supported in AlgorandAnchorFacet (legacy facet).');
+    }
+
+
     // ─────────────────────────────────────────────────────────
     // ESCROW -- Delegated to AlgorandAdapter
     // ─────────────────────────────────────────────────────────

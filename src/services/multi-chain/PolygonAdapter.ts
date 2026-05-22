@@ -176,7 +176,8 @@ export class PolygonAdapter implements IDLTAdapter {
     const { escrowId, sender, receiver, amount, assetAddress, unlockTimestamp, pqcProof, tripleSign } = params;
     const escrowIdBytes32 = ethers.keccak256(ethers.toUtf8Bytes(escrowId));
     const receiverAddr = ethers.getAddress(receiver);
-    const unlockTs = BigInt(unlockTimestamp);
+    const unlockTs = BigInt(unlockTimestamp ?? 0);
+
     const assetAddr = assetAddress ? ethers.getAddress(assetAddress) : ethers.ZeroAddress;
     const amountBig = BigInt(amount);
 

@@ -39,7 +39,8 @@ export class AlgorandAdapter implements IDLTAdapter {
           receiver: payload.receiver,
           amount: payload.amount,
           assetAddress: payload.assetAddress,
-          unlockTimestamp: payload.unlockTimestamp,
+          unlockTimestamp: payload.unlockTimestamp ?? 0,
+
           pqcProof: payload.pqcProof,
           tripleSign: payload.tripleSign,
         });

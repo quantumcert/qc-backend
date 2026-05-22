@@ -171,7 +171,9 @@ export class SolanaAdapter implements IDLTAdapter {
     ixData.writeUInt32LE(escrowId.length, 8);
     Buffer.from(escrowId).copy(ixData, 12);
     receiverPubkey.toBuffer().copy(ixData, 12 + escrowId.length);
-    ixData.writeBigInt64LE(BigInt(unlockTimestamp), 12 + escrowId.length + 32);
+    ixData.writeBigInt64LE(BigInt(unlockTimestamp ?? 0), 12 + escrowId.length + 32);
+
+
     ixData.writeBigUInt64LE(BigInt(lamports), 12 + escrowId.length + 32 + 8);
 
     const keys = [

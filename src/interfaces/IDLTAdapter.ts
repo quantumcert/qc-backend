@@ -130,6 +130,13 @@ export interface IDLTAdapter {
    */
   executeGenericTransition(payload: DLTTransitionPayload): Promise<string>;
 
+  /**
+   * Legacy escrow operations.
+   * Kept for backward compatibility until all callers migrate to executeGenericTransition.
+   */
+  createEscrow(params: EscrowParams): Promise<string>;
+  releaseEscrow(escrowId: string, txRef: string): Promise<string>;
+  cancelEscrow(escrowId: string, txRef: string): Promise<string>;
 
   /**
    * Sends assets/tokens to a destination address (direct transfer).
@@ -145,3 +152,4 @@ export interface IDLTAdapter {
    */
   receiveAsset(params: ReceiveParams): Promise<string>;
 }
+

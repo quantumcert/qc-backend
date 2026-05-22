@@ -130,8 +130,10 @@ export class TikinEscrowFacet {
     const adapter = DLTAdapterFactory.getAdapter(payload.chain);
 
     const transitionPayload: DLTTransitionPayload = {
-      transitionId: payload.escrowId,
+      transitionId: payload.escrowId ?? payload.escrowRecordId ?? '',
       sender: payload.sender,
+
+
       receiver: payload.receiver,
       amount: payload.amount,
       assetAddress: payload.assetAddress,

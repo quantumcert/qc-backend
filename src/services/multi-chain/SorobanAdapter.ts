@@ -45,7 +45,9 @@ export class SorobanAdapter implements IDLTAdapter {
           receiver: payload.receiver,
           amount: payload.amount,
           assetAddress: payload.assetAddress,
-          unlockTimestamp: payload.unlockTimestamp ?? 0,
+      unlockTimestamp: payload.unlockTimestamp ?? 0,
+
+
 
           pqcProof: payload.pqcProof,
           tripleSign: payload.tripleSign,
@@ -183,7 +185,14 @@ export class SorobanAdapter implements IDLTAdapter {
     const account = await this.horizonServer.loadAccount(this.keypair.publicKey());
     const contract = new Contract(this.contractId);
 
-    const args = this._toScValEscrowArgs(escrowId, receiver, amount, params.assetAddress, unlockTimestamp);
+    const args = this._toScValEscrowArgs(
+      escrowId,
+      receiver,
+      amount,
+      params.assetAddress,
+      unlockTimestamp ?? 0
+    );
+
     if (pqcProof) {
       args.push(nativeToScVal(pqcProof, { type: 'string' }));
     }
