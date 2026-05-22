@@ -5,6 +5,7 @@
 import prisma from '../config/prisma';
 import { DLTAdapterFactory, SupportedChain } from './DLTAdapterFactory';
 import { WebhookDispatcher } from '../utils/WebhookDispatcher';
+import type { DLTTransitionPayload } from '../interfaces/IDLTAdapter';
 
 export class RetryWorker {
   /**
@@ -164,17 +165,47 @@ export class RetryWorker {
         }
         case 'ESCROW_CREATE': {
           const params = tx.payload;
-          txId = await adapter.createEscrow(params);
+          txId = await adapter.executeGenericTransition({
+            transitionId: String(params.escrowId ?? params.transitionId ?? tx.txRef),
+            sender: String(params.sender ?? ''),
+            receiver: String(params.receiver ?? ''),
+            amount: String(params.amount ?? '0'),
+            assetAddress: params.assetAddress,
+            unlockTimestamp: params.unlockTimestamp,
+            operation: 'LOCK',
+            pqcProof: params.pqcProof,
+            tripleSign: params.tripleSign,
+          } satisfies DLTTransitionPayload);
           break;
         }
         case 'ESCROW_RELEASE': {
-          const { escrowId, txRef } = tx.payload;
-          txId = await adapter.releaseEscrow(escrowId, txRef);
+          const params = tx.payload;
+          txId = await adapter.executeGenericTransition({
+            transitionId: String(params.escrowId ?? params.transitionId ?? tx.txRef),
+            sender: String(params.sender ?? ''),
+            receiver: String(params.receiver ?? ''),
+            amount: String(params.amount ?? '0'),
+            assetAddress: params.assetAddress,
+            unlockTimestamp: params.unlockTimestamp,
+            operation: 'RELEASE',
+            pqcProof: params.pqcProof,
+            tripleSign: params.tripleSign,
+          } satisfies DLTTransitionPayload);
           break;
         }
         case 'ESCROW_CANCEL': {
-          const { escrowId, txRef } = tx.payload;
-          txId = await adapter.cancelEscrow(escrowId, txRef);
+          const params = tx.payload;
+          txId = await adapter.executeGenericTransition({
+            transitionId: String(params.escrowId ?? params.transitionId ?? tx.txRef),
+            sender: String(params.sender ?? ''),
+            receiver: String(params.receiver ?? ''),
+            amount: String(params.amount ?? '0'),
+            assetAddress: params.assetAddress,
+            unlockTimestamp: params.unlockTimestamp,
+            operation: 'CANCEL',
+            pqcProof: params.pqcProof,
+            tripleSign: params.tripleSign,
+          } satisfies DLTTransitionPayload);
           break;
         }
         case 'TRANSFER': {

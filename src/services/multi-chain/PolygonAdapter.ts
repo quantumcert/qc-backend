@@ -173,7 +173,7 @@ export class PolygonAdapter implements IDLTAdapter {
       throw new Error('Polygon TransferFacet not configured.');
     }
 
-    const { escrowId, sender, receiver, amount, assetAddress, unlockTimestamp, pqcProof, tripleSign } = params;
+    const { escrowId, sender, receiver, amount, assetAddress, unlockTimestamp = 0, pqcProof, tripleSign } = params;
     const escrowIdBytes32 = ethers.keccak256(ethers.toUtf8Bytes(escrowId));
     const receiverAddr = ethers.getAddress(receiver);
     const unlockTs = BigInt(unlockTimestamp);
@@ -384,4 +384,3 @@ export class PolygonAdapter implements IDLTAdapter {
     }
   }
 }
-

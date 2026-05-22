@@ -30,12 +30,14 @@ type LockPayload = {
 };
 
 type ReleasePayload = {
-  escrowId: string; // contract key used by Diamond tests
+  escrowId?: string; // contract key used by Diamond tests
+  escrowRecordId?: string; // contract key used by unit tests
   assetId: string;
 };
 
 type CancelPayload = {
-  escrowId: string; // contract key used by Diamond tests
+  escrowId?: string; // contract key used by Diamond tests
+  escrowRecordId?: string; // contract key used by unit tests
   assetId: string;
 };
 
@@ -130,7 +132,7 @@ export class TikinEscrowFacet {
     const adapter = DLTAdapterFactory.getAdapter(payload.chain);
 
     const transitionPayload: DLTTransitionPayload = {
-      transitionId: payload.escrowId,
+      transitionId: escrowId,
       sender: payload.sender,
       receiver: payload.receiver,
       amount: payload.amount,
@@ -149,7 +151,7 @@ export class TikinEscrowFacet {
     await model.create({
       data: {
         id: crypto.randomUUID(),
-        escrowId: payload.escrowId,
+        escrowId,
         assetId: payload.assetId,
         tenantId,
         chain: payload.chain,
@@ -179,7 +181,7 @@ export class TikinEscrowFacet {
         status: 'APPROVED',
         payload: {
           action: 'ESCROW_LOCKED',
-          escrowId: payload.escrowId,
+          escrowId,
           chain: payload.chain,
           unlockTimestamp: payload.unlockTimestamp,
           releaseMode: payload.releaseMode,
@@ -201,6 +203,11 @@ export class TikinEscrowFacet {
 
   static async release(secureContext: SecureContext, payload: ReleasePayload) {
     const { tenantId, apiKeyId, role } = secureContext;
+    const escrowId = payload.escrowId ?? payload.escrowRecordId;
+
+    if (!escrowId) {
+      throw new Error('Missing escrow identifier (escrowId or escrowRecordId)');
+    }
 
 
     if (role !== 'ADMIN' && role !== 'OPERATOR') {
@@ -208,7 +215,7 @@ export class TikinEscrowFacet {
     }
 
     const escrow = await escrowModel().findFirst({
-      where: { escrowId: payload.escrowId, tenantId },
+      where: { escrowId, tenantId },
     });
 
     if (!escrow) {
@@ -231,7 +238,7 @@ export class TikinEscrowFacet {
     const adapter = DLTAdapterFactory.getAdapter(escrow.chain as SupportedChain);
 
     const transitionPayload: DLTTransitionPayload = {
-      transitionId: payload.escrowId,
+      transitionId: escrowId,
       sender: escrow.sender,
       receiver: escrow.receiver,
       amount: escrow.amount,
@@ -267,7 +274,7 @@ export class TikinEscrowFacet {
         status: 'APPROVED',
         payload: {
           action: 'ESCROW_RELEASED',
-          escrowId: payload.escrowId,
+          escrowId,
           releasedBy: apiKeyId,
           releaseMode: escrow.releaseMode,
           chainTxId: releaseTxId,
@@ -285,13 +292,18 @@ export class TikinEscrowFacet {
 
   static async cancel(secureContext: SecureContext, payload: CancelPayload) {
     const { tenantId, apiKeyId, role } = secureContext;
+    const escrowId = payload.escrowId ?? payload.escrowRecordId;
+
+    if (!escrowId) {
+      throw new Error('Missing escrow identifier (escrowId or escrowRecordId)');
+    }
 
     if (role !== 'ADMIN') {
       throw makeError('Only ADMIN can cancel', 'INSUFFICIENT_PERMISSIONS', 403);
     }
 
     const escrow = await escrowModel().findFirst({
-      where: { escrowId: payload.escrowId, tenantId },
+      where: { escrowId, tenantId },
     });
 
     if (!escrow) {
@@ -305,7 +317,7 @@ export class TikinEscrowFacet {
     const adapter = DLTAdapterFactory.getAdapter(escrow.chain as SupportedChain);
 
     const transitionPayload: DLTTransitionPayload = {
-      transitionId: payload.escrowId,
+      transitionId: escrowId,
       sender: escrow.sender,
       receiver: escrow.receiver,
       amount: escrow.amount,
@@ -341,7 +353,7 @@ export class TikinEscrowFacet {
         status: 'APPROVED',
         payload: {
           action: 'ESCROW_CANCELLED',
-          escrowId: payload.escrowId,
+          escrowId,
           cancelledBy: apiKeyId,
           chainTxId: cancelTxId,
         },
@@ -356,4 +368,3 @@ export class TikinEscrowFacet {
     };
   }
 }
-

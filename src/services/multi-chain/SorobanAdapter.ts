@@ -176,7 +176,7 @@ export class SorobanAdapter implements IDLTAdapter {
       }
     }
 
-    const { escrowId, sender, receiver, amount, unlockTimestamp, pqcProof, tripleSign } = params;
+    const { escrowId, sender, receiver, amount, unlockTimestamp = 0, pqcProof, tripleSign } = params;
 
     const account = await this.horizonServer.loadAccount(this.keypair.publicKey());
     const contract = new Contract(this.contractId);
