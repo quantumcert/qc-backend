@@ -30,12 +30,13 @@ const publicContributionLimiter = rateLimit({
  * @openapi
  * /api/v1/public/asset/{id}:
  *   get:
- *     summary: Ler perfil público de um ativo
+ *     summary: Get the public profile of an asset
  *     description: |
- *       Endpoint público de leitura de ativo. Sem API key, retorna o perfil público
- *       filtrado para leituras via QR, NFC ou navegador. Com uma API key válida,
- *       pode retornar a visão autenticada do tenant quando a chave pertence ao
- *       tenant do ativo.
+ *       Public read endpoint for assets. Without an API key, returns the public-facing
+ *       profile — suitable for QR code scans, NFC taps, or browser views.
+ *
+ *       With a valid API key belonging to the asset's tenant, returns the authenticated
+ *       tenant view with additional fields. Keys from a different tenant receive 403.
  *     tags: [Public Assets]
  *     security: []
  *     parameters:
@@ -44,22 +45,24 @@ const publicContributionLimiter = rateLimit({
  *         required: true
  *         schema:
  *           type: string
- *         description: ID do ativo.
+ *           format: uuid
+ *           example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+ *         description: Asset ID.
  *     responses:
  *       200:
- *         description: Ativo retornado.
+ *         description: Asset returned.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
  *       403:
- *         description: A chave autenticada pertence a outro tenant.
+ *         description: Authenticated key belongs to a different tenant.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
- *         description: Ativo não encontrado.
+ *         description: Asset not found.
  *         content:
  *           application/json:
  *             schema:
@@ -71,11 +74,11 @@ router.get('/asset/:id', optionalApiKey, ContextRouterController.getAsset);
  * @openapi
  * /api/v1/public/asset/{id}/contact:
  *   post:
- *     summary: Enviar contato blindado para um ativo em alerta
+ *     summary: Submit a blind contact message for an asset in alert state
  *     description: |
- *       Endpoint público de contato para ativos em estado ALERT. Os dados enviados
- *       são armazenados como blind contact log e repassados ao owner do ativo pelos
- *       webhooks configurados. Não exige API key.
+ *       Public contact endpoint for assets in `ALERT` state (e.g. lost/stolen items).
+ *       Submitted data is stored as a blind contact log and forwarded to the asset
+ *       owner via configured webhooks. No API key required.
  *     tags: [Public Assets]
  *     security: []
  *     parameters:
@@ -84,7 +87,9 @@ router.get('/asset/:id', optionalApiKey, ContextRouterController.getAsset);
  *         required: true
  *         schema:
  *           type: string
- *         description: ID do ativo.
+ *           format: uuid
+ *           example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+ *         description: Asset ID.
  *     requestBody:
  *       required: true
  *       content:
@@ -92,24 +97,24 @@ router.get('/asset/:id', optionalApiKey, ContextRouterController.getAsset);
  *           schema:
  *             type: object
  *             additionalProperties: true
- *             example:
- *               phone: "+5511999999999"
- *               message: "I found this item."
+ *           example:
+ *             phone: "+5511999999999"
+ *             message: "I found this item near Paulista Ave. Call me anytime."
  *     responses:
  *       201:
- *         description: Dados de contato registrados e repassados.
+ *         description: Contact data recorded and forwarded to the asset owner.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
  *       403:
- *         description: O ativo não está aceitando solicitações de contato.
+ *         description: Asset is not currently accepting contact requests.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
- *         description: Ativo não encontrado.
+ *         description: Asset not found.
  *         content:
  *           application/json:
  *             schema:
@@ -121,21 +126,20 @@ router.post('/asset/:id/contact', BlindContactController.submitContact);
  * @openapi
  * /api/v1/public/verify/document/{hash}:
  *   get:
- *     summary: Verificar documento por hash SHA3-512
+ *     summary: Verify a document by its SHA3-512 hash
  *     description: |
- *       Endpoint público (sem autenticação). Recebe o hash SHA3-512 de um documento
- *       e retorna uma prova pública flat de autenticidade: asset, evento, ancoragem DLT
- *       e status de confirmação. Esta é a rota pública canônica para verificação documental; não existe
- *       rota alternativa `/api/v1/verify/document/{hash}`.
+ *       Public endpoint (no authentication). Accepts a SHA3-512 hash of a document
+ *       and returns a flat authenticity proof: asset, event, DLT anchoring, and
+ *       confirmation status. This is the canonical public route for document
+ *       verification — there is no alternative `/api/v1/verify/document/{hash}`.
  *
- *       O objeto `blockchain` é chain-agnostic e pode conter link de explorer
- *       quando a chain tiver mapeamento suportado. Micropagamento/x402 é opcional,
- *       fica desabilitado por default e, se `X402_ENABLED=true` for ativado sem
- *       provider real, a rota falha fechada com `PAYMENT_PROVIDER_NOT_CONFIGURED`.
+ *       The `blockchain` object is chain-agnostic and may include an explorer link
+ *       when the chain has a supported mapping.
  *
- *       O hash deve ser calculado **client-side** (WebCrypto API) — o arquivo nunca
- *       é enviado ao backend. A resposta de sucesso não expõe `tenantId`, `metadata`,
- *       `owners`, `payload`, `signatureHash`, `sdmMacKey`, `writeKey` ou `apiKey`.
+ *       **The hash must be computed client-side** (e.g. WebCrypto API) — the file
+ *       is never sent to the backend. The response intentionally omits `tenantId`,
+ *       `metadata`, `owners`, `payload`, `signatureHash`, `sdmMacKey`, `writeKey`,
+ *       and `apiKey` for privacy.
  *     tags: [Document Verification]
  *     security: []
  *     parameters:
@@ -147,11 +151,11 @@ router.post('/asset/:id/contact', BlindContactController.submitContact);
  *           minLength: 128
  *           maxLength: 128
  *           pattern: '^[0-9A-Fa-f]{128}$'
- *           example: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
- *         description: Hash SHA3-512 do documento (128 caracteres hex)
+ *           example: "a3f9b2e1d4c7f8091011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768"
+ *         description: SHA3-512 hash of the document (128 hex characters).
  *     responses:
  *       200:
- *         description: Documento verificado com sucesso
+ *         description: Document verified successfully.
  *         content:
  *           application/json:
  *             schema:
@@ -162,13 +166,16 @@ router.post('/asset/:id/contact', BlindContactController.submitContact);
  *                   example: true
  *                 assetId:
  *                   type: string
+ *                   format: uuid
  *                 assetStatus:
  *                   type: string
+ *                   example: "ACTIVE"
  *                 publicUrl:
  *                   type: string
  *                   nullable: true
  *                 eventId:
  *                   type: string
+ *                   format: uuid
  *                 dltTxId:
  *                   type: string
  *                   nullable: true
@@ -177,21 +184,21 @@ router.post('/asset/:id/contact', BlindContactController.submitContact);
  *                   format: date-time
  *                 chain:
  *                   type: string
- *                   example: STELLAR
+ *                   example: "STELLAR"
  *                 blockchain:
  *                   type: object
  *                   nullable: true
  *                   properties:
  *                     dltTxId:
  *                       type: string
- *                       example: STELLAR-TX
+ *                       example: "4a8f2b1e9c3d7f60a5b2e8c1d4f7a0b3c6e9f2a5b8c1d4e7f0a3b6c9d2e5f8a1"
  *                     explorerUrl:
  *                       type: string
  *                       nullable: true
- *                       example: https://stellar.expert/explorer/testnet/tx/STELLAR-TX
+ *                       example: "https://stellar.expert/explorer/public/tx/4a8f2b1e9c3d7f60"
  *                     chain:
  *                       type: string
- *                       example: STELLAR
+ *                       example: "STELLAR"
  *                     anchoredAt:
  *                       type: string
  *                       format: date-time
@@ -200,25 +207,25 @@ router.post('/asset/:id/contact', BlindContactController.submitContact);
  *                   nullable: true
  *                 confirmationStatus:
  *                   type: string
- *                   example: CONFIRMED
+ *                   example: "CONFIRMED"
  *             example:
  *               verified: true
- *               assetId: "uuid-do-ativo"
+ *               assetId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
  *               assetStatus: "ACTIVE"
- *               publicUrl: "https://app.quantumcert.com.br/public/verify/uuid-do-ativo"
- *               dltTxId: "STELLAR-TX"
+ *               publicUrl: "https://app.quantumcert.com.br/public/verify/a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+ *               dltTxId: "4a8f2b1e9c3d7f60a5b2e8c1d4f7a0b3c6e9f2a5b8c1d4e7f0a3b6c9d2e5f8a1"
  *               chain: "STELLAR"
  *               anchoredAt: "2026-05-13T22:00:00.000Z"
  *               blockchain:
- *                 dltTxId: "STELLAR-TX"
- *                 explorerUrl: "https://stellar.expert/explorer/testnet/tx/STELLAR-TX"
+ *                 dltTxId: "4a8f2b1e9c3d7f60a5b2e8c1d4f7a0b3c6e9f2a5b8c1d4e7f0a3b6c9d2e5f8a1"
+ *                 explorerUrl: "https://stellar.expert/explorer/public/tx/4a8f2b1e9c3d7f60"
  *                 chain: "STELLAR"
  *                 anchoredAt: "2026-05-13T22:00:00.000Z"
- *               eventId: "event-id"
- *               issuerId: "api-key-id"
+ *               eventId: "e1f2a3b4-c5d6-7890-abcd-ef1234567890"
+ *               issuerId: "d290f1ee-6c54-4b01-90e6-d701748f0851"
  *               confirmationStatus: "CONFIRMED"
  *       400:
- *         description: Formato de hash inválido (não é SHA3-512 hex de 128 chars)
+ *         description: Invalid hash format — must be a 128-character SHA3-512 hex string.
  *         content:
  *           application/json:
  *             schema:
@@ -231,13 +238,13 @@ router.post('/asset/:id/contact', BlindContactController.submitContact);
  *                   type: string
  *                 code:
  *                   type: string
- *                   example: INVALID_DOCUMENT_HASH
+ *                   example: "INVALID_DOCUMENT_HASH"
  *             example:
  *               success: false
  *               error: "Invalid document hash: must be a 128-character SHA3-512 hex string."
  *               code: "INVALID_DOCUMENT_HASH"
  *       404:
- *         description: Nenhum documento encontrado com este hash
+ *         description: No document found with this hash.
  *         content:
  *           application/json:
  *             schema:
@@ -250,13 +257,13 @@ router.post('/asset/:id/contact', BlindContactController.submitContact);
  *                   type: string
  *                 code:
  *                   type: string
- *                   example: DOCUMENT_NOT_FOUND
+ *                   example: "DOCUMENT_NOT_FOUND"
  *             example:
  *               success: false
  *               error: "Document not found."
  *               code: "DOCUMENT_NOT_FOUND"
  *       501:
- *         description: Pagamento opcional habilitado sem provider configurado
+ *         description: Optional payment enabled but no provider configured.
  *         content:
  *           application/json:
  *             schema:
@@ -269,7 +276,7 @@ router.post('/asset/:id/contact', BlindContactController.submitContact);
  *                   type: string
  *                 code:
  *                   type: string
- *                   example: PAYMENT_PROVIDER_NOT_CONFIGURED
+ *                   example: "PAYMENT_PROVIDER_NOT_CONFIGURED"
  *             example:
  *               success: false
  *               error: "Document verification payment provider is not configured."
@@ -279,11 +286,13 @@ router.post('/asset/:id/contact', BlindContactController.submitContact);
  * @openapi
  * /api/v1/public/asset/{assetId}/contribution:
  *   post:
- *     summary: Enviar contribuição pública para um ativo
+ *     summary: Submit a public contribution for an asset
  *     description: |
- *       Endpoint público de contribuição. O solicitante deve informar `phone` ou
- *       `email`. Auditores registrados podem criar um EventLog aprovado diretamente;
- *       outros solicitantes criam uma PendingContribution para revisão autenticada.
+ *       Public contribution endpoint. The submitter must provide either `phone` or `email`.
+ *       Registered auditors create an approved EventLog directly; other submitters create
+ *       a PendingContribution that requires authenticated review via `POST /api/v1/contributions/{id}/review`.
+ *
+ *       Rate limited to 10 requests per 15 minutes per IP.
  *     tags: [Curation]
  *     security: []
  *     parameters:
@@ -292,7 +301,9 @@ router.post('/asset/:id/contact', BlindContactController.submitContact);
  *         required: true
  *         schema:
  *           type: string
- *         description: ID do ativo que recebe a contribuição.
+ *           format: uuid
+ *           example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+ *         description: ID of the asset receiving the contribution.
  *     requestBody:
  *       required: true
  *       content:
@@ -306,18 +317,21 @@ router.post('/asset/:id/contact', BlindContactController.submitContact);
  *               email:
  *                 type: string
  *                 format: email
- *                 example: "auditor@example.com"
+ *                 example: "inspector@example.com"
  *               payload:
  *                 type: object
  *                 additionalProperties: true
- *                 example:
- *                   note: "Inspection note"
  *             anyOf:
  *               - required: [phone]
  *               - required: [email]
+ *           example:
+ *             email: "inspector@example.com"
+ *             payload:
+ *               note: "Physical inspection completed. Serial number matches."
+ *               location: "Warehouse B, Shelf 4"
  *     responses:
  *       201:
- *         description: Contribuição aceita.
+ *         description: Contribution accepted.
  *         content:
  *           application/json:
  *             schema:
@@ -331,33 +345,37 @@ router.post('/asset/:id/contact', BlindContactController.submitContact);
  *                   properties:
  *                     queued:
  *                       type: boolean
- *                       description: True quando um EventLog aprovado foi criado diretamente; false quando a revisão está pendente.
+ *                       description: "`true` when an approved EventLog was created directly (auditor); `false` when pending review."
  *                     eventId:
  *                       type: string
+ *                       format: uuid
  *                       nullable: true
+ *                       example: "e1f2a3b4-c5d6-7890-abcd-ef1234567890"
  *                     pendingId:
  *                       type: string
+ *                       format: uuid
  *                       nullable: true
+ *                       example: "c7f3a1b2-d4e5-6789-abcd-ef0123456789"
  *       400:
- *         description: Payload, telefone ou e-mail inválido.
+ *         description: Invalid payload, phone, or email.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
- *         description: Ativo não encontrado.
+ *         description: Asset not found.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       413:
- *         description: Payload muito grande.
+ *         description: Payload too large.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       429:
- *         description: Rate limit de contribuição pública excedido.
+ *         description: Public contribution rate limit exceeded.
  *         content:
  *           application/json:
  *             schema:

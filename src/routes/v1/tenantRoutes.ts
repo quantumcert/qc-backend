@@ -21,7 +21,7 @@ router.use(requireApiKey, tenantRateLimiter, requireAdmin);
  * @openapi
  * /api/v1/tenants:
  *   post:
- *     summary: Criar um novo tenant
+ *     summary: Create a new tenant
  *     tags: [Tenants]
  *     security:
  *       - ApiKeyAuth: []
@@ -32,16 +32,29 @@ router.use(requireApiKey, tenantRateLimiter, requireAdmin);
  *         schema:
  *           type: string
  *           format: uuid
- *         description: UUIDv4 único para prevenir duplicatas
+ *           example: "550e8400-e29b-41d4-a716-446655440000"
+ *         description: Unique UUIDv4 to prevent duplicate creation on retries.
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/CreateTenantPayload'
+ *           example:
+ *             name: "Acme Corp"
+ *             plan: "PRO"
  *     responses:
  *       201:
- *         description: Tenant criado com sucesso
+ *         description: Tenant created.
+ *         headers:
+ *           X-RateLimit-Limit-Minute:
+ *             $ref: '#/components/headers/XRateLimitLimitMinute'
+ *           X-RateLimit-Remaining-Minute:
+ *             $ref: '#/components/headers/XRateLimitRemainingMinute'
+ *           X-RateLimit-Limit-Day:
+ *             $ref: '#/components/headers/XRateLimitLimitDay'
+ *           X-RateLimit-Remaining-Day:
+ *             $ref: '#/components/headers/XRateLimitRemainingDay'
  *         content:
  *           application/json:
  *             schema:
@@ -52,23 +65,37 @@ router.use(requireApiKey, tenantRateLimiter, requireAdmin);
  *                     data:
  *                       $ref: '#/components/schemas/Tenant'
  *       401:
- *         description: API key ausente ou inválida
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
+ *         $ref: '#/components/responses/Unauthorized'
  *       403:
- *         description: Role insuficiente (requer ADMIN)
+ *         description: Insufficient role — ADMIN required.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Insufficient permissions."
+ *               code: "INSUFFICIENT_PERMISSIONS"
  *       409:
- *         description: Idempotency key duplicada
+ *         description: Duplicate Idempotency-Key — request already processed.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Duplicate resource."
+ *               code: "DUPLICATE_RESOURCE"
+ *       429:
+ *         description: Rate limit exceeded.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Rate limit exceeded. Please wait before retrying."
+ *               code: "RATE_LIMIT_EXCEEDED"
  */
 router.post('/', TenantController.create);
 
@@ -76,13 +103,22 @@ router.post('/', TenantController.create);
  * @openapi
  * /api/v1/tenants:
  *   get:
- *     summary: Listar todos os tenants
+ *     summary: List all tenants
  *     tags: [Tenants]
  *     security:
  *       - ApiKeyAuth: []
  *     responses:
  *       200:
- *         description: Lista de tenants
+ *         description: Tenant list.
+ *         headers:
+ *           X-RateLimit-Limit-Minute:
+ *             $ref: '#/components/headers/XRateLimitLimitMinute'
+ *           X-RateLimit-Remaining-Minute:
+ *             $ref: '#/components/headers/XRateLimitRemainingMinute'
+ *           X-RateLimit-Limit-Day:
+ *             $ref: '#/components/headers/XRateLimitLimitDay'
+ *           X-RateLimit-Remaining-Day:
+ *             $ref: '#/components/headers/XRateLimitRemainingDay'
  *         content:
  *           application/json:
  *             schema:
@@ -95,11 +131,17 @@ router.post('/', TenantController.create);
  *                       items:
  *                         $ref: '#/components/schemas/Tenant'
  *       401:
- *         description: API key ausente ou inválida
+ *         $ref: '#/components/responses/Unauthorized'
+ *       429:
+ *         description: Rate limit exceeded.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Rate limit exceeded. Please wait before retrying."
+ *               code: "RATE_LIMIT_EXCEEDED"
  */
 router.get('/', TenantController.list);
 
@@ -107,7 +149,7 @@ router.get('/', TenantController.list);
  * @openapi
  * /api/v1/tenants/{id}:
  *   get:
- *     summary: Buscar tenant por ID
+ *     summary: Get tenant by ID
  *     tags: [Tenants]
  *     security:
  *       - ApiKeyAuth: []
@@ -118,9 +160,19 @@ router.get('/', TenantController.list);
  *         schema:
  *           type: string
  *           format: uuid
+ *           example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
  *     responses:
  *       200:
- *         description: Tenant encontrado
+ *         description: Tenant found.
+ *         headers:
+ *           X-RateLimit-Limit-Minute:
+ *             $ref: '#/components/headers/XRateLimitLimitMinute'
+ *           X-RateLimit-Remaining-Minute:
+ *             $ref: '#/components/headers/XRateLimitRemainingMinute'
+ *           X-RateLimit-Limit-Day:
+ *             $ref: '#/components/headers/XRateLimitLimitDay'
+ *           X-RateLimit-Remaining-Day:
+ *             $ref: '#/components/headers/XRateLimitRemainingDay'
  *         content:
  *           application/json:
  *             schema:
@@ -131,11 +183,21 @@ router.get('/', TenantController.list);
  *                     data:
  *                       $ref: '#/components/schemas/Tenant'
  *       404:
- *         description: Tenant não encontrado
+ *         description: Tenant not found.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *       429:
+ *         description: Rate limit exceeded.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Rate limit exceeded. Please wait before retrying."
+ *               code: "RATE_LIMIT_EXCEEDED"
  */
 router.get('/:id', TenantController.getById);
 
@@ -143,7 +205,7 @@ router.get('/:id', TenantController.getById);
  * @openapi
  * /api/v1/tenants/{id}:
  *   patch:
- *     summary: Atualizar tenant
+ *     summary: Update tenant
  *     tags: [Tenants]
  *     security:
  *       - ApiKeyAuth: []
@@ -154,15 +216,28 @@ router.get('/:id', TenantController.getById);
  *         schema:
  *           type: string
  *           format: uuid
+ *           example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/UpdateTenantPayload'
+ *           example:
+ *             name: "Acme Corp (Renamed)"
+ *             plan: "ENTERPRISE"
  *     responses:
  *       200:
- *         description: Tenant atualizado
+ *         description: Tenant updated.
+ *         headers:
+ *           X-RateLimit-Limit-Minute:
+ *             $ref: '#/components/headers/XRateLimitLimitMinute'
+ *           X-RateLimit-Remaining-Minute:
+ *             $ref: '#/components/headers/XRateLimitRemainingMinute'
+ *           X-RateLimit-Limit-Day:
+ *             $ref: '#/components/headers/XRateLimitLimitDay'
+ *           X-RateLimit-Remaining-Day:
+ *             $ref: '#/components/headers/XRateLimitRemainingDay'
  *         content:
  *           application/json:
  *             schema:
@@ -172,12 +247,32 @@ router.get('/:id', TenantController.getById);
  *                   properties:
  *                     data:
  *                       $ref: '#/components/schemas/Tenant'
- *       404:
- *         description: Tenant não encontrado
+ *       403:
+ *         description: Insufficient role — ADMIN required.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Insufficient permissions."
+ *               code: "INSUFFICIENT_PERMISSIONS"
+ *       404:
+ *         description: Tenant not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       429:
+ *         description: Rate limit exceeded.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Rate limit exceeded. Please wait before retrying."
+ *               code: "RATE_LIMIT_EXCEEDED"
  */
 router.patch('/:id', TenantController.update);
 
@@ -185,7 +280,8 @@ router.patch('/:id', TenantController.update);
  * @openapi
  * /api/v1/tenants/{id}/deactivate:
  *   post:
- *     summary: Desativar tenant
+ *     summary: Deactivate a tenant
+ *     description: Suspends the tenant — all their API keys become invalid immediately.
  *     tags: [Tenants]
  *     security:
  *       - ApiKeyAuth: []
@@ -196,19 +292,49 @@ router.patch('/:id', TenantController.update);
  *         schema:
  *           type: string
  *           format: uuid
+ *           example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
  *     responses:
  *       200:
- *         description: Tenant desativado com sucesso
+ *         description: Tenant deactivated.
+ *         headers:
+ *           X-RateLimit-Limit-Minute:
+ *             $ref: '#/components/headers/XRateLimitLimitMinute'
+ *           X-RateLimit-Remaining-Minute:
+ *             $ref: '#/components/headers/XRateLimitRemainingMinute'
+ *           X-RateLimit-Limit-Day:
+ *             $ref: '#/components/headers/XRateLimitLimitDay'
+ *           X-RateLimit-Remaining-Day:
+ *             $ref: '#/components/headers/XRateLimitRemainingDay'
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
- *       404:
- *         description: Tenant não encontrado
+ *       403:
+ *         description: Insufficient role — ADMIN required.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Insufficient permissions."
+ *               code: "INSUFFICIENT_PERMISSIONS"
+ *       404:
+ *         description: Tenant not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       429:
+ *         description: Rate limit exceeded.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Rate limit exceeded. Please wait before retrying."
+ *               code: "RATE_LIMIT_EXCEEDED"
  */
 router.post('/:id/deactivate', TenantController.deactivate);
 
@@ -216,7 +342,8 @@ router.post('/:id/deactivate', TenantController.deactivate);
  * @openapi
  * /api/v1/tenants/{id}/reactivate:
  *   post:
- *     summary: Reativar tenant
+ *     summary: Reactivate a tenant
+ *     description: Restores a deactivated tenant. Their existing active API keys become valid again.
  *     tags: [Tenants]
  *     security:
  *       - ApiKeyAuth: []
@@ -227,19 +354,49 @@ router.post('/:id/deactivate', TenantController.deactivate);
  *         schema:
  *           type: string
  *           format: uuid
+ *           example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
  *     responses:
  *       200:
- *         description: Tenant reativado com sucesso
+ *         description: Tenant reactivated.
+ *         headers:
+ *           X-RateLimit-Limit-Minute:
+ *             $ref: '#/components/headers/XRateLimitLimitMinute'
+ *           X-RateLimit-Remaining-Minute:
+ *             $ref: '#/components/headers/XRateLimitRemainingMinute'
+ *           X-RateLimit-Limit-Day:
+ *             $ref: '#/components/headers/XRateLimitLimitDay'
+ *           X-RateLimit-Remaining-Day:
+ *             $ref: '#/components/headers/XRateLimitRemainingDay'
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
- *       404:
- *         description: Tenant não encontrado
+ *       403:
+ *         description: Insufficient role — ADMIN required.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Insufficient permissions."
+ *               code: "INSUFFICIENT_PERMISSIONS"
+ *       404:
+ *         description: Tenant not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       429:
+ *         description: Rate limit exceeded.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Rate limit exceeded. Please wait before retrying."
+ *               code: "RATE_LIMIT_EXCEEDED"
  */
 router.post('/:id/reactivate', TenantController.reactivate);
 
@@ -247,7 +404,8 @@ router.post('/:id/reactivate', TenantController.reactivate);
  * @openapi
  * /api/v1/tenants/{id}/usage:
  *   get:
- *     summary: Consultar uso de rate limit do tenant
+ *     summary: Get tenant rate limit usage
+ *     description: Returns current request counts against the tenant's per-minute and per-day limits.
  *     tags: [Tenants]
  *     security:
  *       - ApiKeyAuth: []
@@ -258,9 +416,19 @@ router.post('/:id/reactivate', TenantController.reactivate);
  *         schema:
  *           type: string
  *           format: uuid
+ *           example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
  *     responses:
  *       200:
- *         description: Estatísticas de uso do tenant
+ *         description: Tenant usage statistics.
+ *         headers:
+ *           X-RateLimit-Limit-Minute:
+ *             $ref: '#/components/headers/XRateLimitLimitMinute'
+ *           X-RateLimit-Remaining-Minute:
+ *             $ref: '#/components/headers/XRateLimitRemainingMinute'
+ *           X-RateLimit-Limit-Day:
+ *             $ref: '#/components/headers/XRateLimitLimitDay'
+ *           X-RateLimit-Remaining-Day:
+ *             $ref: '#/components/headers/XRateLimitRemainingDay'
  *         content:
  *           application/json:
  *             schema:
@@ -273,18 +441,32 @@ router.post('/:id/reactivate', TenantController.reactivate);
  *                       properties:
  *                         minuteUsage:
  *                           type: integer
+ *                           example: 45
  *                         minuteLimit:
  *                           type: integer
+ *                           example: 100
  *                         dayUsage:
  *                           type: integer
+ *                           example: 3200
  *                         dayLimit:
  *                           type: integer
+ *                           example: 10000
  *       404:
- *         description: Tenant não encontrado
+ *         description: Tenant not found.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *       429:
+ *         description: Rate limit exceeded.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Rate limit exceeded. Please wait before retrying."
+ *               code: "RATE_LIMIT_EXCEEDED"
  */
 router.get('/:id/usage', TenantController.getUsage);
 
