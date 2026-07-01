@@ -37,7 +37,16 @@ const router = Router();
  *         description: Blockchain network for the deposit address
  *     responses:
  *       200:
- *         description: Deposit address retrieved
+ *         description: Deposit address retrieved.
+ *         headers:
+ *           X-RateLimit-Limit-Minute:
+ *             $ref: '#/components/headers/XRateLimitLimitMinute'
+ *           X-RateLimit-Remaining-Minute:
+ *             $ref: '#/components/headers/XRateLimitRemainingMinute'
+ *           X-RateLimit-Limit-Day:
+ *             $ref: '#/components/headers/XRateLimitLimitDay'
+ *           X-RateLimit-Remaining-Day:
+ *             $ref: '#/components/headers/XRateLimitRemainingDay'
  *         content:
  *           application/json:
  *             schema:
@@ -61,9 +70,19 @@ const router = Router();
  *                           type: string
  *                           format: date-time
  *       400:
- *         description: Invalid chain parameter
+ *         $ref: '#/components/responses/BadRequest'
  *       401:
- *         description: API key missing or invalid
+ *         $ref: '#/components/responses/Unauthorized'
+ *       429:
+ *         description: Rate limit exceeded.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Rate limit exceeded. Please wait before retrying."
+ *               code: "RATE_LIMIT_EXCEEDED"
  */
 router.get(
   '/deposit-address',
@@ -94,7 +113,16 @@ router.get(
  *         description: Filter balance by chain (default = all chains)
  *     responses:
  *       200:
- *         description: Balance computed
+ *         description: Balance computed.
+ *         headers:
+ *           X-RateLimit-Limit-Minute:
+ *             $ref: '#/components/headers/XRateLimitLimitMinute'
+ *           X-RateLimit-Remaining-Minute:
+ *             $ref: '#/components/headers/XRateLimitRemainingMinute'
+ *           X-RateLimit-Limit-Day:
+ *             $ref: '#/components/headers/XRateLimitLimitDay'
+ *           X-RateLimit-Remaining-Day:
+ *             $ref: '#/components/headers/XRateLimitRemainingDay'
  *         content:
  *           application/json:
  *             schema:
@@ -121,7 +149,17 @@ router.get(
  *                         depositCount:
  *                           type: integer
  *       401:
- *         description: API key missing or invalid
+ *         $ref: '#/components/responses/Unauthorized'
+ *       429:
+ *         description: Rate limit exceeded.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Rate limit exceeded. Please wait before retrying."
+ *               code: "RATE_LIMIT_EXCEEDED"
  */
 router.get(
   '/balance',
@@ -145,7 +183,16 @@ router.get(
  *       - ApiKeyAuth: []
  *     responses:
  *       200:
- *         description: Quantum Account retrieved
+ *         description: Quantum Account retrieved.
+ *         headers:
+ *           X-RateLimit-Limit-Minute:
+ *             $ref: '#/components/headers/XRateLimitLimitMinute'
+ *           X-RateLimit-Remaining-Minute:
+ *             $ref: '#/components/headers/XRateLimitRemainingMinute'
+ *           X-RateLimit-Limit-Day:
+ *             $ref: '#/components/headers/XRateLimitLimitDay'
+ *           X-RateLimit-Remaining-Day:
+ *             $ref: '#/components/headers/XRateLimitRemainingDay'
  *         content:
  *           application/json:
  *             schema:
@@ -169,7 +216,17 @@ router.get(
  *                         wallets:
  *                           type: array
  *       401:
- *         description: API key missing or invalid
+ *         $ref: '#/components/responses/Unauthorized'
+ *       429:
+ *         description: Rate limit exceeded.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Rate limit exceeded. Please wait before retrying."
+ *               code: "RATE_LIMIT_EXCEEDED"
  */
 router.get(
   '/account',

@@ -63,22 +63,50 @@ const nfcValidateLimiter = rateLimit({
  *     responses:
  *       201:
  *         description: Device registered and linked to asset.
+ *         headers:
+ *           X-RateLimit-Limit-Minute:
+ *             $ref: '#/components/headers/XRateLimitLimitMinute'
+ *           X-RateLimit-Remaining-Minute:
+ *             $ref: '#/components/headers/XRateLimitRemainingMinute'
+ *           X-RateLimit-Limit-Day:
+ *             $ref: '#/components/headers/XRateLimitLimitDay'
+ *           X-RateLimit-Remaining-Day:
+ *             $ref: '#/components/headers/XRateLimitRemainingDay'
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
  *       401:
- *         description: Missing or invalid API key.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
+ *         $ref: '#/components/responses/Unauthorized'
  *       403:
- *         description: Insufficient role — ADMIN required.
+ *         description: Insufficient role or missing scope.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *             examples:
+ *               insufficient_role:
+ *                 summary: Role too low
+ *                 value:
+ *                   success: false
+ *                   error: "Insufficient permissions."
+ *                   code: "INSUFFICIENT_PERMISSIONS"
+ *               scope_denied:
+ *                 summary: Key lacks qtags:write scope
+ *                 value:
+ *                   success: false
+ *                   error: "API key does not have the required scope."
+ *                   code: "API_KEY_SCOPE_DENIED"
+ *       429:
+ *         description: Rate limit exceeded.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Rate limit exceeded. Please wait before retrying."
+ *               code: "RATE_LIMIT_EXCEEDED"
  */
 router.post('/', requireApiKey, requireIdempotency, tenantRateLimiter, requireAdmin, requireApiKeyScope('qtags:write'), DeviceController.register);
 
@@ -112,6 +140,15 @@ router.post('/', requireApiKey, requireIdempotency, tenantRateLimiter, requireAd
  *     responses:
  *       200:
  *         description: Tap validated — returns the linked asset data.
+ *         headers:
+ *           X-RateLimit-Limit-Minute:
+ *             $ref: '#/components/headers/XRateLimitLimitMinute'
+ *           X-RateLimit-Remaining-Minute:
+ *             $ref: '#/components/headers/XRateLimitRemainingMinute'
+ *           X-RateLimit-Limit-Day:
+ *             $ref: '#/components/headers/XRateLimitLimitDay'
+ *           X-RateLimit-Remaining-Day:
+ *             $ref: '#/components/headers/XRateLimitRemainingDay'
  *         content:
  *           application/json:
  *             schema:
@@ -128,11 +165,15 @@ router.post('/', requireApiKey, requireIdempotency, tenantRateLimiter, requireAd
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       429:
- *         description: Too many attempts — retry after 1 minute.
+ *         description: Too many attempts — retry after 1 minute (per-IP limit).
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Too many NFC validation attempts from this IP, please try again after a minute."
+ *               code: "RATE_LIMIT_EXCEEDED"
  */
 router.get('/tap', nfcValidateLimiter, optionalApiKey, tenantRateLimiter, DeviceController.validateTap);
 

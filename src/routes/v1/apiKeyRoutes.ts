@@ -49,6 +49,15 @@ router.use(requireApiKey, tenantRateLimiter, requireAdmin);
  *     responses:
  *       201:
  *         description: API key generated. The raw `key` value is shown exactly once — save it immediately.
+ *         headers:
+ *           X-RateLimit-Limit-Minute:
+ *             $ref: '#/components/headers/XRateLimitLimitMinute'
+ *           X-RateLimit-Remaining-Minute:
+ *             $ref: '#/components/headers/XRateLimitRemainingMinute'
+ *           X-RateLimit-Limit-Day:
+ *             $ref: '#/components/headers/XRateLimitLimitDay'
+ *           X-RateLimit-Remaining-Day:
+ *             $ref: '#/components/headers/XRateLimitRemainingDay'
  *         content:
  *           application/json:
  *             schema:
@@ -66,23 +75,37 @@ router.use(requireApiKey, tenantRateLimiter, requireAdmin);
  *                         apiKey:
  *                           $ref: '#/components/schemas/ApiKey'
  *       401:
- *         description: Missing or invalid API key.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
+ *         $ref: '#/components/responses/Unauthorized'
  *       403:
  *         description: Insufficient role — ADMIN required.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Insufficient permissions."
+ *               code: "INSUFFICIENT_PERMISSIONS"
  *       409:
  *         description: Duplicate Idempotency-Key — request already processed.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Duplicate resource."
+ *               code: "DUPLICATE_RESOURCE"
+ *       429:
+ *         description: Rate limit exceeded.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Rate limit exceeded. Please wait before retrying."
+ *               code: "RATE_LIMIT_EXCEEDED"
  */
 router.post('/', ApiKeyController.generate);
 
@@ -112,6 +135,15 @@ router.post('/', ApiKeyController.generate);
  *     responses:
  *       200:
  *         description: API key list (raw values never returned).
+ *         headers:
+ *           X-RateLimit-Limit-Minute:
+ *             $ref: '#/components/headers/XRateLimitLimitMinute'
+ *           X-RateLimit-Remaining-Minute:
+ *             $ref: '#/components/headers/XRateLimitRemainingMinute'
+ *           X-RateLimit-Limit-Day:
+ *             $ref: '#/components/headers/XRateLimitLimitDay'
+ *           X-RateLimit-Remaining-Day:
+ *             $ref: '#/components/headers/XRateLimitRemainingDay'
  *         content:
  *           application/json:
  *             schema:
@@ -124,11 +156,17 @@ router.post('/', ApiKeyController.generate);
  *                       items:
  *                         $ref: '#/components/schemas/ApiKey'
  *       401:
- *         description: Missing or invalid API key.
+ *         $ref: '#/components/responses/Unauthorized'
+ *       429:
+ *         description: Rate limit exceeded.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Rate limit exceeded. Please wait before retrying."
+ *               code: "RATE_LIMIT_EXCEEDED"
  */
 router.get('/:tenantId', ApiKeyController.list);
 
@@ -152,16 +190,45 @@ router.get('/:tenantId', ApiKeyController.list);
  *     responses:
  *       200:
  *         description: API key revoked successfully.
+ *         headers:
+ *           X-RateLimit-Limit-Minute:
+ *             $ref: '#/components/headers/XRateLimitLimitMinute'
+ *           X-RateLimit-Remaining-Minute:
+ *             $ref: '#/components/headers/XRateLimitRemainingMinute'
+ *           X-RateLimit-Limit-Day:
+ *             $ref: '#/components/headers/XRateLimitLimitDay'
+ *           X-RateLimit-Remaining-Day:
+ *             $ref: '#/components/headers/XRateLimitRemainingDay'
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
+ *       403:
+ *         description: Insufficient role — ADMIN required.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Insufficient permissions."
+ *               code: "INSUFFICIENT_PERMISSIONS"
  *       404:
  *         description: API key not found or does not belong to your tenant.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *       429:
+ *         description: Rate limit exceeded.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Rate limit exceeded. Please wait before retrying."
+ *               code: "RATE_LIMIT_EXCEEDED"
  */
 router.delete('/:id', ApiKeyController.revoke);
 
@@ -195,6 +262,15 @@ router.delete('/:id', ApiKeyController.revoke);
  *     responses:
  *       200:
  *         description: New key issued. The previous key is immediately invalidated.
+ *         headers:
+ *           X-RateLimit-Limit-Minute:
+ *             $ref: '#/components/headers/XRateLimitLimitMinute'
+ *           X-RateLimit-Remaining-Minute:
+ *             $ref: '#/components/headers/XRateLimitRemainingMinute'
+ *           X-RateLimit-Limit-Day:
+ *             $ref: '#/components/headers/XRateLimitLimitDay'
+ *           X-RateLimit-Remaining-Day:
+ *             $ref: '#/components/headers/XRateLimitRemainingDay'
  *         content:
  *           application/json:
  *             schema:
@@ -213,12 +289,32 @@ router.delete('/:id', ApiKeyController.revoke);
  *                           type: string
  *                           format: uuid
  *                           example: "d290f1ee-6c54-4b01-90e6-d701748f0851"
+ *       403:
+ *         description: Insufficient role — ADMIN required.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Insufficient permissions."
+ *               code: "INSUFFICIENT_PERMISSIONS"
  *       404:
  *         description: API key not found or already revoked.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *       429:
+ *         description: Rate limit exceeded.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Rate limit exceeded. Please wait before retrying."
+ *               code: "RATE_LIMIT_EXCEEDED"
  */
 router.post('/:id/rotate', ApiKeyController.rotate);
 

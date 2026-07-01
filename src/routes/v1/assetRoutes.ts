@@ -51,6 +51,15 @@ const router = Router();
  *     responses:
  *       201:
  *         description: Asset registered. SHA3-512 hash computed and stored automatically.
+ *         headers:
+ *           X-RateLimit-Limit-Minute:
+ *             $ref: '#/components/headers/XRateLimitLimitMinute'
+ *           X-RateLimit-Remaining-Minute:
+ *             $ref: '#/components/headers/XRateLimitRemainingMinute'
+ *           X-RateLimit-Limit-Day:
+ *             $ref: '#/components/headers/XRateLimitLimitDay'
+ *           X-RateLimit-Remaining-Day:
+ *             $ref: '#/components/headers/XRateLimitRemainingDay'
  *         content:
  *           application/json:
  *             schema:
@@ -61,23 +70,46 @@ const router = Router();
  *                     data:
  *                       $ref: '#/components/schemas/Asset'
  *       401:
- *         description: Missing or invalid API key.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
+ *         $ref: '#/components/responses/Unauthorized'
  *       403:
- *         description: Insufficient role — OPERATOR or ADMIN required.
+ *         description: Insufficient role or missing scope.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *             examples:
+ *               insufficient_role:
+ *                 summary: Role too low
+ *                 value:
+ *                   success: false
+ *                   error: "Insufficient permissions."
+ *                   code: "INSUFFICIENT_PERMISSIONS"
+ *               scope_denied:
+ *                 summary: Key lacks assets:write scope
+ *                 value:
+ *                   success: false
+ *                   error: "API key does not have the required scope."
+ *                   code: "API_KEY_SCOPE_DENIED"
  *       409:
  *         description: Duplicate Idempotency-Key — request already processed.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Duplicate resource."
+ *               code: "DUPLICATE_RESOURCE"
+ *       429:
+ *         description: Rate limit exceeded.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Rate limit exceeded. Please wait before retrying."
+ *               code: "RATE_LIMIT_EXCEEDED"
  */
 router.post('/', requireApiKey, requireIdempotency, tenantRateLimiter, requireOperator, requireApiKeyScope('assets:write'), AssetController.create);
 
@@ -113,6 +145,15 @@ router.post('/', requireApiKey, requireIdempotency, tenantRateLimiter, requireOp
  *     responses:
  *       200:
  *         description: Paginated asset list.
+ *         headers:
+ *           X-RateLimit-Limit-Minute:
+ *             $ref: '#/components/headers/XRateLimitLimitMinute'
+ *           X-RateLimit-Remaining-Minute:
+ *             $ref: '#/components/headers/XRateLimitRemainingMinute'
+ *           X-RateLimit-Limit-Day:
+ *             $ref: '#/components/headers/XRateLimitLimitDay'
+ *           X-RateLimit-Remaining-Day:
+ *             $ref: '#/components/headers/XRateLimitRemainingDay'
  *         content:
  *           application/json:
  *             schema:
@@ -125,11 +166,27 @@ router.post('/', requireApiKey, requireIdempotency, tenantRateLimiter, requireOp
  *                       items:
  *                         $ref: '#/components/schemas/Asset'
  *       401:
- *         description: Missing or invalid API key.
+ *         $ref: '#/components/responses/Unauthorized'
+ *       403:
+ *         description: Missing scope `assets:read`.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "API key does not have the required scope."
+ *               code: "API_KEY_SCOPE_DENIED"
+ *       429:
+ *         description: Rate limit exceeded.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Rate limit exceeded. Please wait before retrying."
+ *               code: "RATE_LIMIT_EXCEEDED"
  */
 router.get('/', requireApiKey, tenantRateLimiter, requireReader, requireApiKeyScope('assets:read'), AssetController.list);
 
@@ -152,6 +209,15 @@ router.get('/', requireApiKey, tenantRateLimiter, requireReader, requireApiKeySc
  *     responses:
  *       200:
  *         description: Asset found.
+ *         headers:
+ *           X-RateLimit-Limit-Minute:
+ *             $ref: '#/components/headers/XRateLimitLimitMinute'
+ *           X-RateLimit-Remaining-Minute:
+ *             $ref: '#/components/headers/XRateLimitRemainingMinute'
+ *           X-RateLimit-Limit-Day:
+ *             $ref: '#/components/headers/XRateLimitLimitDay'
+ *           X-RateLimit-Remaining-Day:
+ *             $ref: '#/components/headers/XRateLimitRemainingDay'
  *         content:
  *           application/json:
  *             schema:
@@ -161,12 +227,45 @@ router.get('/', requireApiKey, tenantRateLimiter, requireReader, requireApiKeySc
  *                   properties:
  *                     data:
  *                       $ref: '#/components/schemas/Asset'
+ *       403:
+ *         description: Missing scope `assets:read` or cross-tenant access attempt.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             examples:
+ *               scope_denied:
+ *                 summary: Key lacks assets:read scope
+ *                 value:
+ *                   success: false
+ *                   error: "API key does not have the required scope."
+ *                   code: "API_KEY_SCOPE_DENIED"
+ *               isolation_violation:
+ *                 summary: Asset belongs to another tenant
+ *                 value:
+ *                   success: false
+ *                   error: "Access denied."
+ *                   code: "TENANT_ISOLATION_VIOLATION"
  *       404:
  *         description: Asset not found.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Asset not found."
+ *               code: "ASSET_NOT_FOUND"
+ *       429:
+ *         description: Rate limit exceeded.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Rate limit exceeded. Please wait before retrying."
+ *               code: "RATE_LIMIT_EXCEEDED"
  */
 router.get('/:id', requireApiKey, tenantRateLimiter, requireReader, requireApiKeyScope('assets:read'), AssetController.getById);
 
@@ -216,16 +315,49 @@ router.get('/:id', requireApiKey, tenantRateLimiter, requireReader, requireApiKe
  *     responses:
  *       200:
  *         description: Owner added successfully.
+ *         headers:
+ *           X-RateLimit-Limit-Minute:
+ *             $ref: '#/components/headers/XRateLimitLimitMinute'
+ *           X-RateLimit-Remaining-Minute:
+ *             $ref: '#/components/headers/XRateLimitRemainingMinute'
+ *           X-RateLimit-Limit-Day:
+ *             $ref: '#/components/headers/XRateLimitLimitDay'
+ *           X-RateLimit-Remaining-Day:
+ *             $ref: '#/components/headers/XRateLimitRemainingDay'
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
+ *       403:
+ *         description: Insufficient role or missing scope.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Insufficient permissions."
+ *               code: "INSUFFICIENT_PERMISSIONS"
  *       404:
  *         description: Asset not found.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Asset not found."
+ *               code: "ASSET_NOT_FOUND"
+ *       429:
+ *         description: Rate limit exceeded.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Rate limit exceeded. Please wait before retrying."
+ *               code: "RATE_LIMIT_EXCEEDED"
  */
 router.patch('/:id/owners', requireApiKey, requireIdempotency, tenantRateLimiter, requireOperator, requireApiKeyScope('assets:write'), AssetController.addOwner);
 
@@ -283,6 +415,15 @@ router.patch('/:id/owners', requireApiKey, requireIdempotency, tenantRateLimiter
  *     responses:
  *       200:
  *         description: Transfer initiated — returns `paymentLink` and asset status `AWAITING_PAYMENT`.
+ *         headers:
+ *           X-RateLimit-Limit-Minute:
+ *             $ref: '#/components/headers/XRateLimitLimitMinute'
+ *           X-RateLimit-Remaining-Minute:
+ *             $ref: '#/components/headers/XRateLimitRemainingMinute'
+ *           X-RateLimit-Limit-Day:
+ *             $ref: '#/components/headers/XRateLimitLimitDay'
+ *           X-RateLimit-Remaining-Day:
+ *             $ref: '#/components/headers/XRateLimitRemainingDay'
  *         content:
  *           application/json:
  *             schema:
@@ -300,13 +441,47 @@ router.patch('/:id/owners', requireApiKey, requireIdempotency, tenantRateLimiter
  *                           type: string
  *                           example: "AWAITING_PAYMENT"
  *       401:
- *         description: Missing or invalid API key.
+ *         $ref: '#/components/responses/Unauthorized'
  *       403:
- *         description: Insufficient role — OPERATOR or ADMIN required.
+ *         description: Insufficient role or missing scope.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "API key does not have the required scope."
+ *               code: "API_KEY_SCOPE_DENIED"
  *       404:
  *         description: Asset not found or does not belong to this tenant.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Asset not found."
+ *               code: "ASSET_NOT_FOUND"
  *       422:
  *         description: Asset cannot be transferred in its current state.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Invalid asset state for this operation."
+ *               code: "INVALID_ASSET_STATE"
+ *       429:
+ *         description: Rate limit exceeded.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               success: false
+ *               error: "Rate limit exceeded. Please wait before retrying."
+ *               code: "RATE_LIMIT_EXCEEDED"
  */
 router.patch('/:assetId/transfer',
   requireApiKey, requireIdempotency, tenantRateLimiter, requireOperator, requireApiKeyScope('transfers:write'),

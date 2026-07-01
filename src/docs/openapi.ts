@@ -13,6 +13,21 @@ import swaggerJsdoc from 'swagger-jsdoc';
 const isProd = __dirname.includes(`${path.sep}dist${path.sep}`) || __dirname.endsWith(`${path.sep}dist`);
 const ext = isProd ? 'js' : 'ts';
 
+// Route files scanned for @openapi annotations.
+// Internal routes (admin, agent, circuit-breaker) are included only outside production
+// so they never appear in the public-facing Scalar UI.
+const publicRouteFiles = [
+  'tenantRoutes', 'apiKeyRoutes', 'assetRoutes', 'authRoutes',
+  'deviceRoutes', 'publicRoutes', 'webhookRoutes', 'walletRoutes',
+  'userRoutes', 'contributionRoutes', 'docsRoutes',
+].map((name) => path.resolve(__dirname, `../routes/v1/${name}.${ext}`));
+
+const internalRouteFiles = [
+  'adminRoutes', 'agentRoutes', 'circuitBreakerRoutes',
+].map((name) => path.resolve(__dirname, `../routes/v1/${name}.${ext}`));
+
+const isProduction = process.env.NODE_ENV === 'production';
+
 const options: swaggerJsdoc.Options = {
   definition: {
     openapi: '3.0.0',
@@ -64,6 +79,35 @@ Keys are generated via \`POST /api/v1/api-keys\` and come in three roles:
 
 ---
 
+## Tenant isolation
+
+Every resource — assets, API keys, events, devices, credits, QTAGs — is scoped to a single tenant and
+never visible to other tenants, even if they share the same database instance. The tenant is derived
+automatically from the authenticated API key; there is no tenant identifier to pass per-request.
+
+Attempting to access a resource that belongs to a different tenant returns **403**, not 404, to prevent
+enumeration. Cross-tenant operations do not exist in the public API — ownership transfers are mediated
+through the Diamond Proxy transfer flow.
+
+---
+
+## Rate limits
+
+Tenant-authenticated endpoints enforce **per-tenant, per-plan** quotas managed by \`RateLimiterFacet\`.
+Every response from a rate-limited endpoint includes:
+
+| Header | Description |
+|---|---|
+| \`X-RateLimit-Limit-Minute\` | Maximum requests allowed in the current 1-minute window |
+| \`X-RateLimit-Remaining-Minute\` | Requests remaining in the current 1-minute window |
+| \`X-RateLimit-Limit-Day\` | Daily request quota for the tenant's plan |
+| \`X-RateLimit-Remaining-Day\` | Requests remaining today |
+
+Session-based endpoints (auth routes) use **per-IP + per-email** limits via \`express-rate-limit\` and
+return standard \`RateLimit-*\` headers (RFC 6585). Exceeding any limit returns \`429 Too Many Requests\`.
+
+---
+
 ## Idempotency
 
 All \`POST\` and \`PATCH\` mutating endpoints require an **\`Idempotency-Key\`** header (UUIDv4).
@@ -95,7 +139,7 @@ Idempotency-Key: 550e8400-e29b-41d4-a716-446655440000
 | Public verification | \`GET /api/v1/public/verify/document/{hash}\` |
 | QTAG scan | \`GET /api/v1/scan\` |
 | Wallet | \`/api/v1/wallet\` |
-| Circuit Breaker | \`/api/v1/circuit-breaker\` |
+| Circuit Breaker | \`/api/v1/circuit-breaker\` *(internal — dev only)* |
       `,
       contact: {
         name: 'Quantum Cert',
@@ -114,14 +158,88 @@ Idempotency-Key: 550e8400-e29b-41d4-a716-446655440000
           description: 'A `qc_` prefixed API key generated via POST /api/v1/api-keys.',
         },
       },
+      headers: {
+        XRateLimitLimitMinute: {
+          description: 'Maximum requests allowed in the current 1-minute window.',
+          schema: { type: 'integer', example: 60 },
+        },
+        XRateLimitRemainingMinute: {
+          description: 'Requests remaining in the current 1-minute window.',
+          schema: { type: 'integer', example: 47 },
+        },
+        XRateLimitLimitDay: {
+          description: 'Daily request quota for the tenant plan.',
+          schema: { type: 'integer', example: 10000 },
+        },
+        XRateLimitRemainingDay: {
+          description: 'Requests remaining today.',
+          schema: { type: 'integer', example: 9823 },
+        },
+      },
+      responses: {
+        Unauthorized: {
+          description: 'Missing or invalid API key.',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ErrorResponse' },
+              examples: {
+                missing_key: {
+                  summary: 'API key not provided',
+                  value: { success: false, error: 'Missing API key. Provide via X-API-Key header.' },
+                },
+                invalid_key: {
+                  summary: 'API key is invalid',
+                  value: { success: false, error: 'Invalid API key.', code: 'INVALID_KEY' },
+                },
+                key_revoked: {
+                  summary: 'API key has been revoked',
+                  value: { success: false, error: 'API key has been revoked.', code: 'KEY_REVOKED' },
+                },
+                key_expired: {
+                  summary: 'API key has expired',
+                  value: { success: false, error: 'API key has expired.', code: 'KEY_EXPIRED' },
+                },
+              },
+            },
+          },
+        },
+        BadRequest: {
+          description: 'Invalid request payload.',
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/ErrorResponse' },
+              examples: {
+                validation_error: {
+                  summary: 'Schema validation failed (Zod)',
+                  value: {
+                    success: false,
+                    error: 'Validation error.',
+                    details: [
+                      { path: 'metadata', message: 'Required' },
+                    ],
+                  },
+                },
+                invalid_payload: {
+                  summary: 'Business-rule violation',
+                  value: { success: false, error: 'Invalid or missing required fields.', code: 'INVALID_PROVIDER_PAYLOAD' },
+                },
+              },
+            },
+          },
+        },
+      },
       schemas: {
         ErrorResponse: {
           type: 'object',
           required: ['success', 'error'],
           properties: {
             success: { type: 'boolean', example: false },
-            error: { type: 'string', example: 'A descriptive error message.' },
-            code: { type: 'string', example: 'INVALID_KEY' },
+            error: { type: 'string', example: 'Invalid API key.' },
+            code: {
+              type: 'string',
+              description: 'Machine-readable error code. Present on most 4xx responses.',
+              example: 'INVALID_KEY',
+            },
           },
         },
         SuccessResponse: {
@@ -305,7 +423,8 @@ Idempotency-Key: 550e8400-e29b-41d4-a716-446655440000
     security: [{ ApiKeyAuth: [] }],
   },
   apis: [
-    path.resolve(__dirname, `../routes/v1/*.${ext}`),
+    ...publicRouteFiles,
+    ...(isProduction ? [] : internalRouteFiles),
     path.resolve(__dirname, `../routes/index.${ext}`),
     path.resolve(__dirname, `../server.${ext}`),
   ],

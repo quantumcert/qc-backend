@@ -64,7 +64,7 @@ const router = Router();
  *                   pausedAt: "2026-06-30T20:15:00.000Z"
  *                   reason: "Anomaly detected by SecurityWatchdogService"
  *       401:
- *         description: Missing or invalid API key.
+ *         $ref: '#/components/responses/Unauthorized'
  */
 router.get('/status', requireApiKey, tenantRateLimiter, async (req, res) => {
     try {
@@ -136,7 +136,7 @@ router.get('/status', requireApiKey, tenantRateLimiter, async (req, res) => {
  *       400:
  *         description: Missing required fields.
  *       401:
- *         description: Missing or invalid API key.
+ *         $ref: '#/components/responses/Unauthorized'
  *       403:
  *         description: Insufficient role — ADMIN required, or invalid Falcon-512 signature.
  */
@@ -208,7 +208,7 @@ router.post('/pause', requireApiKey, tenantRateLimiter, requireAdmin, async (req
  *       400:
  *         description: Missing required fields.
  *       401:
- *         description: Missing or invalid API key.
+ *         $ref: '#/components/responses/Unauthorized'
  *       403:
  *         description: Insufficient role — ADMIN required, or invalid Falcon-512 signature.
  */
@@ -282,7 +282,7 @@ router.post('/resume', requireApiKey, tenantRateLimiter, requireAdmin, async (re
  *       400:
  *         description: Missing signature.
  *       401:
- *         description: Missing or invalid API key.
+ *         $ref: '#/components/responses/Unauthorized'
  *       403:
  *         description: Insufficient role — ADMIN required, or invalid Falcon-512 signature.
  */
