@@ -9,11 +9,14 @@ const router = Router();
  * @openapi
  * /api/v1/webhooks/mercadopago:
  *   post:
- *     summary: Webhook de pagamento MercadoPago
+ *     summary: MercadoPago payment webhook
  *     description: |
- *       Endpoint público (sem API key). A autenticidade é verificada via HMAC SHA-256
- *       do payload com o `MP_WEBHOOK_SECRET`. Pagamentos confirmados disparam a
- *       conclusão da transferência de ativos pendentes.
+ *       Public endpoint (no API key required). Authenticity is verified via
+ *       HMAC SHA-256 of the raw payload against the `MP_WEBHOOK_SECRET`.
+ *       Confirmed payments trigger automatic completion of pending asset transfers.
+ *
+ *       MercadoPago retries failed deliveries up to 3 times with exponential backoff.
+ *       Respond with `200` as quickly as possible — heavy processing is async.
  *     tags: [Webhooks]
  *     security: []
  *     parameters:
@@ -22,31 +25,44 @@ const router = Router();
  *         required: true
  *         schema:
  *           type: string
- *         description: Assinatura HMAC SHA-256 enviada pelo MercadoPago
+ *           example: "ts=1719500000,v1=abc123def456..."
+ *         description: HMAC SHA-256 signature sent by MercadoPago.
  *       - in: header
  *         name: x-request-id
  *         schema:
  *           type: string
+ *           example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             description: Payload padrão do MercadoPago (action, data.id)
- *             example:
- *               action: payment.updated
+ *             description: Standard MercadoPago webhook payload.
+ *             properties:
+ *               action:
+ *                 type: string
+ *                 enum: [payment.created, payment.updated]
+ *                 example: "payment.updated"
  *               data:
- *                 id: "123456789"
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                     example: "123456789"
+ *           example:
+ *             action: "payment.updated"
+ *             data:
+ *               id: "123456789"
  *     responses:
  *       200:
- *         description: Webhook processado com sucesso
+ *         description: Webhook received and processing queued.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
  *       401:
- *         description: Assinatura HMAC inválida
+ *         description: Invalid HMAC signature — request rejected.
  *         content:
  *           application/json:
  *             schema:

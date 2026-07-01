@@ -21,11 +21,11 @@ const router = Router();
  * @openapi
  * /api/v1/contributions/{id}/review:
  *   post:
- *     summary: Revisar uma contribuição pública pendente
+ *     summary: Review a pending public contribution
  *     description: |
- *       Endpoint autenticado para revisão de contribuições públicas. Requer API key
- *       OPERATOR ou ADMIN. A contribuição pendente deve pertencer ao mesmo tenant
- *       da API key.
+ *       Approves or rejects a pending contribution submitted via the public endpoint.
+ *       The contribution must belong to the same tenant as the authenticating API key.
+ *       Requires OPERATOR or ADMIN role and the `events:write` scope.
  *     tags: [Curation]
  *     security:
  *       - ApiKeyAuth: []
@@ -35,7 +35,9 @@ const router = Router();
  *         required: true
  *         schema:
  *           type: string
- *         description: ID da PendingContribution.
+ *           format: uuid
+ *           example: "c7f3a1b2-d4e5-6789-abcd-ef0123456789"
+ *         description: PendingContribution ID.
  *     requestBody:
  *       required: true
  *       content:
@@ -47,13 +49,17 @@ const router = Router();
  *               decision:
  *                 type: string
  *                 enum: [APPROVED, REJECTED]
+ *                 example: "APPROVED"
  *               reason:
  *                 type: string
  *                 nullable: true
- *                 example: "Evidência insuficiente"
+ *                 example: "Evidence verified against physical inspection report."
+ *           example:
+ *             decision: "APPROVED"
+ *             reason: "Evidence verified against physical inspection report."
  *     responses:
  *       200:
- *         description: Contribuição revisada.
+ *         description: Contribution reviewed.
  *         content:
  *           application/json:
  *             schema:
@@ -67,38 +73,43 @@ const router = Router();
  *                   properties:
  *                     pendingId:
  *                       type: string
+ *                       format: uuid
+ *                       example: "c7f3a1b2-d4e5-6789-abcd-ef0123456789"
  *                     status:
  *                       type: string
  *                       enum: [APPROVED, REJECTED]
+ *                       example: "APPROVED"
  *                     eventId:
  *                       type: string
+ *                       format: uuid
  *                       nullable: true
+ *                       example: "e1f2a3b4-c5d6-7890-abcd-ef1234567890"
  *       400:
- *         description: Decisão inválida.
+ *         description: Invalid decision value.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       401:
- *         description: API key ausente ou inválida.
+ *         description: Missing or invalid API key.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       403:
- *         description: Role não é OPERATOR ou ADMIN.
+ *         description: Insufficient role — OPERATOR or ADMIN required.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
- *         description: Contribuição não encontrada para este tenant.
+ *         description: Contribution not found for this tenant.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       409:
- *         description: Contribuição já revisada.
+ *         description: Contribution already reviewed.
  *         content:
  *           application/json:
  *             schema:

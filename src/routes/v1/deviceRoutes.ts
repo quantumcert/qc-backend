@@ -23,7 +23,10 @@ const nfcValidateLimiter = rateLimit({
  * @openapi
  * /api/v1/devices:
  *   post:
- *     summary: Registrar novo dispositivo NFC/RFID
+ *     summary: Register a new NFC/RFID device
+ *     description: |
+ *       Registers a physical NFC/RFID chip and links it to an existing asset.
+ *       Requires ADMIN role and the `qtags:write` scope.
  *     tags: [Devices]
  *     security:
  *       - ApiKeyAuth: []
@@ -34,6 +37,7 @@ const nfcValidateLimiter = rateLimit({
  *         schema:
  *           type: string
  *           format: uuid
+ *           example: "550e8400-e29b-41d4-a716-446655440000"
  *     requestBody:
  *       required: true
  *       content:
@@ -46,27 +50,31 @@ const nfcValidateLimiter = rateLimit({
  *             properties:
  *               uid:
  *                 type: string
- *                 description: UID físico do chip NFC/RFID
- *                 example: 04:AB:CD:EF:12:34:56
+ *                 description: Physical UID of the NFC/RFID chip (colon-separated hex bytes).
+ *                 example: "04:AB:CD:EF:12:34:56"
  *               assetId:
  *                 type: string
  *                 format: uuid
- *                 description: ID do ativo vinculado ao dispositivo
+ *                 description: ID of the asset to link this device to.
+ *                 example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+ *           example:
+ *             uid: "04:AB:CD:EF:12:34:56"
+ *             assetId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
  *     responses:
  *       201:
- *         description: Dispositivo registrado e vinculado ao ativo
+ *         description: Device registered and linked to asset.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/SuccessResponse'
  *       401:
- *         description: API key ausente ou inválida
+ *         description: Missing or invalid API key.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       403:
- *         description: Role insuficiente (requer ADMIN)
+ *         description: Insufficient role — ADMIN required.
  *         content:
  *           application/json:
  *             schema:
@@ -78,10 +86,11 @@ router.post('/', requireApiKey, requireIdempotency, tenantRateLimiter, requireAd
  * @openapi
  * /api/v1/devices/tap:
  *   get:
- *     summary: Validar toque NFC (público ou autenticado)
+ *     summary: Validate an NFC tap (public or authenticated)
  *     description: |
- *       Endpoint de validação de tap NFC. Aceita requisições sem API key (validação pública via URL)
- *       ou com API key (validação autenticada). Limitado a 5 requisições/min por IP.
+ *       Validates an NFC tap event. Accepts unauthenticated requests (public QR/URL validation)
+ *       or authenticated requests with an API key. Limited to 5 requests/min per IP to prevent
+ *       brute-force cloning attacks.
  *     tags: [Devices]
  *     security:
  *       - ApiKeyAuth: []
@@ -92,16 +101,17 @@ router.post('/', requireApiKey, requireIdempotency, tenantRateLimiter, requireAd
  *         required: true
  *         schema:
  *           type: string
- *         description: UID do chip NFC lido
- *         example: 04ABCDEF123456
+ *           example: "04ABCDEF123456"
+ *         description: NFC chip UID as read by the reader (hex, no separators).
  *       - in: query
  *         name: counter
  *         schema:
  *           type: integer
- *         description: Contador de taps do chip (anti-clone)
+ *           example: 42
+ *         description: Monotonically increasing tap counter for anti-clone protection.
  *     responses:
  *       200:
- *         description: Tap validado — retorna dados do ativo vinculado
+ *         description: Tap validated — returns the linked asset data.
  *         content:
  *           application/json:
  *             schema:
@@ -112,13 +122,13 @@ router.post('/', requireApiKey, requireIdempotency, tenantRateLimiter, requireAd
  *                     data:
  *                       $ref: '#/components/schemas/Asset'
  *       404:
- *         description: Dispositivo não encontrado
+ *         description: Device not found.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *       429:
- *         description: Muitas tentativas — aguarde 1 minuto
+ *         description: Too many attempts — retry after 1 minute.
  *         content:
  *           application/json:
  *             schema:

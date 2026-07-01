@@ -39,6 +39,13 @@ router.get('/api-docs', (_req: Request, res: Response) => {
   const config = JSON.stringify({
     spec: { url: '/api-docs/spec.json' },
     theme: 'default',
+    hideClientButton: true,
+    defaultOpenAllTags: false,
+    tagsSorter: 'alpha',
+    defaultHttpClient: {
+      targetKey: 'javascript',
+      clientKey: 'fetch',
+    },
     authentication: {
       preferredSecurityScheme: 'ApiKeyAuth',
       securitySchemes: {
@@ -59,6 +66,12 @@ router.get('/api-docs', (_req: Request, res: Response) => {
     <title>Quantum Cert Diamond API</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      /* Hide Scalar Cloud toolbar (Developer Tools / Configure / Share / Deploy) */
+      .api-reference-toolbar {
+        display: none !important;
+      }
+    </style>
   </head>
   <body>
     <div id="app"></div>
