@@ -28,10 +28,9 @@ const options: swaggerJsdoc.Options = {
         url: 'https://quantumcert.io',
       },
     },
-    servers: [
-      { url: 'https://api.quantumcert.com.br', description: 'Production' },
-      { url: 'http://localhost:3000', description: 'Development' },
-    ],
+    servers: process.env.NODE_ENV === 'production'
+      ? [{ url: 'https://api.quantumcert.com.br', description: 'Production' }]
+      : [{ url: 'http://localhost:3000', description: 'Development' }],
     components: {
       securitySchemes: {
         ApiKeyAuth: {
